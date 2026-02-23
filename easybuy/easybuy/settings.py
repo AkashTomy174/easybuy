@@ -27,7 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
+AUTH_USER_MODEL = 'core.User'
 # Application definition
 
 INSTALLED_APPS = [
@@ -37,10 +37,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'core',
-    'user',
-    'admin',
-    'seller',
+    'easybuy.core',
+    'easybuy.user',
+    'easybuy.easybuy_admin',
+    'easybuy.seller',
 ]
 
 MIDDLEWARE = [
@@ -53,7 +53,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'easybuy.urls'
+ROOT_URLCONF = 'easybuy.easybuy.urls'
 
 TEMPLATES = [
     {
@@ -70,7 +70,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'easybuy.wsgi.application'
+WSGI_APPLICATION = 'easybuy.easybuy.wsgi.application'
 
 
 # Database

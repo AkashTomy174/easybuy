@@ -1,7 +1,7 @@
 from django.db import models
-from core.models import Category
-from user.models import OrderItem
-from seller.models import SellerProfile, Product
+from easybuy.core.models import Category
+from easybuy.user.models import OrderItem
+from easybuy.seller.models import SellerProfile, Product
 # Create your models here.
 
 

@@ -1,6 +1,6 @@
 
 from django.db import models
-from core.models import User, SubCategory
+from easybuy.core.models import User, SubCategory
 # Create your models here.
 
 

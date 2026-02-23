@@ -1,7 +1,7 @@
 
 from django.db import models
-from core.models import User
-from seller.models import ProductVariant, SellerProfile, Product
+from easybuy.core.models import User
+from easybuy.seller.models import ProductVariant, SellerProfile, Product
 
 
 class Cart(models.Model):
