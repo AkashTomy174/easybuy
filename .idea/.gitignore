@@ -1,0 +1,82 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller (if you use it)
+*.manifest
+*.spec
+
+# Logs and SQLite database
+*.log
+db.sqlite3
+
+# Django stuff
+local_settings.py
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.pytest_cache/
+.hypothesis/
+
+# dotenv environment variables
+.env
+*.env
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# VS Code / editor configs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Python caches
+.ipynb_checkpoints
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Media and static files (optional; include if you store these outside Git)
+media/
+staticfiles/
+
+# MyPy cache
+.mypy_cache/
