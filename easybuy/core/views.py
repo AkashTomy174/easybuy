@@ -29,9 +29,7 @@ def all_login(request):
                 data1 = SellerProfile.objects.get(user=user)
                 return render(request, "dashboard.html", {"data1": data1,'user': user})
         else:
-            return render(
-                request, "login.html", {"error": "Invalid username or password"}
-            )
+            return render(request,"login.html",{'message':'invalid username or password'})
     return render(request, "login.html")
 
 

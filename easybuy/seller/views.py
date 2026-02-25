@@ -55,6 +55,3 @@ def product_list(request):
 
 
 
-
-
-
