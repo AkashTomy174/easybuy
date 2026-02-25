@@ -51,7 +51,7 @@ class ProductVariant(models.Model):
 
 class ProductImage(models.Model):
     variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, related_name="images")
-    image_url = models.URLField()
+    image_url = models.ImageField()
     alt_text = models.CharField(max_length=255, blank=True)
     is_primary = models.BooleanField(default=False)
 

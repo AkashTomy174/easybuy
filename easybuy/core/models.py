@@ -13,7 +13,6 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=15, unique=True, null=True, blank=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='CUSTOMER')
     profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
-    is_verified = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -49,7 +48,7 @@ class Notification(models.Model):
 class Category(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
-    image_url = models.URLField(blank=True, null=True)
+    image_url = models.ImageField(upload_to='Category/',blank=True, null=True)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

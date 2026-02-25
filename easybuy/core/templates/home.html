@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TechMarket | Premium Electronics</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2d5a27", // Deep forest green
+                        "primary-dark": "#1e3d1a",
+                        "accent-terracotta": "#c05e46",
+                        "background-light": "#fdfaf6", // Soft cream
+                        "background-dark": "#1a1c19",
+                        "surface-dark": "#232622",
+                        "surface-light": "#ffffff",
+                        "soft-gray": "#f3f4f1",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "0.75rem",
+                        "xl": "1rem",
+                        "2xl": "1.5rem",
+                        "3xl": "2rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        :root {
+            --primary-color: #2d5a27;
+            --cream-bg: #fdfaf6;
+            --soft-gray: #f3f4f1;
+        }
+        .category-card-square {
+            aspect-ratio: 1/1;
+        }
+    </style>
+</head>
+<body class="font-display bg-[var(--cream-bg)] dark:bg-background-dark text-slate-800 dark:text-slate-100 antialiased selection:bg-primary selection:text-white">
+<div class="flex flex-col min-h-screen">
+<header class="flex h-20 items-center justify-between border-b border-stone-200 dark:border-stone-800 bg-white/80 backdrop-blur-md dark:bg-surface-dark/80 px-4 lg:px-12 z-50 sticky top-0 shadow-sm">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-white">
+<span class="material-symbols-outlined">shopping_bag</span>
+</div>
+<h1 class="text-xl font-bold leading-tight hidden sm:block">TechMarket</h1>
+</div>
+<nav class="hidden xl:flex items-center gap-6">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Shop</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Categories</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Deals</a>
+</nav>
+</div>
+<div class="flex-1 max-w-xl mx-8 hidden md:block">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-stone-400 text-[20px] group-focus-within:text-primary transition-colors">search</span>
+<input class="h-10 w-full rounded-2xl border border-stone-200 bg-stone-50 pl-10 pr-4 text-sm text-stone-900 placeholder:text-stone-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-stone-700 dark:bg-background-dark dark:text-white transition-all shadow-sm" placeholder="Search premium tech..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 lg:gap-6">
+<button class="flex items-center gap-2 text-sm font-medium text-stone-600 dark:text-stone-300 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">favorite</span>
+<span class="hidden lg:inline">Wishlist</span>
+</button>
+<button class="flex items-center gap-2 text-sm font-medium text-stone-600 dark:text-stone-300 hover:text-primary transition-colors relative group">
+<div class="relative">
+<span class="material-symbols-outlined text-[24px]">shopping_cart</span>
+<span class="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[10px] font-bold text-white ring-2 ring-white dark:ring-surface-dark">2</span>
+</div>
+<span class="hidden lg:inline">Cart</span>
+</button>
+<div class="h-8 w-px bg-stone-200 dark:bg-stone-700 mx-2 hidden sm:block"></div>
+<button class="flex items-center gap-3 rounded-full py-1 pr-2 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
+<div class="h-9 w-9 overflow-hidden rounded-full bg-stone-200 ring-2 ring-white dark:ring-stone-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBJhrq07vH3dNgCJiU2yZ-8S2csjVs2MWBi04xdWP-nXQV-y37E2N74lN8xhKfsM8EOH0n69NsxiSvdjJxqoCa8wFe_1d1UPEXStmR6hKOvu6nxesbR9e0DbWkVIn2nA_6eXeU7pWyZz_mly2TtlPwQMereXR9NBJMYSQy3qogapmxRlVRB_u1cQ3Hi-mq5u_vwjRq3gkeDuH47ZAiUkS4vSVbI2FVVudY_q1v2cZBhJfNC7pWttdyI1kY6TS42BDaL2e4hNo6-Mz54'); background-size: cover; background-position: center;"></div>
+<span class="hidden lg:block text-sm font-medium text-stone-700 dark:text-stone-200">Alex J.</span>
+</button>
+</div>
+</header>
+<main class="flex-1">
+<section class="relative h-[650px] w-full overflow-hidden bg-stone-900">
+<div class="absolute inset-0">
+<img alt="Cozy Home Lifestyle with Tech" class="h-full w-full object-cover object-center opacity-70" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEI3Wh1ENSB9-IPyEqt_nYcCKBIRIiItY5ZU6rngBtK9oJi8kiXqVqPCI8srm1s1CD1P_P_ibyVu_xyFqE5ZCQq6OaCuEm5h7e30mOn8YXrLzyBZezm6lIRXJW-izcWkaQKXL7CNbu_OzVGs-48JZlFUZYQaqsYa5IUbIKDxlawJOxhx4r8T8d3LJOKJzvgTaKNqFhNML0wZsogtSMVSVv5XmilxIxJANWz0aK5morIFgb8qF6JNaAN1GsCSoJM-VrpKfZHDSXMalu"/>
+<div class="absolute inset-0 bg-gradient-to-r from-stone-950/80 via-stone-950/30 to-transparent"></div>
+</div>
+<div class="relative mx-auto flex h-full max-w-7xl flex-col justify-center px-4 sm:px-12">
+<span class="mb-4 text-xs font-bold uppercase tracking-widest text-accent-terracotta">Limited Edition Arrival</span>
+<h1 class="max-w-2xl text-5xl font-black text-white md:text-7xl leading-[1.1]">The Future of Tech is Here</h1>
+<p class="mt-6 max-w-lg text-lg text-stone-200 leading-relaxed">Experience innovation at its finest. Discover our curated collection of high-end consumer electronics designed for the modern lifestyle.</p>
+<div class="mt-10 flex flex-wrap gap-4">
+<button class="rounded-2xl bg-primary px-10 py-4 font-bold text-white transition-all hover:bg-primary-dark hover:scale-105 shadow-lg shadow-primary/20">Shop Now</button>
+<button class="rounded-2xl border border-white/30 bg-white/10 px-10 py-4 font-bold text-white backdrop-blur-md transition-all hover:bg-white hover:text-stone-900">Learn More</button>
+</div>
+</div>
+</section>
+<section class="mx-auto -mt-12 relative z-10 max-w-7xl px-4 sm:px-12">
+<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+<div class="flex items-center gap-4 rounded-3xl border border-stone-100 bg-white p-6 shadow-xl shadow-stone-200/50 dark:border-stone-800 dark:bg-surface-dark">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-stone-50 text-primary dark:bg-primary/10">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+<div>
+<h4 class="font-bold">Free Shipping</h4>
+<p class="text-sm text-stone-500">On all orders over $99</p>
+</div>
+</div>
+<div class="flex items-center gap-4 rounded-3xl border border-stone-100 bg-white p-6 shadow-xl shadow-stone-200/50 dark:border-stone-800 dark:bg-surface-dark">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-stone-50 text-primary dark:bg-primary/10">
+<span class="material-symbols-outlined">support_agent</span>
+</div>
+<div>
+<h4 class="font-bold">24/7 Support</h4>
+<p class="text-sm text-stone-500">Always here to help you</p>
+</div>
+</div>
+<div class="flex items-center gap-4 rounded-3xl border border-stone-100 bg-white p-6 shadow-xl shadow-stone-200/50 dark:border-stone-800 dark:bg-surface-dark">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-stone-50 text-primary dark:bg-primary/10">
+<span class="material-symbols-outlined">verified_user</span>
+</div>
+<div>
+<h4 class="font-bold">Secure Payment</h4>
+<p class="text-sm text-stone-500">100% secure checkouts</p>
+</div>
+</div>
+<div class="flex items-center gap-4 rounded-3xl border border-stone-100 bg-white p-6 shadow-xl shadow-stone-200/50 dark:border-stone-800 dark:bg-surface-dark">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-stone-50 text-primary dark:bg-primary/10">
+<span class="material-symbols-outlined">restart_alt</span>
+</div>
+<div>
+<h4 class="font-bold">30-Day Returns</h4>
+<p class="text-sm text-stone-500">Simple return policy</p>
+</div>
+</div>
+</div>
+</section>
+<section class="mx-auto max-w-7xl px-4 py-24 sm:px-12">
+<div class="mb-12 flex items-end justify-between">
+<div>
+<h2 class="text-3xl font-black text-stone-900">Shop by Category</h2>
+<p class="mt-2 text-stone-500">Find exactly what you're looking for</p>
+</div>
+<a class="font-bold text-primary hover:underline transition-all" href="#">View All Categories</a>
+</div>
+<div class="grid grid-cols-2 gap-8 md:grid-cols-4">
+<div class="group flex flex-col items-center gap-4 text-center cursor-pointer">
+<div class="relative flex h-48 w-full items-center justify-center rounded-3xl bg-[var(--soft-gray)] ring-0 ring-primary transition-all group-hover:bg-white group-hover:shadow-2xl group-hover:ring-4 dark:bg-surface-dark overflow-hidden">
+<img alt="Laptops" class="h-32 w-32 object-contain group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGLt77CaW93sePc-0Ic_l_JePLHg2D_h6P_1IBCB7BDCeDLZ_VZo4TNwgFOUzUTvhbwk2QlCOqKfAx2l-diulHpqY3s6b31E29Vtj5Ev47zq8SVQmCRTTl81BNYlYJZFobTpuUH7h1eNZUCScGvjIHiIRwev4AE8DEhtMvHp7xi8musVWcsYbPR8lWIHLP3WTj07QwLJwwEOy76gDDBKP6FR7ulzNx56u6WpPy2lcirtXf6vqTgFll9leJWBvImb0pNtr-l9mNidbc"/>
+</div>
+<span class="text-lg font-bold text-stone-800">Laptops</span>
+</div>
+<div class="group flex flex-col items-center gap-4 text-center cursor-pointer">
+<div class="relative flex h-48 w-full items-center justify-center rounded-3xl bg-[var(--soft-gray)] ring-0 ring-primary transition-all group-hover:bg-white group-hover:shadow-2xl group-hover:ring-4 dark:bg-surface-dark overflow-hidden">
+<img alt="Audio" class="h-32 w-32 object-contain group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEI3Wh1ENSB9-IPyEqt_nYcCKBIRIiItY5ZU6rngBtK9oJi8kiXqVqPCI8srm1s1CD1P_P_ibyVu_xyFqE5ZCQq6OaCuEm5h7e30mOn8YXrLzyBZezm6lIRXJW-izcWkaQKXL7CNbu_OzVGs-48JZlFUZYQaqsYa5IUbIKDxlawJOxhx4r8T8d3LJOKJzvgTaKNqFhNML0wZsogtSMVSVv5XmilxIxJANWz0aK5morIFgb8qF6JNaAN1GsCSoJM-VrpKfZHDSXMalu"/>
+</div>
+<span class="text-lg font-bold text-stone-800">Audio</span>
+</div>
+<div class="group flex flex-col items-center gap-4 text-center cursor-pointer">
+<div class="relative flex h-48 w-full items-center justify-center rounded-3xl bg-[var(--soft-gray)] ring-0 ring-primary transition-all group-hover:bg-white group-hover:shadow-2xl group-hover:ring-4 dark:bg-surface-dark overflow-hidden">
+<img alt="Smartphones" class="h-32 w-32 object-contain group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD007eYFiXBk_BTOHs3hIbWw7sjs9JLhTcfAU-t2xb8hklLGt8C5ZG3a1Gq1YCxIOsBnHlNRtla-YYsZDdKj-dwvb9OEsVcqlPI0C-EFP2RVj27XGAk7Xa3CoFLNpkDagHQLVRU8i6Idfeh6AbOSkTgWPYuNFs8wXAyL3Fi-ZABYcGODBm0ZDCXRgTb0K5ETik--zderMX8IML3rL5kq7QsBwpj4zQLgfCazOeNGqAZleDH-TkbV9ZadozJB55URpJbWXNwsFE8KMnM"/>
+</div>
+<span class="text-lg font-bold text-stone-800">Smartphones</span>
+</div>
+<div class="group flex flex-col items-center gap-4 text-center cursor-pointer">
+<div class="relative flex h-48 w-full items-center justify-center rounded-3xl bg-[var(--soft-gray)] ring-0 ring-primary transition-all group-hover:bg-white group-hover:shadow-2xl group-hover:ring-4 dark:bg-surface-dark overflow-hidden">
+<img alt="Cameras" class="h-32 w-32 object-contain group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIeRxiqJasFMlefS9zckavMri8KDAzk-rjpo7IgEtZ_45WNZV0iZXc82il_-EXAqvA2LSROwKOV58ZRYbWrdDdVEQdYMc2X2GSp6S6fneJ5FB49Je3vHS4lVbryVbsLmm2NObNLf2x-KNzLZGoMMvn8oDv806dWUCOalvh0Ium2vX4JqFJKN8lq3yahmTGzTW3yu2mWSDXFOfofIdm8Ph7hKblCWx-qPWFpuU4w9493EM65whXMhmWqT1G_E3IuK1CacIiy10LhN2a"/>
+</div>
+<span class="text-lg font-bold text-stone-800">Cameras</span>
+</div>
+</div>
+</section>
+<section class="bg-[var(--soft-gray)] py-24 dark:bg-stone-900/50">
+<div class="mx-auto max-w-7xl px-4 sm:px-12">
+<div class="mb-12 flex items-end justify-between">
+<div>
+<h2 class="text-3xl font-black text-stone-900">New Arrivals</h2>
+<p class="mt-2 text-stone-500">The latest tech just landed in our warehouse</p>
+</div>
+<button class="rounded-2xl border border-stone-200 bg-white px-6 py-2.5 text-sm font-bold shadow-sm transition-all hover:bg-stone-50 dark:border-stone-700 dark:bg-surface-dark">See All Products</button>
+</div>
+<div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+<div class="group relative flex flex-col rounded-3xl border border-stone-100 bg-white p-4 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 dark:border-stone-800 dark:bg-surface-dark">
+<div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800 mb-4">
+<span class="absolute left-3 top-3 z-10 rounded-full bg-accent-terracotta px-3 py-1 text-[10px] font-bold text-white uppercase tracking-wider">New</span>
+<img alt="Product" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-90 group-hover:opacity-100" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD007eYFiXBk_BTOHs3hIbWw7sjs9JLhTcfAU-t2xb8hklLGt8C5ZG3a1Gq1YCxIOsBnHlNRtla-YYsZDdKj-dwvb9OEsVcqlPI0C-EFP2RVj27XGAk7Xa3CoFLNpkDagHQLVRU8i6Idfeh6AbOSkTgWPYuNFs8wXAyL3Fi-ZABYcGODBm0ZDCXRgTb0K5ETik--zderMX8IML3rL5kq7QsBwpj4zQLgfCazOeNGqAZleDH-TkbV9ZadozJB55URpJbWXNwsFE8KMnM"/>
+<button class="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all hover:bg-white hover:text-accent-terracotta dark:bg-black/50">
+<span class="material-symbols-outlined text-[20px]">favorite</span>
+</button>
+</div>
+<div class="flex flex-1 flex-col">
+<p class="text-xs font-medium text-stone-400 uppercase tracking-wide">Wearables</p>
+<h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-1 group-hover:text-primary transition-colors">Premium Health Tracking Smartwatch</h3>
+<div class="mt-2 flex items-center gap-1">
+<div class="flex text-stone-300">
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+</div>
+<span class="text-xs text-stone-400 font-medium">(42)</span>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<span class="text-xl font-black text-stone-900 dark:text-white">$399.00</span>
+<button class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col rounded-3xl border border-stone-100 bg-white p-4 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 dark:border-stone-800 dark:bg-surface-dark">
+<div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800 mb-4">
+<img alt="Product" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-90 group-hover:opacity-100" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEI3Wh1ENSB9-IPyEqt_nYcCKBIRIiItY5ZU6rngBtK9oJi8kiXqVqPCI8srm1s1CD1P_P_ibyVu_xyFqE5ZCQq6OaCuEm5h7e30mOn8YXrLzyBZezm6lIRXJW-izcWkaQKXL7CNbu_OzVGs-48JZlFUZYQaqsYa5IUbIKDxlawJOxhx4r8T8d3LJOKJzvgTaKNqFhNML0wZsogtSMVSVv5XmilxIxJANWz0aK5morIFgb8qF6JNaAN1GsCSoJM-VrpKfZHDSXMalu"/>
+<button class="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all hover:bg-white hover:text-accent-terracotta dark:bg-black/50">
+<span class="material-symbols-outlined text-[20px]">favorite</span>
+</button>
+</div>
+<div class="flex flex-1 flex-col">
+<p class="text-xs font-medium text-stone-400 uppercase tracking-wide">Audio</p>
+<h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-1 group-hover:text-primary transition-colors">Spatial Audio Wireless Headphones</h3>
+<div class="mt-2 flex items-center gap-1">
+<div class="flex text-stone-300">
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+</div>
+<span class="text-xs text-stone-400 font-medium">(1.1k)</span>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<span class="text-xl font-black text-stone-900 dark:text-white">$249.00</span>
+<button class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col rounded-3xl border border-stone-100 bg-white p-4 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 dark:border-stone-800 dark:bg-surface-dark">
+<div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800 mb-4">
+<img alt="Product" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-90 group-hover:opacity-100" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGLt77CaW93sePc-0Ic_l_JePLHg2D_h6P_1IBCB7BDCeDLZ_VZo4TNwgFOUzUTvhbwk2QlCOqKfAx2l-diulHpqY3s6b31E29Vtj5Ev47zq8SVQmCRTTl81BNYlYJZFobTpuUH7h1eNZUCScGvjIHiIRwev4AE8DEhtMvHp7xi8musVWcsYbPR8lWIHLP3WTj07QwLJwwEOy76gDDBKP6FR7ulzNx56u6WpPy2lcirtXf6vqTgFll9leJWBvImb0pNtr-l9mNidbc"/>
+<button class="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all hover:bg-white hover:text-accent-terracotta dark:bg-black/50">
+<span class="material-symbols-outlined text-[20px]">favorite</span>
+</button>
+</div>
+<div class="flex flex-1 flex-col">
+<p class="text-xs font-medium text-stone-400 uppercase tracking-wide">Keyboards</p>
+<h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-1 group-hover:text-primary transition-colors">Tactile RGB Mechanical Keyboard</h3>
+<div class="mt-2 flex items-center gap-1">
+<div class="flex text-stone-300">
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star_half</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+</div>
+<span class="text-xs text-stone-400 font-medium">(156)</span>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<span class="text-xl font-black text-stone-900 dark:text-white">$129.99</span>
+<button class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col rounded-3xl border border-stone-100 bg-white p-4 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 dark:border-stone-800 dark:bg-surface-dark">
+<div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800 mb-4">
+<img alt="Product" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-90 group-hover:opacity-100" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnpOgkFjvkIsOoVkldecEG1Xuiof4NcjLzUPCMkseT0pxm-NFV0quulkUvcVDJSlt4hnxQpABeeDOjYWs_1l30TzsL7tVaeNSuTrSYdSSwILZztpHw3bPyVH5WobdntnaFAZqJcMjS-3ebGubnYErRJ9RBPOR8GIZbLaGskSw6xcdiozFc6QVlIfkXLFo2GvEd5Yr2Lef4aLwsJACaxgULusfObFMkUjJjo9U3dIC7_UPbPNq2TxWu678EctVx9i-NiE9UD2n2Mave"/>
+<button class="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all hover:bg-white hover:text-accent-terracotta dark:bg-black/50">
+<span class="material-symbols-outlined text-[20px]">favorite</span>
+</button>
+</div>
+<div class="flex flex-1 flex-col">
+<p class="text-xs font-medium text-stone-400 uppercase tracking-wide">Accessories</p>
+<h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-1 group-hover:text-primary transition-colors">Aluminum Laptop Stand</h3>
+<div class="mt-2 flex items-center gap-1">
+<div class="flex text-stone-300">
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px] fill-stone-800 text-stone-800">star</span>
+<span class="material-symbols-outlined text-[16px]">star</span>
+</div>
+<span class="text-xs text-stone-400 font-medium">(88)</span>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<span class="text-xl font-black text-stone-900 dark:text-white">$45.00</span>
+<button class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="mx-auto max-w-7xl px-4 py-24 sm:px-12">
+<div class="relative overflow-hidden rounded-[40px] bg-primary px-8 py-20 text-center text-white md:px-24">
+<div class="relative z-10">
+<h2 class="text-4xl font-black">Join the Tech Elite</h2>
+<p class="mx-auto mt-4 max-w-xl text-lg text-stone-100/90 leading-relaxed">Subscribe to receive updates, access to exclusive deals, and more.</p>
+<form class="mx-auto mt-10 flex max-w-md flex-col gap-4 sm:flex-row">
+<input class="h-14 w-full rounded-2xl border-none bg-white px-6 text-stone-900 placeholder:text-stone-400 focus:ring-2 focus:ring-accent-terracotta" placeholder="Enter your email" type="email"/>
+<button class="h-14 shrink-0 rounded-2xl bg-stone-900 px-8 font-bold text-white transition-all hover:bg-black shadow-lg">Subscribe</button>
+</form>
+</div>
+<div class="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
+<div class="absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-primary-dark/40 blur-3xl"></div>
+</div>
+</section>
+</main>
+<footer class="border-t border-stone-200 bg-white pt-24 dark:border-stone-800 dark:bg-surface-dark">
+<div class="mx-auto max-w-7xl px-4 sm:px-12">
+<div class="grid grid-cols-1 gap-12 pb-16 md:grid-cols-2 lg:grid-cols-4">
+<div class="flex flex-col gap-6">
+<div class="flex items-center gap-3">
+<div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-white">
+<span class="material-symbols-outlined">shopping_bag</span>
+</div>
+<h1 class="text-xl font-bold text-stone-900 dark:text-white">TechMarket</h1>
+</div>
+<p class="text-sm text-stone-500 leading-relaxed">The world's leading destination for premium electronics and high-end consumer goods. Quality guaranteed.</p>
+<div class="flex gap-4">
+<button class="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-50 text-stone-600 hover:bg-primary hover:text-white transition-all"><span class="material-symbols-outlined text-[20px]">public</span></button>
+<button class="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-50 text-stone-600 hover:bg-primary hover:text-white transition-all"><span class="material-symbols-outlined text-[20px]">share</span></button>
+<button class="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-50 text-stone-600 hover:bg-primary hover:text-white transition-all"><span class="material-symbols-outlined text-[20px]">rss_feed</span></button>
+</div>
+</div>
+<div>
+<h4 class="mb-6 font-bold uppercase tracking-wider text-stone-900 dark:text-white text-xs">Shop</h4>
+<ul class="flex flex-col gap-4 text-sm text-stone-500">
+<li><a class="hover:text-primary transition-colors" href="#">Laptops</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Smartphones</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Audio</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Cameras</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Accessories</a></li>
+</ul>
+</div>
+<div>
+<h4 class="mb-6 font-bold uppercase tracking-wider text-stone-900 dark:text-white text-xs">Company</h4>
+<ul class="flex flex-col gap-4 text-sm text-stone-500">
+<li><a class="hover:text-primary transition-colors" href="#">About Us</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Careers</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Blog</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Sustainability</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Contact</a></li>
+</ul>
+</div>
+<div>
+<h4 class="mb-6 font-bold uppercase tracking-wider text-stone-900 dark:text-white text-xs">Legal</h4>
+<ul class="flex flex-col gap-4 text-sm text-stone-500">
+<li><a class="hover:text-primary transition-colors" href="#">Terms of Service</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Privacy Policy</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Cookie Settings</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Returns &amp; Refunds</a></li>
+</ul>
+</div>
+</div>
+<div class="flex flex-col items-center justify-between gap-4 border-t border-stone-100 py-8 dark:border-stone-800 md:flex-row">
+<p class="text-xs text-stone-400">© 2024 TechMarket Inc. All rights reserved.</p>
+<div class="flex items-center gap-6">
+<img alt="Visa" class="h-5 grayscale opacity-30 hover:grayscale-0 hover:opacity-100 transition-all cursor-pointer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNotZY4A7USaKUbSTtBMOo4Ram9-gUW_fId9l9MgeIzrInanJpmut_do-t9KFS85lqyLQvbM0wpinSMLS8HnUwnBgUPCwo_8R6Zr2DmXk9pO7Xtt5NHVAjrwgC0aLzUMA-A0i3rbLrmWyfwTwMuukr2VbhzH3zYleUJt8BdqZSZEnd0CEpIlaKMPxbn91TEH6uw5TNaXeQmqtq4R2etth4awjgqBvxIWRo3YPL0Gbc7cq6IVgDbz9O8HOvAioT-5KrWS3cB_QuexOB"/>
+<img alt="Mastercard" class="h-5 grayscale opacity-30 hover:grayscale-0 hover:opacity-100 transition-all cursor-pointer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrYdz-uEHr7JBAy59mMztBH9MGS7-okxH2YfFH-m3xv-pO0ovR9O9oFTn1lh9Ai11384HoJoViptEubkUII6bfu5t6HE0JXuCC-n6taaP4CWwSYwwhJLyZNGakjQRX8aGHJWlp5-dHUs8XuGvEMWbUCrzEKwVv7gJJY3InAU_YyArvI_xIOXobtAKGm_mlkzz-i2wBtxBZrZqrGDwJtiLgv4HiUi1MDwYmbOB8oX8RN6HsnqQ27R4k8K5sF-h8mCc5COFl67y-Nu6u"/>
+<img alt="Paypal" class="h-5 grayscale opacity-30 hover:grayscale-0 hover:opacity-100 transition-all cursor-pointer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD15tE7-uETqujtSaaiz5hdtUX8sp_9f9hALydrPU940kOJI5D4XkuhBmKAsAW3DaHhwFQmZmfv9bfmiPQGTAfINPpJOE3_DjjOzC5_u3BubZDVC37s79MS0iTggV7U6Qq1-Aoft5SBgv33ISI66jP2XpGMEbYrRvletECoNMdwS1X1ytscqgGmNDcPAbWE7a5BofLQoPA1AV0t8sUdHdqWHU3g9p53IqWmyRdQ5jYpjA4El3MwoIDR-ELSJgph-NMFv7l7uOo_fO_e"/>
+</div>
+</div>
+</div>
+</footer>
+</div>
+
+</body></html>
