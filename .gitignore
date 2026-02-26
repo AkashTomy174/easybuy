@@ -60,6 +60,7 @@ coverage.xml
 venv/
 ENV/
 env/
+myenv/
 
 # VS Code / editor configs
 .vscode/

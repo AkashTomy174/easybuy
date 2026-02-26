@@ -1,5 +1,6 @@
 # trunk-ignore-all(isort)
 from django.contrib import admin
+
 from .models import User,Banner,Category,SubCategory,Address,Notification
 
 

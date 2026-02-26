@@ -1,8 +1,10 @@
-# forms.py (create in core app)
-from django import forms
-from .models import Category
 
-class CategoryForm(forms.ModelForm):
+from django import forms
+from django.contrib.auth.forms import UserCreationForm
+from .models import User
+
+class CustomerRegisterForm(UserCreationForm):
     class Meta:
-        model = Category
-        fields = ['name', 'slug', 'image_url', 'description']
+        model = User
+        fields = ['username', 'email', 'phone_number', 'password1', 'password2']
+
