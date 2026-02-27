@@ -58,8 +58,8 @@
                 <h1 class="text-xl font-bold leading-tight hidden sm:block">EasyBuy</h1>
             </div>
             <nav class="hidden xl:flex items-center gap-6">
-                <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Shop</a>
-                <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Categories</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors" href="{% url 'all_new_products' %}">New Arrivals</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors" href="{% url 'all_categories' %}">Categories</a>
                 <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Deals</a>
             </nav>
         </div>
@@ -69,6 +69,7 @@
                 <input class="h-10 w-full rounded-2xl border border-stone-200 bg-stone-50 pl-10 pr-4 text-sm text-stone-900 placeholder:text-stone-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-stone-700 dark:bg-background-dark dark:text-white transition-all shadow-sm" placeholder="Search premium tech..." type="text"/>
             </div>
         </div>
+        
         <div class="flex items-center gap-4 lg:gap-6">
             <button class="flex items-center gap-2 text-sm font-medium text-stone-600 dark:text-stone-300 hover:text-primary transition-colors">
                 <span class="material-symbols-outlined">favorite</span>
@@ -81,25 +82,35 @@
                 </div>
                 <span class="hidden lg:inline">Cart</span>
             </button>
+            
             <div class="h-8 w-px bg-stone-200 dark:bg-stone-700 mx-2 hidden sm:block"></div>
-            <a href="{% url 'profile_settings' %}" class="flex items-center gap-3 rounded-full py-1 pr-2 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
-                <div class="h-9 w-9 overflow-hidden rounded-full bg-stone-200 ring-2 ring-white dark:ring-stone-700 flex items-center justify-center">
-                    {% if request.user.is_authenticated and request.user.profile_image %}
-                        <img src="{{ request.user.profile_image.url }}" class="h-full w-full object-cover">
-                    {% else %}
-                        <span class="material-symbols-outlined text-stone-500">account_circle</span>
-                    {% endif %}
+
+            {% if user.is_authenticated %}
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'profile_settings' %}" class="flex items-center gap-3 rounded-full py-1 pr-2 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
+                        <div class="h-9 w-9 overflow-hidden rounded-full bg-stone-200 ring-2 ring-white dark:ring-stone-700 flex items-center justify-center">
+                            {% if request.user.profile_image %}
+                                <img src="{{ request.user.profile_image.url }}" class="h-full w-full object-cover">
+                            {% else %}
+                                <span class="material-symbols-outlined text-stone-500">account_circle</span>
+                            {% endif %}
+                        </div>
+                        <span class="hidden lg:block text-sm font-medium text-stone-700 dark:text-stone-200">{{ request.user.username }}</span>
+                    </a>
+                    
+                    <form action="{% url 'logout' %}" method="post" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-stone-50 text-stone-600 hover:bg-accent-terracotta hover:text-white transition-all duration-300 text-xs font-black uppercase tracking-widest">
+                            <span class="material-symbols-outlined text-[18px]">power_settings_new</span>
+                            <span>Logout</span>
+                        </button>
+                    </form>
                 </div>
-                
-                <span class="hidden lg:block text-sm font-medium text-stone-700 dark:text-stone-200">{{ request.user.username|default:"Guest" }}</span>
-            </a>
-            <form action="{% url 'logout' %}" method="post" class="m-0">
-                {% csrf_token %}
-                <button type="submit" class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-stone-50 text-stone-600 hover:bg-accent-terracotta hover:text-white transition-all duration-300 text-xs font-black uppercase tracking-widest">
-                    <span class="material-symbols-outlined text-[18px]">power_settings_new</span>
-                    <span>Logout</span>
-                </button>
-            </form>
+            {% else %}
+                <a class="text-primary font-bold text-sm border-2 border-primary/20 px-5 py-2 rounded-2xl hover:bg-primary hover:text-white transition-all" href="{% url 'login' %}">
+                    Login In
+                </a>
+            {% endif %}
         </div>
     </header>
 
@@ -114,10 +125,9 @@
                 <h1 class="max-w-2xl text-5xl font-black text-white md:text-7xl leading-[1.1]">The Future of Tech is Here</h1>
                 <p class="mt-6 max-w-lg text-lg text-stone-200 leading-relaxed">Experience innovation at its finest. Discover our curated collection of high-end consumer electronics.</p>
                 <div class="mt-10 flex flex-wrap gap-4">
-                    <a href="{% url 'all_products' %}">
+                    <a href="{% url 'all_new_products' %}">
                         <button class="rounded-2xl bg-primary px-10 py-4 font-bold text-white transition-all hover:bg-primary-dark hover:scale-105 shadow-lg shadow-primary/20">Shop Now</button>
                     </a>
-                    <button class="rounded-2xl border border-white/30 bg-white/10 px-10 py-4 font-bold text-white backdrop-blur-md transition-all hover:bg-white/20">Learn More</button>
                 </div>
             </div>
         </section>
@@ -128,22 +138,20 @@
                     <h2 class="text-3xl font-black text-stone-900 dark:text-white">Shop by Category</h2>
                     <p class="mt-2 text-stone-500">Find exactly what you're looking for</p>
                 </div>
-                <a class="font-bold text-primary hover:underline transition-all" href="#">View All Categories</a>
+                <a class="font-bold text-primary hover:underline transition-all" href="{% url 'all_categories' %}">View All Categories</a>
             </div>
             <div class="grid grid-cols-2 gap-8 md:grid-cols-4">
                 {% for category in categories %}
-                <div class="group flex flex-col items-center gap-4 text-center cursor-pointer">
+                <a href="{%url 'category_products' category.id%}" class="group flex flex-col items-center gap-4 text-center cursor-pointer">
                     <div class="relative flex aspect-square w-full items-center justify-center rounded-3xl bg-white shadow-sm ring-1 ring-stone-100 transition-all group-hover:shadow-xl group-hover:ring-primary/20 overflow-hidden dark:bg-surface-dark">
                         {% if category.image %}
-                            <img alt="{{ category.name }}" 
-                                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                                src="{{ category.image.url }}"/>
+                            <img alt="{{ category.name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="{{ category.image.url }}"/>
                         {% else %}
                             <span class="material-symbols-outlined text-stone-300 text-5xl">category</span>
                         {% endif %}
                     </div>
                     <span class="text-lg font-bold text-stone-800 dark:text-stone-200">{{ category.name }}</span>
-                </div>
+                </a>
                 {% empty %}
                 <div class="col-span-full py-10 text-center">
                     <p class="text-stone-500 italic">No categories found.</p>
@@ -157,66 +165,55 @@
                 <div class="mb-12 flex items-end justify-between">
                     <div>
                         <h2 class="text-3xl font-black text-stone-900 dark:text-white">New Arrivals</h2>
-                        <p class="mt-2 text-stone-500">The latest tech just landed in our warehouse</p>
+                        <p class="mt-2 text-stone-500">The latest unique additions to our store</p>
                     </div>
-                    <a href="{% url 'all_products' %}">
-                        <button class="rounded-2xl border border-stone-200 bg-white px-6 py-2.5 text-sm font-bold shadow-sm transition-all hover:bg-stone-50 dark:border-stone-700 dark:bg-surface-dark">See All Products</button>
+                    <a href="{% url 'all_new_products' %}">
+                        <button class="rounded-2xl border border-stone-200 bg-white px-6 py-2.5 text-sm font-bold shadow-sm transition-all hover:bg-stone-50 dark:border-stone-700 dark:bg-surface-dark">See All New Products</button>
                     </a>    
                 </div>
                     
-                <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {% for pi in product_images %}
-                    <div class="group relative flex flex-col rounded-3xl border border-stone-100 bg-white p-4 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 dark:border-stone-800 dark:bg-surface-dark">
-                        
-                        <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800 mb-4">
-                            {% if pi.image %}
-                                <img src="{{ pi.image.url }}" 
-                                    alt="{{ pi.variant.product.name }}" 
-                                    class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110">
-                            {% else %}
-                                <div class="flex h-full w-full items-center justify-center bg-stone-100 dark:bg-stone-800">
-                                    <span class="material-symbols-outlined text-stone-400 text-5xl">image</span>
-                                </div>
-                            {% endif %}
-                            
-                            <button class="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all hover:bg-white hover:text-accent-terracotta dark:bg-black/50">
-                                <span class="material-symbols-outlined text-[20px]">favorite</span>
-                            </button>
-                        </div>
+                <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    {% for product in latest_products %}
+    <div class="group relative flex flex-col rounded-2xl border border-stone-100 bg-white p-2.5 shadow-sm transition-all hover:shadow-md dark:border-stone-800 dark:bg-surface-dark">
+        
+        <div class="relative aspect-square w-full overflow-hidden rounded-xl bg-stone-50 dark:bg-stone-800 mb-3">
+            
+            {% with product.variants.all.0 as variant %}
+                {% if variant and variant.images.all.0 %}
+                    <img src="{{ variant.images.all.0.image.url }}" 
+                        alt="{{ product.name }}" 
+                        class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105">
+                {% else %}
+                    <div class="flex h-full w-full items-center justify-center bg-stone-100 dark:bg-stone-800">
+                        <span class="material-symbols-outlined text-stone-300 text-3xl">image</span>
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            <button class="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all hover:bg-white hover:text-accent-terracotta dark:bg-black/50">
+                <span class="material-symbols-outlined text-[18px]">favorite</span>
+            </button>
+        </div>
 
-                        <div class="flex flex-1 flex-col px-2">
-                            <p class="text-xs font-medium text-stone-400 uppercase tracking-wide">{{ pi.variant.product.brand }}</p>
-                            <h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-1">
-                                {{ pi.variant.product.name }} 
-                                <span class="text-stone-400 text-sm font-normal">({{ pi.variant.sku_code }})</span>
-                            </h3>
-                            
-                            <div class="mt-4 flex items-center justify-between">
-                                <div class="flex flex-col">
-                                    <span class="text-xs text-stone-400 line-through">₹{{ pi.variant.mrp }}</span>
-                                    <span class="text-xl font-black text-stone-900 dark:text-white">₹{{ pi.variant.selling_price }}</span>
-                                </div>
-                                
-                                <button class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
-                                    <span class="material-symbols-outlined">add_shopping_cart</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="col-span-full py-10 text-center">
-                        <p class="text-stone-500 italic">No products available at the moment.</p>
-                    </div>
-                    {% endfor %}
-                    
-                </div>
+        <div class="flex flex-1 flex-col px-1 pb-2">
+            <p class="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-0.5">{{ product.brand }}</p>
+            <h3 class="text-sm font-bold text-stone-900 dark:text-white line-clamp-1 group-hover:text-primary transition-colors">
+                {{ product.name }}
+            </h3>
+            {% if variant.selling_price %}
+                <p class="mt-1 text-sm font-black text-primary">₹{{ variant.selling_price }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
             </div>
         </section>
 
         <section class="mx-auto max-w-7xl px-4 py-24 sm:px-12">
             <div class="relative overflow-hidden rounded-[40px] bg-primary px-8 py-20 text-center text-white md:px-24">
                 <div class="relative z-10">
-                    <h2 class="text-4xl font-black">Join the Tech Elite</h2>
+                    <h2 class="text-4xl font-black">Join the Easy Buy</h2>
                     <p class="mx-auto mt-4 max-w-xl text-lg text-stone-100/90 leading-relaxed">Subscribe to receive updates and exclusive deals.</p>
                     <form class="mx-auto mt-10 flex max-w-md flex-col gap-4 sm:flex-row">
                         <input class="h-14 w-full rounded-2xl border-none bg-white px-6 text-stone-900 placeholder:text-stone-400 focus:ring-2 focus:ring-accent-terracotta" placeholder="Enter your email" type="email"/>
@@ -240,8 +237,8 @@
                     <p class="text-sm text-stone-500">Premium electronics and high-end consumer goods. Quality guaranteed.</p>
                 </div>
             </div>
-            <div class="border-t border-stone-100 py-8 text-center">
-                <p class="text-xs text-stone-400">© 2026 EasyBuy Inc. All rights reserved.</p>
+            <div class="border-t border-stone-100 py-8 text-center text-xs text-stone-400">
+                © 2026 EasyBuy Inc. All rights reserved.
             </div>
         </div>
     </footer>

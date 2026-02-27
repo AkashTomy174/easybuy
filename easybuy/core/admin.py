@@ -13,8 +13,6 @@ class AddressInline(admin.StackedInline):
     model = Address
     extra = 0
 
-
-
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
 

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>New Arrivals | EasyBuy Premium</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2d5a27",
+                        "primary-dark": "#1e3d1a",
+                        "accent-terracotta": "#c05e46",
+                        "background-light": "#fdfaf6",
+                        "soft-gray": "#f3f4f1",
+                    },
+                    fontFamily: { "display": ["Inter", "sans-serif"] },
+                },
+            },
+        }
+    </script>
+    <style type="text/tailwindcss">
+        :root {
+            --primary-color: #2d5a27;
+            --cream-bg: #fdfaf6;
+        }
+        .product-card-shadow {
+            box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+
+<body class="font-display bg-[var(--cream-bg)] text-slate-800 antialiased">
+<div class="flex flex-col min-h-screen">
+    
+    <header class="flex h-20 items-center justify-between border-b border-stone-200 bg-white/80 backdrop-blur-md px-4 lg:px-12 z-50 sticky top-0 shadow-sm">
+        <div class="flex items-center gap-8">
+            <a href="{% url 'home' %}" class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-white">
+                    <span class="material-symbols-outlined">shopping_bag</span>
+                </div>
+                <h1 class="text-xl font-bold leading-tight hidden sm:block">EasyBuy</h1>
+            </a>
+            <nav class="hidden xl:flex items-center gap-6">
+                <a class="text-sm font-medium text-primary" href="{% url 'all_new_products' %}">New Arrivals</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors" href="{% url 'all_categories' %}">Categories</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Deals</a>
+            </nav>
+        </div>
+
+        <div class="flex-1 max-w-xl mx-8 hidden md:block">
+            <div class="relative group">
+                <span class="material-symbols-outlined absolute left-3 top-2.5 text-stone-400 text-[20px] group-focus-within:text-primary transition-colors">search</span>
+                <input class="h-10 w-full rounded-2xl border border-stone-200 bg-stone-50 pl-10 pr-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm outline-none" placeholder="Search latest tech..." type="text"/>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4 lg:gap-6">
+            <button class="flex items-center gap-2 text-sm font-medium text-stone-600 dark:text-stone-300 hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">favorite</span>
+                <span class="hidden lg:inline">Wishlist</span>
+            </button>
+            <button class="flex items-center gap-2 text-sm font-medium text-stone-600 dark:text-stone-300 hover:text-primary transition-colors relative">
+                <div class="relative">
+                    <span class="material-symbols-outlined text-[24px]">shopping_cart</span>
+                    <span class="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[10px] font-bold text-white ring-2 ring-white">0</span>
+                </div>
+                <span class="hidden lg:inline">Cart</span>
+            </button>
+            <div class="h-8 w-px bg-stone-200 mx-2 hidden sm:block"></div>
+            <a href="{% url 'profile_settings' %}" class="h-9 w-9 overflow-hidden rounded-full bg-stone-200 ring-2 ring-white shadow-sm flex items-center justify-center">
+                {% if request.user.is_authenticated and request.user.profile_image %}
+                    <img src="{{ request.user.profile_image.url }}" class="h-full w-full object-cover">
+                {% else %}
+                    <span class="material-symbols-outlined text-stone-500">account_circle</span>
+                {% endif %}
+            </a>
+                    <form action="{% url 'logout' %}" method="post" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="p-2 rounded-xl text-stone-400 hover:text-accent-terracotta transition-colors">
+                            <span class="material-symbols-outlined text-[20px]">logout</span>
+                        </button>
+                    </form>
+        </div>
+    </header>
+
+    <main class="flex-1">
+        <section class="bg-white border-b border-stone-100 py-16">
+            <div class="mx-auto max-w-7xl px-4 lg:px-12 text-center">
+                <span class="text-xs font-black uppercase tracking-[0.3em] text-accent-terracotta mb-4 block">Just In</span>
+                <h1 class="text-5xl font-black text-stone-900 md:text-6xl tracking-tight">New Arrivals</h1>
+                <p class="mt-4 mx-auto max-w-xl text-stone-500 text-lg">Fresh innovations and style. Be the first to own the latest in premium tech.</p>
+            </div>
+        </section>
+
+        <section class="mx-auto max-w-7xl px-4 py-20 sm:px-12">
+            
+            <div class="flex justify-between items-center mb-12">
+                <div class="text-sm font-bold text-stone-400 uppercase tracking-widest">
+                    {{ page_obj.paginator.count }} items discovered
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {% for pi in page_obj %}
+                <div class="group relative flex flex-col rounded-[2.5rem] border border-stone-100 bg-white p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2">
+                    
+                    <div class="relative aspect-square w-full overflow-hidden rounded-[2rem] bg-stone-50 mb-5">
+                        {% if pi.image %}
+                            <img src="{{ pi.image.url }}" alt="{{ pi.variant.product.name }}" 
+                                 class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
+                        {% else %}
+                            <div class="flex h-full w-full items-center justify-center bg-stone-100">
+                                <span class="material-symbols-outlined text-stone-300 text-6xl">image</span>
+                            </div>
+                        {% endif %}
+                        <div class="absolute top-4 left-4">
+                            <span class="bg-primary text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-tighter shadow-lg">New</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-1 flex-col px-2">
+                        <p class="text-[10px] font-black text-primary uppercase tracking-widest mb-1">{{ pi.variant.product.brand }}</p>
+                        <h3 class="font-bold text-stone-900 text-lg leading-tight line-clamp-2 min-h-[3rem] group-hover:text-primary transition-colors">
+                            {{ pi.variant.product.name }}
+                        </h3>
+                        
+                        <div class="mt-6 flex items-end justify-between border-t border-stone-50 pt-4">
+                            <div class="flex flex-col">
+                                {% if pi.variant.mrp > pi.variant.selling_price %}
+                                    <span class="text-xs text-stone-400 line-through font-medium">₹{{ pi.variant.mrp }}</span>
+                                {% endif %}
+                                <span class="text-2xl font-black text-stone-900">₹{{ pi.variant.selling_price }}</span>
+                            </div>
+                            
+                            <button class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/30 hover:bg-primary-dark transition-all">
+                                <span class="material-symbols-outlined">shopping_cart</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-full py-24 text-center">
+                    <span class="material-symbols-outlined text-7xl text-stone-200">auto_awesome</span>
+                    <p class="text-stone-400 mt-4 text-lg font-medium">No new arrivals found. Check back later!</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if page_obj.has_other_pages %}
+            <div class="mt-24 flex justify-center">
+                <div class="flex items-center gap-2 p-2 bg-white rounded-[2rem] border border-stone-100 shadow-sm">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" class="h-12 w-12 flex items-center justify-center rounded-2xl hover:bg-stone-50">
+                        <span class="material-symbols-outlined">chevron_left</span>
+                    </a>
+                    {% endif %}
+
+                    <span class="px-6 font-bold text-stone-600">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="h-12 w-12 flex items-center justify-center rounded-2xl hover:bg-stone-50">
+                        <span class="material-symbols-outlined">chevron_right</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </section>
+    </main>
+
+    <footer class="border-t border-stone-200 bg-white py-12 text-center">
+        <p class="text-[10px] text-stone-300 font-bold uppercase tracking-[0.1em]">© 2026 EasyBuy Inc. Designed for Excellence.</p>
+    </footer>
+</div>
+</body>
+</html>

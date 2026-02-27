@@ -59,18 +59,17 @@
                     <p class="text-stone-500 text-sm">Create your account to start shopping.</p>
                 </div>
 
-                <form method="POST" class="p-10 pt-0 space-y-5">
+                <form method="POST" action="{% url 'register' %}" class="p-10 pt-0 space-y-5">
                     {% csrf_token %}
 
-                    {% if form.errors %}
-                    <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-xs">
-                        <p class="font-bold mb-1">Please correct the following:</p>
-                        <ul class="list-disc pl-4">
-                            {% for field in form %}
-                                {% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}
-                            {% endfor %}
-                            {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
-                        </ul>
+                    {% if messages %}
+                    <div class="space-y-2">
+                        {% for message in messages %}
+                        <div class="{% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-600{% else %}bg-green-50 border-green-200 text-green-600{% endif %} border px-4 py-3 rounded-2xl text-xs flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm">info</span>
+                            <p class="font-medium">{{ message }}</p>
+                        </div>
+                        {% endfor %}
                     </div>
                     {% endif %}
 
@@ -79,7 +78,7 @@
                             <label class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Username</label>
                             <div class="relative">
                                 <span class="material-symbols-outlined absolute left-4 top-3 text-stone-400">person</span>
-                                <input name="username" class="w-full pl-12 pr-4 py-3.5 bg-stone-50 border-stone-200 rounded-2xl text-sm focus:ring-primary focus:border-primary border transition-all outline-none" placeholder="johndoe123" type="text" value="{{ form.username.value|default:'' }}" required/>
+                                <input name="username" class="w-full pl-12 pr-4 py-3.5 bg-stone-50 border-stone-200 rounded-2xl text-sm focus:ring-primary focus:border-primary border transition-all outline-none" placeholder="johndoe123" type="text" value="{{ request.POST.username }}" required/>
                             </div>
                         </div>
 
@@ -87,7 +86,7 @@
                             <label class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Email Address</label>
                             <div class="relative">
                                 <span class="material-symbols-outlined absolute left-4 top-3 text-stone-400">mail</span>
-                                <input name="email" class="w-full pl-12 pr-4 py-3.5 bg-stone-50 border-stone-200 rounded-2xl text-sm focus:ring-primary focus:border-primary border transition-all outline-none" placeholder="name@email.com" type="email" value="{{ form.email.value|default:'' }}" required/>
+                                <input name="email" class="w-full pl-12 pr-4 py-3.5 bg-stone-50 border-stone-200 rounded-2xl text-sm focus:ring-primary focus:border-primary border transition-all outline-none" placeholder="name@email.com" type="email" value="{{ request.POST.email }}" required/>
                             </div>
                         </div>
 
@@ -95,7 +94,7 @@
                             <label class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Phone Number</label>
                             <div class="relative">
                                 <span class="material-symbols-outlined absolute left-4 top-3 text-stone-400">call</span>
-                                <input name="phone_number" class="w-full pl-12 pr-4 py-3.5 bg-stone-50 border-stone-200 rounded-2xl text-sm focus:ring-primary focus:border-primary border transition-all outline-none" placeholder="+1 (555) 000-0000" type="tel" value="{{ form.phone_number.value|default:'' }}" required/>
+                                <input name="phone_number" class="w-full pl-12 pr-4 py-3.5 bg-stone-50 border-stone-200 rounded-2xl text-sm focus:ring-primary focus:border-primary border transition-all outline-none" placeholder="+1 (555) 000-0000" type="tel" value="{{ request.POST.phone_number }}"/>
                             </div>
                         </div>
 
@@ -137,7 +136,7 @@
                     <a href="#" class="hover:text-primary transition-colors">Terms</a>
                     <a href="#" class="hover:text-primary transition-colors">Contact</a>
                 </div>
-                <p class="text-[10px] text-stone-400">© 2024 TechMarket Global. Premium E-Commerce.</p>
+                <p class="text-[10px] text-stone-400">© 2026 TechMarket Global. Premium E-Commerce.</p>
             </div>
         </div>
     </main>

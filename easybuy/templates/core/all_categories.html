@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>EasyBuy | All Categories</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2d5a27",
+                        "primary-dark": "#1e3d1a",
+                        "accent-terracotta": "#c05e46",
+                        "background-light": "#fdfaf6",
+                        "background-dark": "#1a1c19",
+                        "surface-dark": "#232622",
+                        "surface-light": "#ffffff",
+                        "soft-gray": "#f3f4f1",
+                    },
+                    fontFamily: { "display": ["Inter", "sans-serif"] },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-display bg-[var(--cream-bg)] dark:bg-background-dark text-slate-800 dark:text-slate-100 antialiased">
+<div class="flex flex-col min-h-screen">
+    
+    <header class="flex h-20 items-center justify-between border-b border-stone-200 dark:border-stone-800 bg-white/80 backdrop-blur-md dark:bg-surface-dark/80 px-4 lg:px-12 z-50 sticky top-0 shadow-sm">
+        <div class="flex items-center gap-8">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'home' %}" class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-white">
+                        <span class="material-symbols-outlined">shopping_bag</span>
+                    </div>
+                    <h1 class="text-xl font-bold leading-tight hidden sm:block text-stone-900 dark:text-white">EasyBuy</h1>
+                </a>
+            </div>
+            <nav class="hidden xl:flex items-center gap-6">
+                <a class="text-sm font-medium hover:text-primary transition-colors" href="{% url 'all_new_products' %}">New Arrivals</a>
+                <a class="text-sm font-medium text-primary" href="#">Categories</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Deals</a>
+            </nav>
+        </div>
+        
+        <div class="flex-1 max-w-xl mx-8 hidden md:block">
+            <div class="relative group">
+                <span class="material-symbols-outlined absolute left-3 top-2.5 text-stone-400 text-[20px] group-focus-within:text-primary transition-colors">search</span>
+                <input class="h-10 w-full rounded-2xl border border-stone-200 bg-stone-50 pl-10 pr-4 text-sm text-stone-900 placeholder:text-stone-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-stone-700 dark:bg-background-dark transition-all" placeholder="Search categories..." type="text"/>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4 lg:gap-6">
+            <button class="flex items-center gap-2 text-sm font-medium text-stone-600 dark:text-stone-300 hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">favorite</span>
+                <span class="hidden lg:inline">Wishlist</span>
+            </button>
+            <button class="flex items-center gap-2 text-sm font-medium text-stone-600 dark:text-stone-300 hover:text-primary transition-colors relative">
+                <div class="relative">
+                    <span class="material-symbols-outlined text-[24px]">shopping_cart</span>
+                    <span class="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[10px] font-bold text-white ring-2 ring-white">0</span>
+                </div>
+                <span class="hidden lg:inline">Cart</span>
+            </button>
+            
+            <div class="h-8 w-px bg-stone-200 dark:bg-stone-700 mx-2 hidden sm:block"></div>
+
+            {% if user.is_authenticated %}
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'profile_settings' %}" class="flex items-center gap-2 rounded-full py-1 pr-2 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
+                        <div class="h-9 w-9 overflow-hidden rounded-full bg-stone-200 ring-2 ring-white flex items-center justify-center">
+                            {% if request.user.profile_image %}
+                                <img src="{{ request.user.profile_image.url }}" class="h-full w-full object-cover">
+                            {% else %}
+                                <span class="material-symbols-outlined text-stone-500">account_circle</span>
+                            {% endif %}
+                        </div>
+                    </a>
+                    <form action="{% url 'logout' %}" method="post" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="p-2 rounded-xl text-stone-400 hover:text-accent-terracotta transition-colors">
+                            <span class="material-symbols-outlined text-[20px]">logout</span>
+                        </button>
+                    </form>
+                </div>
+            {% else %}
+                <a class="text-primary font-bold text-sm border-2 border-primary/20 px-5 py-2 rounded-2xl hover:bg-primary hover:text-white transition-all" href="{% url 'login' %}">Login</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <main class="flex-1 mx-auto max-w-7xl w-full px-4 py-16 sm:px-12">
+        <div class="mb-12">
+            <h2 class="text-4xl font-black text-stone-900 dark:text-white">Explore Our Categories</h2>
+            <p class="mt-2 text-stone-500">Find exactly what you're looking for across our entire collection.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-8 md:grid-cols-4">
+            {% for cat in all_categories %}
+            <div class="group flex flex-col items-center gap-4 text-center cursor-pointer">
+                <div class="relative flex aspect-square w-full items-center justify-center rounded-[2.5rem] bg-white shadow-sm ring-1 ring-stone-100 transition-all group-hover:shadow-2xl group-hover:ring-primary/20 overflow-hidden dark:bg-surface-dark">
+                    {% if cat.image %}
+                        <img alt="{{ cat.name }}" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" src="{{ cat.image.url }}"/>
+                    {% else %}
+                        <div class="flex flex-col items-center text-stone-300">
+                            <span class="material-symbols-outlined text-6xl">category</span>
+                        </div>
+                    {% endif %}
+                    <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="text-xl font-bold text-stone-800 dark:text-stone-200 group-hover:text-primary transition-colors">{{ cat.name }}</span>
+                    <span class="text-xs font-bold text-stone-400 uppercase tracking-widest">Shop Collection</span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full py-20 text-center">
+                <p class="text-stone-500 italic">No categories found in the database.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <footer class="border-t border-stone-200 bg-white pt-12 pb-8 dark:border-stone-800 dark:bg-surface-dark text-center">
+        <p class="text-xs text-stone-400 font-medium">© 2026 EasyBuy Inc. All rights reserved.</p>
+    </footer>
+</div>
+</body>
+</html>

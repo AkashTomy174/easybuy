@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import SellerProfile, Product, ProductVariant, ProductImage
+from .models import SellerProfile, Product, ProductVariant, ProductImage,Attribute,AttributeOption,VariantAttributeBridge
 
 @admin.register(SellerProfile)
 class SellerProfileAdmin(admin.ModelAdmin):
@@ -30,3 +30,6 @@ class ProductVariantAdmin(admin.ModelAdmin):
     search_fields = ("sku_code", "product__name")
 
 
+admin.site.register(Attribute)
+admin.site.register(AttributeOption)
+admin.site.register(VariantAttributeBridge)

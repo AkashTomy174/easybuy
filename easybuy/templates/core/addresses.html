@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Address Book | EasyBuy</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2d5a27",
+                        "primary-dark": "#1e3d1a",
+                        "accent-terracotta": "#c05e46",
+                        "background-light": "#fdfaf6",
+                        "soft-gray": "#f3f4f1",
+                    },
+                    fontFamily: { "display": ["Inter", "sans-serif"] },
+                },
+            },
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer base {
+            body { @apply font-display bg-[#fdfaf6] text-stone-800 antialiased; }
+        }
+        .nav-link-active { @apply bg-primary text-white shadow-lg shadow-primary/20; }
+        .nav-link-inactive { @apply text-stone-500 hover:bg-stone-100 hover:text-stone-900; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <header class="flex h-20 items-center justify-between border-b border-stone-200 bg-white/80 backdrop-blur-md px-4 lg:px-12 z-50 sticky top-0 shadow-sm">
+        <div class="flex items-center gap-8">
+            <a href="{% url 'home' %}" class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-white">
+                    <span class="material-symbols-outlined">shopping_bag</span>
+                </div>
+                <h1 class="text-xl font-bold leading-tight hidden sm:block">EasyBuy</h1>
+            </a>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="text-right hidden sm:block">
+                <p class="text-xs font-black text-stone-900 uppercase tracking-tighter">{{ user.username }}</p>
+                <p class="text-[10px] text-stone-400 font-bold uppercase">Customer</p>
+            </div>
+            <div class="h-10 w-10 rounded-2xl overflow-hidden bg-stone-100 ring-2 ring-white shadow-sm flex items-center justify-center">
+                {% if user.profile_image %}
+                    <img src="{{ user.profile_image.url }}" class="h-full w-full object-cover">
+                {% else %}
+                    <span class="material-symbols-outlined text-stone-400">person</span>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto w-full px-4 lg:px-12 py-12">
+        
+        {% if messages %}
+        <div class="mb-8 space-y-2">
+            {% for message in messages %}
+            <div class="p-4 rounded-2xl bg-white border border-stone-100 shadow-sm flex items-center gap-3 text-primary">
+                <span class="material-symbols-outlined">check_circle</span>
+                <p class="text-sm font-bold">{{ message }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="flex flex-col lg:flex-row gap-12">
+
+            <aside class="w-full lg:w-72 flex-shrink-0">
+                <div class="bg-white rounded-[2.5rem] border border-stone-100 p-4 shadow-xl shadow-stone-200/40 sticky top-28">
+                    <div class="px-4 py-3 mb-2">
+                        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">Settings</span>
+                    </div>
+                    <nav class="space-y-2">
+                        <a href="{% url 'profile_settings' %}" class="nav-link-inactive flex items-center gap-3 px-5 py-4 rounded-3xl transition-all">
+                            <span class="material-symbols-outlined text-[20px]">person</span>
+                            <span class="text-sm font-bold">Personal Info</span>
+                        </a>
+                        <a href="{% url 'manage_addresses' %}" class="nav-link-active flex items-center gap-3 px-5 py-4 rounded-3xl transition-all">
+                            <span class="material-symbols-outlined text-[20px]">location_on</span>
+                            <span class="text-sm font-bold">Addresses</span>
+                        </a>
+                        <a href="#" class="nav-link-inactive flex items-center gap-3 px-5 py-4 rounded-3xl transition-all">
+                            <span class="material-symbols-outlined text-[20px]">package_2</span>
+                            <span class="text-sm font-bold">My Orders</span>
+                        </a>
+                    </nav>
+                    <div class="mt-8 pt-4 border-t border-stone-50">
+                        <form action="{% url 'logout' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="flex items-center gap-3 px-5 py-4 w-full text-stone-400 hover:text-accent-terracotta transition-colors rounded-3xl">
+                                <span class="material-symbols-outlined text-[20px]">logout</span>
+                                <span class="text-sm font-bold">Sign Out</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="flex-grow space-y-8">
+                
+                <div class="flex items-center justify-between px-2">
+                    <div>
+                        <h2 class="text-3xl font-black text-stone-900">Your Addresses</h2>
+                        <p class="text-stone-400 text-sm font-medium mt-1">Manage your delivery locations</p>
+                    </div>
+                    <button onclick="document.getElementById('addAddressSection').classList.toggle('hidden')" class="bg-stone-900 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-primary transition-all">
+                        Add New <span class="material-symbols-outlined text-sm">add</span>
+                    </button>
+                </div>
+
+                <section id="addAddressSection" class="hidden bg-white rounded-[2.5rem] border border-stone-100 p-8 shadow-xl">
+                    <h3 class="text-xl font-black mb-6">Add a New Address</h3>
+                    <form method="POST" action="{% url 'user_address' %}" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% csrf_token %}
+                        <input type="text" name="fullname" required placeholder="Full Name" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                        <input type="text" name="phone" required placeholder="Phone Number" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                        <input type="text" name="house_info" required placeholder="House / Building No." class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                        <input type="text" name="locality" required placeholder="Locality / Street" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                        <input type="text" name="city" required placeholder="City" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                        <input type="text" name="state" required placeholder="State" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                        <input type="text" name="pincode" required placeholder="Pincode" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                        <select name="address_type" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                            <option value="Home">Home</option>
+                            <option value="Work">Work</option>
+                        </select>
+                        <div class="col-span-full flex items-center gap-2 px-1">
+                            <input type="checkbox" name="is_default" class="rounded text-primary focus:ring-primary">
+                            <label class="text-xs font-bold text-stone-500">Set as primary address</label>
+                        </div>
+                        <button type="submit" class="col-span-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-primary-dark transition-all">Save New Address</button>
+                    </form>
+                </section>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% for addr in addresses %}
+                    <div class="bg-white rounded-[2rem] border-2 {% if addr.is_default %}border-primary shadow-lg shadow-primary/5{% else %}border-stone-100{% endif %} p-8 relative">
+                        
+                        {% if addr.is_default %}
+                        <span class="absolute top-6 right-6 text-[10px] font-black uppercase tracking-widest bg-primary text-white px-3 py-1.5 rounded-xl">Default</span>
+                        {% endif %}
+
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-12 h-12 bg-stone-50 rounded-2xl flex items-center justify-center text-stone-400">
+                                <span class="material-symbols-outlined">{% if addr.address_type == 'Home' %}home{% else %}work{% endif %}</span>
+                            </div>
+                            <h4 class="font-black text-stone-900 text-lg">{{ addr.full_name }}</h4>
+                        </div>
+                        
+                        <p class="text-sm text-stone-500 font-medium leading-relaxed mb-8">
+                            {{ addr.house_info }}, {{ addr.locality }}<br/>
+                            {{ addr.city }}, {{ addr.state }} - {{ addr.pincode }}
+                        </p>
+
+                        <div class="flex gap-4 border-t border-stone-50 pt-6">
+                            <button onclick="toggleEdit('{{ addr.id }}')" class="text-xs font-black uppercase tracking-widest text-primary hover:underline">Edit</button>
+                            <a href="{% url 'delete_address' addr.id %}" onclick="return confirm('Delete this address?')" class="text-xs font-black uppercase tracking-widest text-red-400 hover:underline">Remove</a>
+                        </div>
+
+                        <div id="edit-modal-{{ addr.id }}" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+                            <div class="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl">
+                                <div class="bg-stone-900 p-6 text-white flex justify-between items-center">
+                                    <h4 class="font-black uppercase tracking-widest text-sm">Edit Address</h4>
+                                    <button onclick="toggleEdit('{{ addr.id }}')" class="material-symbols-outlined">close</button>
+                                </div>
+                                <form method="POST" action="{% url 'edit_address' addr.id %}" class="p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {% csrf_token %}
+                                    <input type="text" name="fullname" value="{{ addr.full_name }}" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                                    <input type="text" name="phone" value="{{ addr.phone_number }}" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                                    <input type="text" name="house_info" value="{{ addr.house_info }}" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                                    <input type="text" name="locality" value="{{ addr.locality }}" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                                    <input type="text" name="city" value="{{ addr.city }}" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                                    <input type="text" name="state" value="{{ addr.state }}" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                                    <input type="text" name="pincode" value="{{ addr.pincode }}" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                                    <select name="address_type" class="rounded-xl border-stone-100 bg-stone-50 p-4 text-sm font-bold">
+                                        <option value="Home" {% if addr.address_type == 'Home' %}selected{% endif %}>Home</option>
+                                        <option value="Work" {% if addr.address_type == 'Work' %}selected{% endif %}>Work</option>
+                                    </select>
+                                    <div class="col-span-full flex items-center gap-2 py-2">
+                                        <input type="checkbox" name="is_default" {% if addr.is_default %}checked{% endif %} class="rounded text-primary">
+                                        <label class="text-xs font-bold text-stone-500">Default Address</label>
+                                    </div>
+                                    <button type="submit" class="col-span-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest">Update Address</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-span-full py-16 text-center bg-stone-50 rounded-[2rem] border-2 border-dashed border-stone-200">
+                        <span class="material-symbols-outlined text-stone-300 text-5xl mb-2">location_off</span>
+                        <p class="text-stone-400 font-bold italic">Your address book is empty.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="mt-auto py-12 border-t border-stone-200 text-center">
+        <p class="text-[10px] text-stone-300 font-bold uppercase tracking-widest">© 2026 EasyBuy Commerce.</p>
+    </footer>
+
+    <script>
+        function toggleEdit(id) {
+            const modal = document.getElementById('edit-modal-' + id);
+            modal.classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ categories.name }} | EasyBuy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-900 antialiased">
+
+    <header class="sticky top-0 z-50 w-full border-b border-stone-200 bg-white/80 backdrop-blur-md">
+        <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-12">
+            <a href="/" class="flex items-center gap-2">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-green-700 text-white">
+                    <span class="material-symbols-outlined">local_mall</span>
+                </div>
+                <span class="text-xl font-black tracking-tight">EasyBuy</span>
+            </a>
+            
+            <div class="flex items-center gap-6">
+                <span class="material-symbols-outlined text-stone-600">search</span>
+                <div class="relative text-stone-600">
+                    <span class="material-symbols-outlined">shopping_cart</span>
+                    <span class="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-green-700 text-[10px] text-white font-bold">0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-12 sm:px-12">
+        <div class="flex flex-col md:flex-row gap-12">
+            
+            <aside class="w-full md:w-64 flex-shrink-0">
+                <div class="sticky top-32">
+                    <h2 class="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-6 px-4">Subcategories</h2>
+                    <div class="flex flex-col gap-1">
+                        {% for sub in subcategory %}
+                        <a href="{% url 'subcategory_products' sub.id %}" 
+                           class="px-4 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-between
+                           {% if active_sub == sub.id %} 
+                                bg-green-700 text-white shadow-xl shadow-green-700/20 
+                           {% elif not active_sub and forloop.first %} 
+                                bg-green-700 text-white shadow-xl shadow-green-700/20 
+                           {% else %} 
+                                text-stone-600 hover:bg-stone-100 
+                           {% endif %}">
+                            <span>{{ sub.name }}</span>
+                            <span class="material-symbols-outlined text-xs">chevron_right</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </aside>
+
+            <section class="flex-1">
+                
+                <div class="mb-10 px-2">
+                    <h1 class="text-4xl font-black text-stone-900 tracking-tight">
+                        {% if active_sub %}
+                            {% for sub in subcategory %}
+                                {% if sub.id == active_sub %}{{ sub.name }}{% endif %}
+                            {% endfor %}
+                        {% else %}
+                            {{ subcategory.first.name }}
+                        {% endif %}
+                    </h1>
+                    <p class="text-stone-500 mt-2">Explore items in this collection.</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {% for p in product %}
+                    <div class="group relative flex flex-col rounded-[2.5rem] border border-stone-100 bg-white p-4 transition-all hover:shadow-2xl hover:shadow-stone-200/50">
+                        
+                        <div class="relative aspect-square overflow-hidden rounded-[2rem] bg-stone-50 mb-5">
+                            {% with p.variants.first as v %}
+                                {% if v %}
+                                    {% for img in v.images.all %}
+                                        {% if img.is_primary %}
+                                            <img src="{{ img.image.url }}" alt="{{ p.name }}" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110">
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="flex h-full w-full items-center justify-center bg-stone-100 text-stone-300">
+                                        <span class="material-symbols-outlined text-5xl">image_not_supported</span>
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+
+                        <div class="px-2 flex flex-col flex-1">
+                            <p class="text-[10px] font-black uppercase text-green-700 tracking-widest mb-1">{{ p.brand|default:"EasyBuy" }}</p>
+                            <h3 class="font-bold text-stone-900 text-lg leading-tight line-clamp-2 min-h-[3rem]">
+                                {{ p.name }}
+                            </h3>
+                            
+                            <div class="mt-6 flex items-end justify-between border-t border-stone-50 pt-4">
+                                {% with p.variants.first as v %}
+                                    <div class="flex flex-col">
+                                        {% if v %}
+                                            <span class="text-2xl font-black text-stone-900">₹{{ v.selling_price }}</span>
+                                            {% if v.mrp > v.selling_price %}
+                                                <span class="text-xs font-medium text-stone-400 line-through">₹{{ v.mrp }}</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-sm font-bold text-stone-400 italic">Coming Soon</span>
+                                        {% endif %}
+                                    </div>
+                                {% endwith %}
+                                
+                                <button class="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-700 text-white shadow-lg shadow-green-700/30 hover:bg-green-800 transition-all">
+                                    <span class="material-symbols-outlined">add</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-span-full py-24 text-center">
+                        <span class="material-symbols-outlined text-4xl text-stone-200 mb-4">inventory_2</span>
+                        <p class="text-stone-400 font-medium italic">No products available in this section.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="mt-20 border-t border-stone-200 bg-white py-12">
+        <div class="mx-auto max-w-7xl px-4 text-center">
+            <p class="text-xs font-black text-stone-300 uppercase tracking-widest">© 2026 EasyBuy Marketplace</p>
+        </div>
+    </footer>
+
+</body>
+</html>
