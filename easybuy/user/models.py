@@ -67,6 +67,7 @@ class ReturnRequest(models.Model):
     reason = models.TextField()
     status = models.CharField(max_length=20, default="PENDING")
     approved_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     
 class Shipment(models.Model):
