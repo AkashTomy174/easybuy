@@ -1,21 +1,56 @@
-<!-- add_category.html - CORRECTED -->
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Add Category</title>
-</head>
-<body>
-    <h2>Add Category</h2>
+{% extends 'core/core_base.html' %}
+{% block title %}Add Category | EasyBuy{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto w-full px-4 py-12">
     
-    <form method="POST" enctype="multipart/form-data" action="{% url 'add_category' %}">
-        {% csrf_token %}
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-3xl border border-stone-200 dark:border-stone-700 shadow-sm overflow-hidden">
+        <div class="bg-primary px-8 py-6">
+            <h2 class="text-2xl font-black text-white">Add New Category</h2>
+            <p class="text-white/70 text-sm mt-1">Create a new product category</p>
+        </div>
         
-        <input type="text" name="name" placeholder="Name" required><br><br>
-        <input type="text" name="slug" placeholder="Slug" required><br><br>
-        <input type="file" name="image_url" accept="image/*"><br><br>
-        <textarea name="des" placeholder="Description"></textarea><br><br>
-        
-        <button type="submit">Submit</button>
-    </form>
-</body>
-</html>
+        <form method="POST" enctype="multipart/form-data" action="{% url 'add_category' %}" class="p-8 space-y-6">
+            {% csrf_token %}
+            
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase text-stone-400 tracking-widest ml-1">Category Name</label>
+                <input type="text" name="name" placeholder="Enter category name" required
+                       class="w-full rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-4 text-sm font-bold focus:ring-2 focus:ring-primary focus:border-primary">
+            </div>
+            
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase text-stone-400 tracking-widest ml-1">Slug</label>
+                <input type="text" name="slug" placeholder="category-slug" required
+                       class="w-full rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-4 text-sm font-bold focus:ring-2 focus:ring-primary focus:border-primary">
+            </div>
+            
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase text-stone-400 tracking-widest ml-1">Category Image</label>
+                <label class="flex flex-col items-center justify-center w-full h-32 rounded-2xl border-2 border-dashed border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 cursor-pointer hover:border-primary transition-colors">
+                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                        <span class="material-symbols-outlined text-3xl text-stone-300 mb-2">cloud_upload</span>
+                        <p class="text-sm text-stone-400">Click to upload image</p>
+                    </div>
+                    <input type="file" name="image_url" accept="image/*" class="hidden">
+                </label>
+            </div>
+            
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase text-stone-400 tracking-widest ml-1">Description</label>
+                <textarea name="des" placeholder="Enter category description" rows="4"
+                          class="w-full rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-4 text-sm font-bold focus:ring-2 focus:ring-primary focus:border-primary resize-none"></textarea>
+            </div>
+            
+            <div class="flex gap-4 pt-4">
+                <a href="{% url 'all_categories' %}" class="flex-1 py-4 rounded-2xl border-2 border-stone-200 dark:border-stone-700 font-black uppercase tracking-widest text-center text-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit" class="flex-1 bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20">
+                    Add Category
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

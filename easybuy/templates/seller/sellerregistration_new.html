@@ -52,7 +52,7 @@
         </div>
         <div class="flex items-center gap-6">
             <a class="text-sm font-medium text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Support</a>
-            <a class="text-primary font-bold text-sm border-2 border-primary/20 px-5 py-2 rounded-2xl hover:bg-primary hover:text-white transition-all" href="#">Login</a>
+            <a class="text-primary font-bold text-sm border-2 border-primary/20 px-5 py-2 rounded-2xl hover:bg-primary hover:text-white transition-all" href="{% url 'all_login' %}">Login</a>
         </div>
     </header>
 
@@ -152,7 +152,7 @@
                         </div>
                     </div>
 
-                    <!-- Document Upload -->
+                    <!-- Document Upload - Fixed -->
                     <div>
                         <h3 class="text-sm font-bold text-stone-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                             <span class="material-symbols-outlined text-primary">upload_file</span>
@@ -160,13 +160,13 @@
                         </h3>
                         <div class="space-y-1">
                             <label class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Upload Document *</label>
-                            <div class="border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer" onclick="document.getElementById('doc-input').click()">
+                            <label class="border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
                                 <span class="material-symbols-outlined text-4xl text-stone-300 mb-2">cloud_upload</span>
                                 <p class="text-sm text-stone-500">Click to upload or drag and drop</p>
                                 <p class="text-xs text-stone-400 mt-1">PDF, JPG, PNG, DOC (Max size: 5MB)</p>
-                                <input type="file" id="doc-input" name="doc" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" onchange="updateFileName(this)"/>
-                            </div>
-                            <p id="file-name" class="text-sm text-primary font-medium mt-2"></p>
+                                <input type="file" name="doc" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="hidden" id="doc-input" onchange="document.getElementById('file-chosen').textContent = this.files[0].name"/>
+                            </label>
+                            <p id="file-chosen" class="text-sm text-primary font-medium mt-2"></p>
                         </div>
                     </div>
 

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>{% block title %}EasyBuy | Premium E-Commerce{% endblock %}</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2d5a27",
+                        "primary-dark": "#1e3d1a",
+                        "primary-light": "#3d7a35",
+                        "accent-terracotta": "#c05e46",
+                        "accent-blue": "#0ea5e9",
+                        "background-light": "#fdfaf6",
+                        "background-dark": "#1a1c19",
+                        "surface-dark": "#232622",
+                        "surface-light": "#ffffff",
+                        "soft-gray": "#f3f4f1",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "0.75rem",
+                        "xl": "1rem",
+                        "2xl": "1.5rem",
+                        "3xl": "2rem",
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        'card': '0 4px 20px -2px rgba(0, 0, 0, 0.06)',
+                        'card-hover': '0 20px 40px -12px rgba(0, 0, 0, 0.12)',
+                        'button': '0 4px 14px -3px rgba(45, 90, 39, 0.3)',
+                    }
+                },
+            },
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        :root {
+            --primary-color: #2d5a27;
+            --cream-bg: #fdfaf6;
+            --soft-gray: #f3f4f1;
+        }
+        .content-bg {
+            background: linear-gradient(180deg, #f8f6f3 0%, #fdfaf6 100%);
+        }
+        .dark .content-bg {
+            background: linear-gradient(180deg, #1a1c19 0%, #232622 100%);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="font-display bg-[var(--cream-bg)] dark:bg-background-dark text-slate-800 dark:text-slate-100 antialiased selection:bg-primary selection:text-white">
+<div class="flex flex-col min-h-screen">
+    
+    <!-- Top Banner -->
+    <div class="bg-gradient-to-r from-primary to-primary-dark text-white text-center py-2 px-4 text-xs font-medium">
+        <span>🚀 Free shipping on orders above ₹999 | 30-day returns | 24/7 Customer Support</span>
+    </div>
+
+    <!-- Header -->
+    <header class="flex h-20 items-center justify-between border-b border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-surface-dark/95 backdrop-blur-md px-4 lg:px-12 z-50 sticky top-0 shadow-sm">
+        
+        <!-- Logo & Nav -->
+        <div class="flex items-center gap-8">
+            <a href="{% url 'home' %}" class="flex items-center gap-3 group">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
+                    <span class="material-symbols-outlined text-2xl">shopping_bag</span>
+                </div>
+                <h1 class="text-xl font-black tracking-tight text-stone-900 dark:text-white group-hover:text-primary transition-colors">EasyBuy</h1>
+            </a>
+            
+            <nav class="hidden xl:flex items-center gap-1">
+                <a class="px-4 py-2 text-sm font-medium rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'all_products' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'all_products' %}">Shop</a>
+                <a class="px-4 py-2 text-sm font-medium rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'all_categories' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'all_categories' %}">Categories</a>
+                <a class="px-4 py-2 text-sm font-medium rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'new_arrivals' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'new_arrivals' %}">New Arrivals</a>
+                <a class="px-4 py-2 text-sm font-medium rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300" href="#">Deals</a>
+            </nav>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="flex-1 max-w-xl mx-8 hidden md:block">
+            <form action="{% url 'all_products' %}" method="get" class="relative group">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-primary transition-colors">search</span>
+                <input name="q" class="h-12 w-full rounded-2xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 pl-12 pr-4 text-sm font-medium text-stone-900 dark:text-white placeholder:text-stone-400 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-inner" placeholder="Search for products, brands, categories..." type="text"/>
+                <button type="submit" class="hidden">Search</button>
+            </form>
+        </div>
+
+        <!-- User Actions -->
+        <div class="flex items-center gap-2 lg:gap-4">
+            <!-- Wishlist -->
+            <a href="#" class="flex items-center gap-2 p-2.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300">
+                <span class="material-symbols-outlined text-[24px]">favorite_border</span>
+                <span class="hidden lg:inline text-sm font-medium">Wishlist</span>
+            </a>
+            
+            <!-- Cart -->
+            <a href="#" class="flex items-center gap-2 p-2.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative">
+                <span class="material-symbols-outlined text-[24px]">shopping_cart</span>
+                <span class="hidden lg:inline text-sm font-medium">Cart</span>
+                <span class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent-terracotta text-[10px] font-bold text-white ring-2 ring-white dark:ring-surface-dark">0</span>
+            </a>
+            
+            <!-- Divider -->
+            <div class="h-8 w-px bg-stone-200 dark:bg-stone-700 mx-1 hidden sm:block"></div>
+            
+            <!-- User Menu -->
+            {% if request.user.is_authenticated %}
+            <div class="relative group">
+                <button class="flex items-center gap-2 rounded-2xl py-1.5 px-3 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+                    <div class="h-9 w-9 overflow-hidden rounded-full bg-stone-200 ring-2 ring-white dark:ring-stone-700 flex items-center justify-center">
+                        {% if request.user.profile_image %}
+                            <img src="{{ request.user.profile_image.url }}" class="h-full w-full object-cover">
+                        {% else %}
+                            <span class="material-symbols-outlined text-stone-500">account_circle</span>
+                        {% endif %}
+                    </div>
+                    <span class="hidden lg:block text-sm font-medium text-stone-700 dark:text-stone-200 max-w-[100px] truncate">{{ request.user.username }}</span>
+                    <span class="material-symbols-outlined text-[18px] text-stone-400 hidden lg:block">expand_more</span>
+                </button>
+                
+                <!-- Dropdown -->
+                <div class="absolute right-0 top-full mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right z-50">
+                    <div class="bg-white dark:bg-surface-dark rounded-2xl shadow-xl border border-stone-200 dark:border-stone-700 py-2">
+                        <div class="px-4 py-3 border-b border-stone-100 dark:border-stone-700">
+                            <p class="text-sm font-bold text-stone-900 dark:text-white">{{ request.user.get_full_name|default:request.user.username }}</p>
+                            <p class="text-xs text-stone-500">{{ request.user.email }}</p>
+                        </div>
+                        <a href="{% url 'profile_settings' %}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
+                            <span class="material-symbols-outlined text-[20px]">person</span>
+                            My Profile
+                        </a>
+                        <a href="{% url 'manage_addresses' %}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
+                            <span class="material-symbols-outlined text-[20px]">location_on</span>
+                            My Addresses
+                        </a>
+                        <a href="#" class="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
+                            <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+                            My Orders
+                        </a>
+                        <div class="border-t border-stone-100 dark:border-stone-700 mt-2 pt-2">
+                            <form action="{% url 'logout' %}" method="post" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    <span class="material-symbols-outlined text-[20px]">logout</span>
+                                    Logout
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <a href="{% url 'all_login' %}" class="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-colors shadow-button">
+                <span class="material-symbols-outlined text-[20px]">login</span>
+                <span class="hidden lg:inline">Sign In</span>
+            </a>
+            <a href="{% url 'register' %}" class="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-2xl border-2 border-stone-200 dark:border-stone-700 font-bold text-sm text-stone-600 dark:text-stone-300 hover:border-primary hover:text-primary transition-colors">
+                Register
+            </a>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-surface-dark border-t border-stone-200 dark:border-stone-700 z-50 px-4 py-2">
+        <div class="flex items-center justify-around">
+            <a href="{% url 'home' %}" class="flex flex-col items-center gap-1 p-2 {% if request.resolver_match.url_name == 'home' %}text-primary{% else %}text-stone-500{% endif %}">
+                <span class="material-symbols-outlined">home</span>
+                <span class="text-[10px] font-medium">Home</span>
+            </a>
+            <a href="{% url 'all_products' %}" class="flex flex-col items-center gap-1 p-2 {% if request.resolver_match.url_name == 'all_products' %}text-primary{% else %}text-stone-500{% endif %}">
+                <span class="material-symbols-outlined">grid_view</span>
+                <span class="text-[10px] font-medium">Shop</span>
+            </a>
+            <a href="#" class="flex flex-col items-center gap-1 p-2 text-stone-500">
+                <span class="material-symbols-outlined">search</span>
+                <span class="text-[10px] font-medium">Search</span>
+            </a>
+            <a href="#" class="flex flex-col items-center gap-1 p-2 text-stone-500 relative">
+                <span class="material-symbols-outlined">shopping_cart</span>
+                <span class="absolute top-0 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[8px] font-bold text-white">0</span>
+                <span class="text-[10px] font-medium">Cart</span>
+            </a>
+            {% if request.user.is_authenticated %}
+            <a href="{% url 'profile_settings' %}" class="flex flex-col items-center gap-1 p-2 text-stone-500">
+                <span class="material-symbols-outlined">person</span>
+                <span class="text-[10px] font-medium">Account</span>
+            </a>
+            {% else %}
+            <a href="{% url 'all_login' %}" class="flex flex-col items-center gap-1 p-2 text-stone-500">
+                <span class="material-symbols-outlined">login</span>
+                <span class="text-[10px] font-medium">Login</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1 content-bg">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Newsletter Section -->
+    <section class="bg-gradient-to-r from-primary to-primary-dark py-16">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <h2 class="text-3xl font-black text-white mb-4">Join the EasyBuy Family</h2>
+            <p class="text-white/80 mb-8 max-w-xl mx-auto">Subscribe to receive exclusive deals, early access to new products, and special discounts delivered to your inbox.</p>
+            <form class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+                <input class="flex-1 h-14 rounded-2xl border-0 bg-white/10 backdrop-blur-sm px-6 text-white placeholder:text-white/60 focus:ring-4 focus:ring-white/20" placeholder="Enter your email address" type="email"/>
+                <button class="h-14 px-8 rounded-2xl bg-white text-primary font-bold hover:bg-stone-100 transition-colors shadow-lg" type="submit">Subscribe</button>
+            </form>
+            <p class="text-white/60 text-xs mt-4">By subscribing, you agree to our Privacy Policy and Terms of Service.</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-stone-200 bg-white pt-16 dark:border-stone-800 dark:bg-surface-dark">
+        <div class="max-w-7xl mx-auto px-4 lg:px-12">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 pb-12">
+                <!-- Company Info -->
+                <div class="col-span-2 lg:col-span-1">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-white">
+                            <span class="material-symbols-outlined text-2xl">shopping_bag</span>
+                        </div>
+                        <h1 class="text-xl font-black text-stone-900 dark:text-white">EasyBuy</h1>
+                    </div>
+                    <p class="text-sm text-stone-500 dark:text-stone-400 mb-6">Your trusted destination for premium electronics and quality products.</p>
+                    <div class="flex items-center gap-3">
+                        <a href="#" class="h-10 w-10 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-500 hover:bg-primary hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-[20px]">phone</span>
+                        </a>
+                        <a href="#" class="h-10 w-10 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-500 hover:bg-primary hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-[20px]">email</span>
+                        </a>
+                        <a href="#" class="h-10 w-10 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-500 hover:bg-primary hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-[20px]">chat</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Shop -->
+                <div>
+                    <h3 class="text-sm font-bold text-stone-900 dark:text-white uppercase tracking-wider mb-4">Shop</h3>
+                    <ul class="space-y-3">
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">All Products</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">New Arrivals</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Best Sellers</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Deals & Offers</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Gift Cards</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Customer Service -->
+                <div>
+                    <h3 class="text-sm font-bold text-stone-900 dark:text-white uppercase tracking-wider mb-4">Support</h3>
+                    <ul class="space-y-3">
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Help Center</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Returns</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Shipping Info</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Track Order</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Contact Us</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Account -->
+                <div>
+                    <h3 class="text-sm font-bold text-stone-900 dark:text-white uppercase tracking-wider mb-4">Account</h3>
+                    <ul class="space-y-3">
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">My Account</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">My Orders</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Wishlist</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Addresses</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Become Seller -->
+                <div class="col-span-2 md:col-span-4 lg:col-span-1">
+                    <h3 class="text-sm font-bold text-stone-900 dark:text-white uppercase tracking-wider mb-4">Sell on EasyBuy</h3>
+                    <ul class="space-y-3">
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'seller_register' %}">Seller Registration</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Seller Dashboard</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Seller Policies</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Success Stories</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Bottom Bar -->
+            <div class="border-t border-stone-200 dark:border-stone-700 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="text-xs text-stone-400">© 2026 EasyBuy Inc. All rights reserved.</p>
+                <div class="flex items-center gap-6 text-xs">
+                    <a class="text-stone-400 hover:text-primary transition-colors" href="#">Privacy Policy</a>
+                    <a class="text-stone-400 hover:text-primary transition-colors" href="#">Terms of Service</a>
+                    <a class="text-stone-400 hover:text-primary transition-colors" href="#">Cookie Policy</a>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-stone-400">We accept:</span>
+                    <div class="flex items-center gap-1">
+                        <div class="h-6 w-10 bg-stone-100 dark:bg-stone-800 rounded flex items-center justify-center text-[8px] font-bold text-stone-500">VISA</div>
+                        <div class="h-6 w-10 bg-stone-100 dark:bg-stone-800 rounded flex items-center justify-center text-[8px] font-bold text-stone-500">MC</div>
+                        <div class="h-6 w-10 bg-stone-100 dark:bg-stone-800 rounded flex items-center justify-center text-[8px] font-bold text-stone-500">UPI</div>
+                        <div class="h-6 w-10 bg-stone-100 dark:bg-stone-800 rounded flex items-center justify-center text-[8px] font-bold text-stone-500">COD</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

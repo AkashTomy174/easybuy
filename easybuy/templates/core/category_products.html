@@ -1,0 +1,126 @@
+{% extends 'core/core_base.html' %}
+{% block title %}{{ categories.name }} | EasyBuy{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-card-shadow { box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.08); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb & Header -->
+<section class="mx-auto max-w-7xl px-4 py-8 sm:px-12">
+    <div class="mb-10">
+        <nav class="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 mb-4">
+            <a href="{% url 'all_categories' %}" class="hover:text-primary transition-colors">Categories</a>
+            <span class="material-symbols-outlined text-[12px]">chevron_right</span>
+            <span class="text-stone-900 dark:text-white">{{ categories.name }}</span>
+        </nav>
+        <h1 class="text-4xl font-black text-stone-900 dark:text-white tracking-tight">
+            {% if active_sub %}
+                {% for sub in subcategory %}{% if sub.id == active_sub %}{{ sub.name }}{% endif %}{% endfor %}
+            {% else %}
+                All {{ categories.name }}
+            {% endif %}
+        </h1>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        
+        <!-- Sidebar -->
+        <aside class="w-full lg:w-64 flex-shrink-0">
+            <div class="sticky top-24 lg:top-32 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-stone-100 dark:border-stone-800">
+                <h2 class="text-[11px] font-black uppercase tracking-[0.2em] text-stone-400 mb-6 flex items-center gap-2">
+                    Collections <div class="h-px flex-1 bg-stone-200"></div>
+                </h2>
+                <div class="flex lg:flex-col gap-2 overflow-x-auto hide-scrollbar pb-4 lg:pb-0">
+                    {% if categories %}
+                    <a href="{% url 'category_products' categories.id %}" 
+                       class="whitespace-nowrap px-5 py-3 rounded-2xl text-sm font-bold transition-all border border-transparent
+                       {% if not active_sub %} bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg shadow-primary/30 {% else %} text-stone-600 dark:text-stone-300 hover:bg-white dark:hover:bg-stone-800 hover:border-stone-200 {% endif %}">
+                        All Items
+                    </a>
+                    {% endif %}
+
+                    {% for sub in subcategory %}
+                    <a href="{% url 'subcategory_products' sub.id %}" 
+                       class="whitespace-nowrap px-5 py-3 rounded-2xl text-sm font-bold transition-all border border-transparent flex items-center justify-between gap-4
+                       {% if active_sub == sub.id %} 
+                            bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg shadow-primary/30
+                       {% else %} 
+                            text-stone-600 dark:text-stone-300 hover:bg-white dark:hover:bg-stone-800 hover:border-stone-200 
+                       {% endif %}">
+                        <span>{{ sub.name }}</span>
+                        <span class="material-symbols-outlined text-[16px] opacity-50 hidden lg:block">chevron_right</span>
+                    </a>
+                    {% endfor %}
+                </div>               
+            </div>
+        </aside>
+
+        <!-- Products Grid -->
+        <section class="flex-1">
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                {% for p in product %}
+                <div class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary/30">
+                    
+                    <div class="relative aspect-square overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4">
+                        {% with p.variants.first as v %}
+                            {% if v %}
+                                {% for img in v.images.all %}
+                                    {% if img.is_primary %}
+                                        <img src="{{ img.image.url }}" alt="{{ p.name }}" class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <div class="flex h-full w-full items-center justify-center">
+                                    <span class="material-symbols-outlined text-5xl text-stone-300">image_not_supported</span>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+
+                        <button class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm">
+                            <span class="material-symbols-outlined text-[20px]">favorite_border</span>
+                        </button>
+                    </div>
+
+                    <div class="px-2 flex flex-col flex-1">
+                        <span class="text-[10px] font-black uppercase text-accent-terracotta tracking-[0.2em] mb-2">{{ p.brand|default:"EasyBuy" }}</span>
+                        <h3 class="font-bold text-stone-900 dark:text-white text-lg leading-tight line-clamp-2 mb-4 group-hover:text-primary transition-colors">
+                            {{ p.name }}
+                        </h3>
+                        
+                        <div class="mt-auto flex items-center justify-between pt-4 border-t border-stone-100 dark:border-stone-700">
+                            {% with p.variants.first as v %}
+                                <div class="flex flex-col">
+                                    {% if v %}
+                                        <span class="text-2xl font-black text-stone-900 dark:text-white tracking-tighter">₹{{ v.selling_price }}</span>
+                                        {% if v.mrp > v.selling_price %}
+                                            <span class="text-xs font-medium text-stone-400 line-through">₹{{ v.mrp }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-sm font-bold text-stone-400 italic uppercase">Coming Soon</span>
+                                    {% endif %}
+                                </div>
+                            {% endwith %}
+                            
+                            <a href="#" class="h-12 w-12 flex items-center justify-center rounded-2xl bg-gradient-to-r from-stone-800 to-stone-900 dark:from-stone-700 dark:to-stone-600 text-white shadow-lg hover:bg-gradient-to-r hover:from-primary hover:to-primary-dark hover:shadow-primary/30 transition-all">
+                                <span class="material-symbols-outlined">add_shopping_cart</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-full py-32 text-center bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-3xl border border-stone-200 dark:border-stone-700">
+                    <div class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-stone-100 dark:bg-stone-800 text-stone-300 mb-6">
+                        <span class="material-symbols-outlined text-4xl">inventory_2</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-stone-900 dark:text-white">No products found here</h3>
+                    <p class="text-stone-500 mt-2 max-w-xs mx-auto">We're constantly updating our collection. Check back soon.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</section>
+{% endblock %}

@@ -1,17 +1,192 @@
 from django.shortcuts import render, redirect
 
 from django.contrib.auth import authenticate, login, logout
-from .models import Category, User, Address
+from .models import Category, User, Address, SubCategory
 from django.http import HttpResponse
 from easybuy.seller.models import SellerProfile
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from easybuy.seller.models import Product, ProductVariant, ProductImage
-from .forms import CustomerRegisterForm
 from django.core.paginator import Paginator
+from easybuy.core.decorators import role_required
 
 
 # Create your views here.
+@role_required(allowed_roles=['CUSTOMER'])
+@login_required  # user profile update
+def profile_settings(request):
+    if request.method == "POST":
+        user = request.user
+        user.first_name = request.POST.get("first_name")
+        user.last_name = request.POST.get("last_name")
+        user.email = request.POST.get("email")
+        user.phone_number = request.POST.get("phone_number")
+        user.dob = request.POST.get("dob") if request.POST.get("dob") else None
+        user.gender = request.POST.get("gender")
+
+        if request.FILES.get("profile_image"):
+            user.profile_image = request.FILES.get("profile_image")
+
+        user.save()
+        messages.success(request, "Profile updated successfully!")
+        return redirect("core/profile_settings")
+
+    return render(request, "core/profile.html")
+
+
+def all_products(request):  # view all product
+    product_images = ProductImage.objects.filter(is_primary=True).select_related(
+        "variant__product"
+    )
+    paginator = Paginator(product_images, 8)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+    return render(request, "user/all_products.html", {"page_obj": page_obj})
+
+@role_required(allowed_roles=['CUSTOMER'])
+def home_view(request):  # load home of user#
+    categories = Category.objects.filter(is_active=True)
+    product_images = (
+        ProductImage.objects.filter(is_primary=True)
+        .select_related("variant__product")
+        .order_by("-id")[:8]
+    )
+    print(f"Product count: {product_images.count()}")
+    return render(
+        request,
+        "core/home.html",
+        {"categories": categories, "product_images": product_images},
+    )
+
+@role_required(allowed_roles=['CUSTOMER'])
+def register_view(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        email = request.POST.get("email")
+        password1 = request.POST.get("password1")
+        password2 = request.POST.get("password2")
+        if not username or not email or not password1:
+            messages.error(request, "All fields are required.")
+            return redirect("register")
+        if password1 != password2:
+            messages.error(request, "Passwords do not match.")
+            return redirect("register")
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Username already exists.")
+            return redirect("register")
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password1,
+        )
+        user.role = "CUSTOMER"
+        user.save()
+        login(request, user)
+        return redirect("home")
+
+    return render(request, "core/register.html")
+
+
+@login_required
+@role_required(allowed_roles=['CUSTOMER'])
+def edit_address(request, id):
+    address = Address.objects.get(id=id, user=request.user)
+    if request.method == "POST":
+        address.full_name = request.POST.get("fullname")
+        address.phone_number = request.POST.get("phone")
+        address.house_info = request.POST.get("house_info")
+        address.locality = request.POST.get("locality")
+        address.city = request.POST.get("city")
+        address.state = request.POST.get("state")
+        address.pincode = request.POST.get("pincode")
+        address.address_type = request.POST.get("address_type")
+        is_default = request.POST.get("is_default") == "on"
+        if is_default:
+            Address.objects.filter(user=request.user).update(is_default=False)
+            address.is_default = True
+        else:
+            address.is_default = False
+        address.save()
+    return redirect("manage_addresses")
+
+
+@login_required
+@role_required(allowed_roles=['CUSTOMER'])
+def delete_address(request, id):
+    address = Address.objects.get(id=id, user=request.user)
+    address.delete()
+    return redirect("manage_addresses")
+
+@login_required
+@role_required(allowed_roles=['CUSTOMER'])
+def user_address(request):
+    if request.method == "POST":
+        full_name = request.POST.get("fullname")
+        phone = request.POST.get("phone")
+        pincode = request.POST.get("pincode")
+        locality = request.POST.get("locality")
+        house = request.POST.get("house_info")
+        city = request.POST.get("city")
+        state = request.POST.get("state")
+        addr_type = request.POST.get("address_type")
+        is_default = request.POST.get("is_default") == "on"
+        if is_default:
+            Address.objects.filter(user=request.user).update(is_default=False)
+        Address.objects.create(
+            user=request.user,
+            full_name=full_name,
+            phone_number=phone,
+            pincode=pincode,
+            locality=locality,
+            house_info=house,
+            city=city,
+            state=state,
+            address_type=addr_type,
+            is_default=is_default,
+        )
+        return redirect("manage_addresses")
+
+
+@login_required
+@role_required(allowed_roles=['CUSTOMER'])
+def manage_addresses(request):
+    addresses = Address.objects.filter(user=request.user).order_by("-is_default", "-id")
+    return render(request, "core/addresses.html", {"addresses": addresses})
+
+@login_required
+def logout_view(request):
+    logout(request)
+    return render(request, "core/login.html", {"message": "Logged out successfully!"})
+
+
+@login_required
+def profile_settings(request):
+    user = request.user
+    addresses = Address.objects.filter(user=user)
+    default_address = addresses.filter(is_default=True).first()
+
+    if request.method == "POST":
+        user.first_name = request.POST.get("first_name")
+        user.last_name = request.POST.get("last_name")
+        user.email = request.POST.get("email")
+        user.phone_number = request.POST.get("phone_number")
+        user.dob = request.POST.get("dob") if request.POST.get("dob") else None
+        user.gender = request.POST.get("gender")
+        if request.FILES.get("profile_image"):
+            user.profile_image = request.FILES.get("profile_image")
+        user.save()
+        messages.success(request, "Profile updated successfully!")
+        return redirect("profile_settings")
+    return render(
+        request,
+        "core/profile.html",
+        {"addresses": addresses, "default_address": default_address, "user": user},
+    )
+
+
+def all_categories(request):
+    categories = Category.objects.filter(is_active=True)
+    return render(request, "core/all_categories.html", {"categories": categories})
 
 
 def all_login(request):
@@ -46,81 +221,6 @@ def all_login(request):
                 request, "core/login.html", {"error": "Invalid username or password"}
             )
     return render(request, "core/login.html")
-
-
-@login_required  # user profile update
-def profile_settings(request):
-    if request.method == "POST":
-        user = request.user
-        user.first_name = request.POST.get("first_name")
-        user.last_name = request.POST.get("last_name")
-        user.email = request.POST.get("email")
-        user.phone_number = request.POST.get("phone_number")
-        user.dob = request.POST.get("dob") if request.POST.get("dob") else None
-        user.gender = request.POST.get("gender")
-
-        if request.FILES.get("profile_image"):
-            user.profile_image = request.FILES.get("profile_image")
-
-        user.save()
-        messages.success(request, "Profile updated successfully!")
-        return redirect("core/profile_settings")
-
-    return render(request, "core/profile.html")
-
-
-def all_products(request):  # view all product
-    product_images = ProductImage.objects.filter(is_primary=True).select_related(
-        "variant__product"
-    )
-    paginator = Paginator(product_images, 8)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-    return render(request, "core/all_products.html", {"page_obj": page_obj})
-
-
-def home_view(request):  # load home of user#
-    categories = Category.objects.filter(is_active=True)
-    product_images = (
-        ProductImage.objects.filter(is_primary=True)
-        .select_related("variant__product")
-        .order_by("-id")[:8]
-    )
-    print(f"Product count: {product_images.count()}")
-    return render(
-        request,
-        "core/home.html",
-        {"categories": categories, "product_images": product_images},
-    )
-
-
-def logout_view(request):
-    logout(request)
-    return render(request, "core/login.html", {"message": "Logged out successfully!"})
-
-
-from django.core.paginator import Paginator
-
-def all_categories(request):
-    categories = Category.objects.filter(is_active=True)
-    paginator = Paginator(categories, 12)  # 12 per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    return render(request, "core/all_categories.html", {"page_obj": page_obj})
-
-
-def register_view(request):
-    if request.method == "POST":
-        form = CustomerRegisterForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.role = "CUSTOMER"
-            user.save()
-            login(request, user)
-            return redirect("home")
-    else:
-        form = CustomerRegisterForm()
-    return render(request, "core/register.html", {"form": form})
 
 
 # def add_sub_category(request):

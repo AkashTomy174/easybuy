@@ -1,0 +1,88 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}All Users - Admin | EasyBuy{% endblock %}
+
+{% block header_title %}All Users{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-slate-200">
+        <h2 class="text-xl font-bold text-slate-900">Customer Users</h2>
+        <p class="text-sm text-slate-500 mt-1">View all registered customers</p>
+    </div>
+
+    <!-- Users Table -->
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-slate-50 border-b border-slate-200">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">ID</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Username</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Email</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Phone</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Joined Date</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+                {% for user in page_obj %}
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{{ user.id }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ user.username }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ user.email }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ user.phone_number|default:"N/A" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ user.date_joined|date:"M d, Y" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if user.is_active %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactive</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-slate-500">No users found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+        <div class="text-sm text-slate-500">
+            Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </div>
+        <nav class="flex items-center gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page=1" class="px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">
+                « First
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">
+                ‹ Prev
+            </a>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <span class="px-3 py-2 text-sm font-medium text-white bg-primary rounded-lg">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?page={{ num }}" class="px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">
+                Next ›
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">
+                Last »
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

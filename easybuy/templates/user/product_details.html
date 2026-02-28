@@ -1,0 +1,90 @@
+{% extends 'core/core_base.html' %}
+{% block title %}{{ product.name }} | EasyBuy{% endblock %}
+
+{% block content %}
+<main class="flex-1 mx-auto max-w-7xl w-full px-4 py-12 lg:px-12">
+    {% if error %}
+        <div class="text-center py-20">
+            <h1 class="text-2xl font-bold">{{ error }}</h1>
+            <a href="{% url 'all_products' %}" class="text-primary underline mt-4 inline-block">Back to Shopping</a>
+        </div>
+    {% else %}
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
+        
+        <!-- Image Gallery -->
+        <div class="space-y-6">
+            <div class="aspect-square rounded-[3rem] overflow-hidden bg-white dark:bg-surface-dark border border-stone-200 dark:border-stone-700 shadow-sm">
+                {% with product.variants.first as first_variant %}
+                    {% for img in first_variant.images.all %}
+                        {% if img.is_primary %}
+                            <img src="{{ img.image.url }}" id="main-image" class="w-full h-full object-cover transition-all duration-500">
+                        {% endif %}
+                    {% endfor %}
+                {% endwith %}
+            </div>
+            
+            <div class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
+                {% for variant in product.variants.all %}
+                    {% for img in variant.images.all %}
+                        <button onclick="document.getElementById('main-image').src='{{ img.image.url }}'" 
+                                class="h-20 w-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary transition-all bg-white dark:bg-stone-800">
+                            <img src="{{ img.image.url }}" class="w-full h-full object-cover">
+                        </button>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Product Info -->
+        <div class="flex flex-col">
+            <div class="mb-8">
+                <span class="text-xs font-black uppercase tracking-[0.3em] text-accent-terracotta">{{ product.brand|default:"Premium Collection" }}</span>
+                <h1 class="text-4xl lg:text-5xl font-black text-stone-900 dark:text-white mt-2 leading-tight">{{ product.name }}</h1>
+                
+                <div class="flex items-center gap-4 mt-6">
+                    {% with product.variants.first as v %}
+                        <span class="text-3xl font-black text-primary">₹{{ v.selling_price }}</span>
+                        {% if v.mrp > v.selling_price %}
+                            <span class="text-lg text-stone-400 line-through">₹{{ v.mrp }}</span>
+                            <span class="bg-accent-terracotta/10 text-accent-terracotta px-3 py-1 rounded-full text-xs font-bold uppercase">Save ₹{{ v.mrp|add:"-v.selling_price" }}</span>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+
+            <!-- Variant Selection -->
+            <div class="mb-8">
+                <h3 class="text-sm font-bold text-stone-900 dark:text-white mb-4 uppercase tracking-widest">Select Variant</h3>
+                <div class="flex flex-wrap gap-3">
+                    {% for variant in product.variants.all %}
+                    <button class="px-6 py-3 rounded-2xl border-2 border-stone-200 dark:border-stone-700 font-bold text-sm hover:border-primary hover:text-primary transition-all dark:text-white">
+                        {{ variant.name|default:"Standard" }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 mb-12">
+                <button class="flex-1 h-16 bg-primary text-white rounded-[2rem] font-black text-lg hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined">shopping_cart</span>
+                    Add to Cart
+                </button>
+                <button class="h-16 w-16 flex items-center justify-center rounded-[2rem] border-2 border-stone-200 dark:border-stone-700 text-stone-400 hover:text-accent-terracotta hover:border-accent-terracotta transition-all">
+                    <span class="material-symbols-outlined">favorite_border</span>
+                </button>
+            </div>
+
+            <!-- Description -->
+            <div class="border-t border-stone-200 dark:border-stone-700 pt-8">
+                <h3 class="text-sm font-bold text-stone-900 dark:text-white mb-4 uppercase tracking-widest">Description</h3>
+                <div class="prose prose-stone text-stone-500 dark:text-stone-400 leading-relaxed">
+                    {{ product.description|safe|default:"No description available for this product." }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</main>
+{% endblock %}

@@ -60,6 +60,8 @@ class ProductVariant(models.Model):
     height = models.FloatField(null=True, blank=True)
     tax_percentage = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
+    def __str__(self):
+        return f"{self.product.name} - {self.sku_code}"
 
 
 class ProductImage(models.Model):
@@ -67,20 +69,26 @@ class ProductImage(models.Model):
     image = models.ImageField(upload_to='products/variants/',null=True, blank=True)
     alt_text = models.CharField(max_length=255, blank=True)
     is_primary = models.BooleanField(default=False)
+    def __str__(self):
+        return f"{self.variant.sku_code} Image"
 
 
 class Attribute(models.Model):
     name = models.CharField(max_length=100)
-
+    def __str__(self):
+        return self.name
 
 class AttributeOption(models.Model):
     attribute = models.ForeignKey(Attribute, on_delete=models.CASCADE, related_name="options")
     value = models.CharField(max_length=100)
-
+    def __str__(self):
+        return f"{self.attribute.name}: {self.value}"
 
 class VariantAttributeBridge(models.Model):
     variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE)
     option = models.ForeignKey(AttributeOption, on_delete=models.CASCADE)
+    def __str__(self):
+        return f"{self.variant.sku_code} - {self.option}"
 
 
 class InventoryLog(models.Model):

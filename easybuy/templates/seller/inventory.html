@@ -1,257 +1,154 @@
-<!DOCTYPE html>
-<html class="light" lang="en">
-<head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Inventory - {{ seller.store_name }}</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#0f172a",
-                        "accent": "#3b82f6",
-                        "surface-light": "#ffffff",
-                        "surface-dark": "#0f172a",
-                    },
-                    fontFamily: {
-                        "sans": ["Plus Jakarta Sans", "sans-serif"]
-                    },
-                },
-            }
-        }
-    </script>
-    <style>
-        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    </style>
-</head>
+{% extends 'seller/seller_base.html' %}
+{% block title %}Inventory - EasyBuy Seller{% endblock %}
 
-<body class="bg-slate-50 dark:bg-[#05090f] text-slate-900 dark:text-slate-100 antialiased">
-<div class="flex h-screen overflow-hidden">
-
-    <aside class="w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col hidden lg:flex">
-        <div class="p-8">
-            <div class="flex items-center gap-3 px-2">
-                <div class="bg-accent p-2 rounded-xl shadow-lg shadow-accent/20 text-white">
-                    <span class="material-symbols-outlined block text-2xl">grid_view</span>
-                </div>
-                <h2 class="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
-                    BUY<span class="text-accent">NEXT</span>
-                </h2>
-            </div>
-        </div>
-
-        <nav class="flex-1 px-4 space-y-1.5">
-            <a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group" href="{% url 'sellerdashboard' %}">
-                <span class="material-symbols-outlined group-hover:text-accent transition-colors">dashboard</span>
-                <span class="font-medium">Dashboard</span>
-            </a>
-            <a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-accent/10 text-accent font-semibold shadow-sm" href="#">
-                <span class="material-symbols-outlined">inventory_2</span>
-                <span>Inventory</span>
-            </a>
-            <a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 transition-all group" href="#">
-                <span class="material-symbols-outlined group-hover:text-accent">orders</span>
-                <span class="font-medium">Orders</span>
-            </a>
-        </nav>
-
-        <div class="p-6 mt-auto">
-            <div class="bg-slate-900 dark:bg-slate-800 rounded-2xl p-5 relative overflow-hidden group">
-                <div class="relative z-10">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] mb-1">Active Store</p>
-                    <p class="text-sm font-bold text-white truncate">{{ seller.store_name }}</p>
-                    <div class="mt-4 flex items-center justify-between">
-                        <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold">Pro Account</span>
-                        <span class="material-symbols-outlined text-slate-400 text-sm">settings</span>
-                    </div>
-                </div>
-                <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-accent/10 rounded-full blur-2xl group-hover:bg-accent/20 transition-all"></div>
-            </div>
-        </div>
-    </aside>
-
-    <main class="flex-1 flex flex-col overflow-y-auto">
-        <header class="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-10 sticky top-0 z-20">
-            <div class="flex items-center gap-4 flex-1">
-                <div class="relative w-full max-w-lg group">
-                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-accent transition-colors">search</span>
-                    <input type="text" class="w-full bg-slate-100 dark:bg-slate-800/50 border-transparent focus:border-accent/30 focus:bg-white dark:focus:bg-slate-800 rounded-2xl py-2.5 pl-12 pr-4 text-sm focus:ring-4 focus:ring-accent/10 transition-all" placeholder="Search products, SKUs, or categories...">
-                </div>
-            </div>
-
-            <div class="flex items-center gap-6">
-                <button class="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl relative transition-colors">
-                    <span class="material-symbols-outlined">notifications</span>
-                    <span class="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
-                </button>
-                <div class="flex items-center gap-4 pl-6 border-l border-slate-200 dark:border-slate-800">
-                    <div class="text-right hidden sm:block">
-                        <p class="text-sm font-bold">{{ request.user.username }}</p>
-                        <p class="text-[11px] text-slate-500 font-medium">Store Admin</p>
-                    </div>
-                    <img class="h-11 w-11 rounded-xl border-2 border-accent/20 p-0.5" src="https://ui-avatars.com/api/?name={{ request.user.username }}&background=3b82f6&color=fff">
-                </div>
-            </div>
-        </header>
-
-        <div class="p-10 max-w-[1600px] mx-auto w-full">
-            <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-                <div>
-                    <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">Inventory</h1>
-                    <p class="text-slate-500 mt-2 font-medium">Monitoring <span class="text-accent">{{ total_products }}</span> products across your ecosystem.</p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <button class="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all shadow-sm">
-                        <span class="material-symbols-outlined text-xl">filter_list</span> Filter
-                    </button>
-                    <button class="flex items-center gap-2 px-6 py-2.5 bg-accent text-white rounded-xl text-sm font-bold hover:bg-accent/90 transition-all shadow-lg shadow-accent/25">
-                        <span class="material-symbols-outlined text-xl">add</span> Add Product
-                    </button>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
-                    <div class="w-12 h-12 bg-blue-500/10 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
-                        <span class="material-symbols-outlined text-2xl">category</span>
-                    </div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Products</p>
-                    <div class="flex items-baseline gap-2 mt-2">
-                        <h3 class="text-3xl font-black">{{ total_products }}</h3>
-                        <span class="text-xs font-bold text-emerald-500">+12%</span>
-                    </div>
-                </div>
-
-                <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                    <div class="w-12 h-12 bg-purple-500/10 text-purple-600 rounded-2xl flex items-center justify-center mb-6">
-                        <span class="material-symbols-outlined text-2xl">style</span>
-                    </div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Variants</p>
-                    <h3 class="text-3xl font-black mt-2">{{ total_variants }}</h3>
-                </div>
-
-                <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                    <div class="w-12 h-12 bg-orange-500/10 text-orange-600 rounded-2xl flex items-center justify-center mb-6">
-                        <span class="material-symbols-outlined text-2xl">warning</span>
-                    </div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Low Stock</p>
-                    <h3 class="text-3xl font-black mt-2 text-orange-600">{{ low_stock_count }}</h3>
-                </div>
-
-                <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                    <div class="w-12 h-12 bg-emerald-500/10 text-emerald-600 rounded-2xl flex items-center justify-center mb-6">
-                        <span class="material-symbols-outlined text-2xl">payments</span>
-                    </div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Inventory Value</p>
-                    <h3 class="text-3xl font-black mt-2">${{ total_inventory_value|floatformat:2 }}</h3>
-                </div>
-            </div>
-
-            <div class="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-                <div class="p-8 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
-                    <h4 class="text-xl font-bold">Catalog Details</h4>
-                    <span class="text-xs bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full font-semibold text-slate-500">Updated 2 mins ago</span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em]">
-                                <th class="px-8 py-5 border-b border-slate-50 dark:border-slate-800">Product / Details</th>
-                                <th class="px-8 py-5 border-b border-slate-50 dark:border-slate-800">SKU Code</th>
-                                <th class="px-8 py-5 border-b border-slate-50 dark:border-slate-800 text-right">Pricing</th>
-                                <th class="px-8 py-5 border-b border-slate-50 dark:border-slate-800 text-center">Stock Level</th>
-                                <th class="px-8 py-5 border-b border-slate-50 dark:border-slate-800 text-center">Status</th>
-                                <th class="px-8 py-5 border-b border-slate-50 dark:border-slate-800 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
-                            {% for product in products %}
-                                {% for variant in product.variants.all %}
-                                <tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                                    <td class="px-8 py-5">
-                                        <div class="flex items-center gap-4">
-                                            <div class="h-14 w-14 bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700">
-                                                {% with variant.images.first as img %}
-                                                    {% if img %}<img src="{{ img.image.url }}" class="h-full w-full object-cover">{% else %}
-                                                    <div class="h-full w-full flex items-center justify-center">
-                                                        <span class="material-symbols-outlined text-slate-300">image</span>
-                                                    </div>
-                                                    {% endif %}
-                                                {% endwith %}
-                                            </div>
-                                            <div class="min-w-0">
-                                                <p class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ product.name }}</p>
-                                                <p class="text-xs text-slate-500 font-medium mt-0.5">Category: Electronics</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-8 py-5">
-                                        <span class="font-mono text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
-                                            {{ variant.sku_code }}
-                                        </span>
-                                    </td>
-                                    <td class="px-8 py-5 text-right">
-                                        <p class="text-sm font-black text-slate-900 dark:text-white">${{ variant.selling_price }}</p>
-                                        <p class="text-[10px] text-slate-400 line-through decoration-slate-300">${{ variant.mrp }}</p>
-                                    </td>
-                                    <td class="px-8 py-5 text-center">
-                                        <div class="flex flex-col items-center gap-1">
-                                            <div class="w-16 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                                <div class="h-full {% if variant.stock_quantity > 10 %}bg-emerald-500{% elif variant.stock_quantity > 0 %}bg-orange-500{% else %}bg-red-500{% endif %}" 
-                                                     style="width: {{ variant.stock_quantity|default:0 }}%"></div>
-                                            </div>
-                                            <span class="text-xs font-bold">{{ variant.stock_quantity }} units</span>
-                                        </div>
-                                    </td>
-                                    <td class="px-8 py-5 text-center">
-                                        {% if variant.stock_quantity > 10 %}
-                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
-                                                Active
-                                            </span>
-                                        {% elif variant.stock_quantity > 0 %}
-                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
-                                                Restock
-                                            </span>
-                                        {% else %}
-                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400">
-                                                Sold Out
-                                            </span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="px-8 py-5 text-center">
-                                        <button class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-accent transition-colors">
-                                            <span class="material-symbols-outlined text-xl">more_vert</span>
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% empty %}
-                                <tr>
-                                    <td colspan="6" class="px-8 py-20 text-center">
-                                        <div class="flex flex-col items-center">
-                                            <div class="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center mb-4">
-                                                <span class="material-symbols-outlined text-4xl text-slate-300">inventory_2</span>
-                                            </div>
-                                            <h5 class="text-lg font-bold text-slate-900 dark:text-white">Your inventory is empty</h5>
-                                            <p class="text-slate-500 text-sm max-w-xs mx-auto mt-2">Start growing your business by adding your first product to the catalog.</p>
-                                            <button class="mt-6 px-6 py-2 bg-accent text-white rounded-xl text-sm font-bold shadow-lg shadow-accent/20">Add First Product</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </main>
+{% block content %}
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+    <div>
+        <h1 class="text-4xl font-black tracking-tight text-stone-900 dark:text-white">Inventory</h1>
+        <p class="text-stone-500 mt-2 font-medium">Monitoring <span class="text-primary">{{ total_products }}</span> products across your ecosystem.</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <button class="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-surface-dark border border-stone-200 dark:border-stone-700 rounded-xl text-sm font-bold hover:bg-stone-50 transition-all shadow-sm">
+            <span class="material-symbols-outlined text-xl">filter_list</span> Filter
+        </button>
+        <button class="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">
+            <span class="material-symbols-outlined text-xl">add</span> Add Product
+        </button>
+    </div>
 </div>
-</body>
-</html>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm hover:shadow-md transition-shadow">
+        <div class="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-2xl">category</span>
+        </div>
+        <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Total Products</p>
+        <div class="flex items-baseline gap-2 mt-2">
+            <h3 class="text-3xl font-black">{{ total_products }}</h3>
+            <span class="text-xs font-bold text-emerald-500">+12%</span>
+        </div>
+    </div>
+
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+        <div class="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-2xl">style</span>
+        </div>
+        <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Total Variants</p>
+        <h3 class="text-3xl font-black mt-2">{{ total_variants }}</h3>
+    </div>
+
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+        <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-2xl">warning</span>
+        </div>
+        <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Low Stock</p>
+        <h3 class="text-3xl font-black mt-2 text-orange-600 dark:text-orange-400">{{ low_stock_count }}</h3>
+    </div>
+
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+        <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-2xl">payments</span>
+        </div>
+        <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Inventory Value</p>
+        <h3 class="text-3xl font-black mt-2">${{ total_inventory_value|floatformat:2 }}</h3>
+    </div>
+</div>
+
+<!-- Products Table -->
+<div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-stone-100 dark:border-stone-700 flex items-center justify-between">
+        <h4 class="text-xl font-bold">Catalog Details</h4>
+        <span class="text-xs bg-stone-100 dark:bg-stone-800 px-3 py-1 rounded-full font-semibold text-stone-500">Updated 2 mins ago</span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="text-[11px] font-bold text-stone-400 uppercase tracking-[0.15em]">
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Product / Details</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">SKU Code</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700 text-right">Pricing</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700 text-center">Stock Level</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700 text-center">Status</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-100 dark:divide-stone-700">
+                {% for product in products %}
+                    {% for variant in product.variants.all %}
+                    <tr class="group hover:bg-stone-50/50 dark:hover:bg-stone-800/30 transition-colors">
+                        <td class="px-6 py-5">
+                            <div class="flex items-center gap-4">
+                                <div class="h-14 w-14 bg-stone-100 dark:bg-stone-800 rounded-2xl overflow-hidden flex-shrink-0 border border-stone-200 dark:border-stone-700">
+                                    {% with variant.images.first as img %}
+                                        {% if img %}<img src="{{ img.image.url }}" class="h-full w-full object-cover">{% else %}
+                                        <div class="h-full w-full flex items-center justify-center">
+                                            <span class="material-symbols-outlined text-stone-300">image</span>
+                                        </div>
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-bold text-stone-900 dark:text-white truncate">{{ product.name }}</p>
+                                    <p class="text-xs text-stone-500 font-medium mt-0.5">Category: Electronics</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-5">
+                            <span class="font-mono text-xs font-bold text-stone-500 bg-stone-100 dark:bg-stone-800 px-2 py-1 rounded">
+                                {{ variant.sku_code }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-5 text-right">
+                            <p class="text-sm font-black text-stone-900 dark:text-white">${{ variant.selling_price }}</p>
+                            <p class="text-[10px] text-stone-400 line-through decoration-stone-300">${{ variant.mrp }}</p>
+                        </td>
+                        <td class="px-6 py-5 text-center">
+                            <div class="flex flex-col items-center gap-1">
+                                <div class="w-16 h-1.5 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
+                                    <div class="h-full {% if variant.stock_quantity > 10 %}bg-emerald-500{% elif variant.stock_quantity > 0 %}bg-orange-500{% else %}bg-red-500{% endif %}" style="width: {% if variant.stock_quantity %}{{ variant.stock_quantity }}{% else %}0{% endif %}%"></div>
+                                </div>
+                                <span class="text-xs font-bold">{{ variant.stock_quantity }} units</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-5 text-center">
+                            {% if variant.stock_quantity > 10 %}
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+                                    Active
+                                </span>
+                            {% elif variant.stock_quantity > 0 %}
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+                                    Restock
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                                    Sold Out
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-5 text-center">
+                            <button class="p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg text-stone-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-xl">more_vert</span>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-20 text-center">
+                            <div class="flex flex-col items-center">
+                                <div class="w-20 h-20 bg-stone-100 dark:bg-stone-800 rounded-3xl flex items-center justify-center mb-4">
+                                    <span class="material-symbols-outlined text-4xl text-stone-300">inventory_2</span>
+                                </div>
+                                <h5 class="text-lg font-bold text-stone-900 dark:text-white">Your inventory is empty</h5>
+                                <p class="text-stone-500 text-sm max-w-xs mx-auto mt-2">Start growing your business by adding your first product to the catalog.</p>
+                                <button class="mt-6 px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20">Add First Product</button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
