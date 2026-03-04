@@ -70,6 +70,17 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 9999;
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -121,10 +132,10 @@
             </a>
             
             <!-- Cart -->
-            <a href="#" class="flex items-center gap-2 p-2.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative">
+            <a href="{% url 'cart' %}" class="flex items-center gap-2 p-2.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative">
                 <span class="material-symbols-outlined text-[24px]">shopping_cart</span>
                 <span class="hidden lg:inline text-sm font-medium">Cart</span>
-                <span class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent-terracotta text-[10px] font-bold text-white ring-2 ring-white dark:ring-surface-dark">0</span>
+                <span id="header-cart-count" class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent-terracotta text-[10px] font-bold text-white ring-2 ring-white dark:ring-surface-dark">{% if request.user.is_authenticated %}{{ request.user.cart.items.count }}{% else %}0{% endif %}</span>
             </a>
             
             <!-- Divider -->
@@ -202,11 +213,6 @@
             <a href="#" class="flex flex-col items-center gap-1 p-2 text-stone-500">
                 <span class="material-symbols-outlined">search</span>
                 <span class="text-[10px] font-medium">Search</span>
-            </a>
-            <a href="#" class="flex flex-col items-center gap-1 p-2 text-stone-500 relative">
-                <span class="material-symbols-outlined">shopping_cart</span>
-                <span class="absolute top-0 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[8px] font-bold text-white">0</span>
-                <span class="text-[10px] font-medium">Cart</span>
             </a>
             {% if request.user.is_authenticated %}
             <a href="{% url 'profile_settings' %}" class="flex flex-col items-center gap-1 p-2 text-stone-500">
@@ -336,5 +342,56 @@
 </div>
 
 {% block extra_js %}{% endblock %}
+
+<script>
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#333;color:white;padding:12px 24px;border-radius:8px;font-size:14px;z-index:9999';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function addToCart(variantId) {
+    if (!variantId) return;
+
+    fetch(`/user/addtocart/${variantId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.message === "Item added to cart successfully") {
+            updateHeaderCartCount(data.cart_count);
+            showToast('Added to cart');
+        } else if (data.message) {
+            showToast(data.message);
+        }
+    })
+    .catch(err => console.error(err));
+}
+
+function updateHeaderCartCount(count) {
+    const cartCountEl = document.getElementById('header-cart-count');
+    if (cartCountEl) {
+        cartCountEl.textContent = count;
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        document.cookie.split(';').forEach(cookie => {
+            const [k,v] = cookie.trim().split('=');
+            if (k === name) cookieValue = decodeURIComponent(v);
+        });
+    }
+    return cookieValue;
+}
+</script>
 </body>
 </html>
+

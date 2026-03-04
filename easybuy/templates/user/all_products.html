@@ -30,34 +30,51 @@
     <!-- Products Grid -->
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {% for item in page_obj %}
-        <div class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary/30">
+        <div class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary/30 cursor-pointer">
             
-            <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4">
-                <img src="{{ item.image.url }}" alt="{{ item.variant.product.name }}" 
-                     class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
-                
-                <button class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm">
-                    <span class="material-symbols-outlined text-[20px]">favorite_border</span>
-                </button>
-            </div>
-
-            <div class="flex flex-1 flex-col px-2">
-                <span class="text-[10px] font-black text-stone-400 dark:text-stone-500 uppercase tracking-[0.2em] mb-1">{{ item.variant.product.brand }}</span>
-                <h3 class="font-bold text-stone-900 dark:text-white text-lg leading-tight line-clamp-1 group-hover:text-primary transition-colors">
-                    {{ item.variant.product.name }}
-                </h3>
-                
-                <div class="mt-4 flex items-center justify-between">
-                    <div class="flex flex-col">
-                        <span class="text-xl font-black text-primary">₹{{ item.variant.selling_price }}</span>
-                        {% if item.variant.mrp > item.variant.selling_price %}
-                        <span class="text-xs font-medium text-stone-400 line-through">₹{{ item.variant.mrp }}</span>
-                        {% endif %}
+            <!-- Product Image (clickable link to single product) -->
+            <a href="{% url 'single_product' item.variant.product.slug %}" class="block">
+                <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4">
+                    {% if item.image %}
+                    <img src="{{ item.image.image.url }}" alt="{{ item.variant.product.name }}" 
+                         class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
+                    {% else %}
+                    <div class="h-full w-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-7xl text-stone-300">image</span>
                     </div>
-                    <a href="#" class="h-10 w-10 flex items-center justify-center rounded-2xl bg-stone-100 dark:bg-stone-700 text-stone-400 hover:bg-primary hover:text-white transition-all">
-                        <span class="material-symbols-outlined text-xl">add_shopping_cart</span>
-                    </a>
+                    {% endif %}
+                    
+                    <button onclick="event.stopPropagation()" class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm">
+                        <span class="material-symbols-outlined text-[20px]">favorite_border</span>
+                    </button>
                 </div>
+
+                <!-- Product Info -->
+                <div class="flex flex-1 flex-col px-2">
+                    <span class="text-[10px] font-black text-stone-400 dark:text-stone-500 uppercase tracking-[0.2em] mb-1">{{ item.variant.product.brand }}</span>
+                    <h3 class="font-bold text-stone-900 dark:text-white text-lg leading-tight line-clamp-1 group-hover:text-primary transition-colors">
+                        {{ item.variant.product.name }}
+                    </h3>
+                </div>
+            </a>
+
+            <!-- Add to Cart Button (outside the link) -->
+            <div class="mt-4 flex items-center justify-between gap-2 px-2">
+                <div class="flex flex-col">
+                    <span class="text-xl font-black text-primary">₹{{ item.variant.selling_price }}</span>
+                    {% if item.variant.mrp > item.variant.selling_price %}
+                    <span class="text-xs font-medium text-stone-400 line-through">₹{{ item.variant.mrp }}</span>
+                    {% endif %}
+                </div>
+
+                <!-- Add to Cart Button -->
+                <button 
+                    type="button"
+                    onclick="addToCart({{ item.variant.id }})"
+                    class="h-10 px-4 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-all flex items-center gap-1">
+                    <span class="material-symbols-outlined">shopping_cart</span>
+                    Add
+                </button>
             </div>
         </div>
         {% empty %}
@@ -103,4 +120,54 @@
     </div>
     {% endif %}
 </section>
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed bottom-4 right-4 z-50"></div>
+
+<script>
+// Add to Cart Function
+function addToCart(variantId) {
+    if (!variantId) { alert('Variant not selected'); return; }
+
+    fetch(`/user/addtocart/${variantId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.message === "Item added to cart successfully") {
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(err => console.error(err));
+}
+
+// Toast Notification
+function showToast(message, type) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = (type==='success'?'bg-green-600':'bg-red-600') + ' text-white px-6 py-4 rounded-lg shadow-lg mb-2 flex items-center gap-3';
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(()=>container.removeChild(toast), 3000);
+}
+
+// CSRF Cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        document.cookie.split(';').forEach(cookie => {
+            const [k,v] = cookie.trim().split('=');
+            if (k === name) cookieValue = decodeURIComponent(v);
+        });
+    }
+    return cookieValue;
+}
+</script>
+
 {% endblock %}

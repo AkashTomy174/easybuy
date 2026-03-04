@@ -77,6 +77,11 @@
                 <span class="material-symbols-outlined">inventory_2</span>
                 <span>Inventory</span>
             </a>
+            <!-- Add Product -->
+            <a href="{% url 'add_product' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'add_product' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
+                <span class="material-symbols-outlined">add_box</span>
+                <span>Add Product</span>
+            </a>
             <!-- Orders -->
             <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
                 <span class="material-symbols-outlined">shopping_cart</span>

@@ -12,8 +12,8 @@ from easybuy.core.decorators import role_required
 
 
 # Create your views here.
-@role_required(allowed_roles=['CUSTOMER'])
-@login_required  # user profile update
+@role_required(allowed_roles=["CUSTOMER"])
+@login_required
 def profile_settings(request):
     if request.method == "POST":
         user = request.user
@@ -34,31 +34,64 @@ def profile_settings(request):
     return render(request, "core/profile.html")
 
 
-def all_products(request):  # view all product
-    product_images = ProductImage.objects.filter(is_primary=True).select_related(
-        "variant__product"
+def all_products(request):
+    # Get all variants directly instead of relying on ProductImage
+    variants = (
+        ProductVariant.objects.filter(product__is_active=True)
+        .select_related("product", "product__seller")
+        .order_by("-id")
     )
-    paginator = Paginator(product_images, 8)
+    # Get primary images for each variant
+    variant_ids = [v.id for v in variants]
+    primary_images = {
+        img.variant_id: img
+        for img in ProductImage.objects.filter(
+            variant_id__in=variant_ids, is_primary=True
+        )
+    }
+    # Create a list of objects with variant and image
+    product_data = []
+    for variant in variants:
+        product_data.append(
+            {"variant": variant, "image": primary_images.get(variant.id)}
+        )
+    paginator = Paginator(product_data, 8)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
     return render(request, "user/all_products.html", {"page_obj": page_obj})
 
-@role_required(allowed_roles=['CUSTOMER'])
-def home_view(request):  # load home of user#
+
+def home_view(request):
     categories = Category.objects.filter(is_active=True)
-    product_images = (
-        ProductImage.objects.filter(is_primary=True)
-        .select_related("variant__product")
+    # Get variants directly instead of relying on ProductImage
+    variants = (
+        ProductVariant.objects.filter(product__is_active=True)
+        .select_related("product", "product__seller")
         .order_by("-id")[:8]
     )
-    print(f"Product count: {product_images.count()}")
+    # Get primary images for each variant
+    variant_ids = [v.id for v in variants]
+    primary_images = {
+        img.variant_id: img
+        for img in ProductImage.objects.filter(
+            variant_id__in=variant_ids, is_primary=True
+        )
+    }
+    # Create a list of objects with variant and image
+    product_data = []
+    for variant in variants:
+        product_data.append(
+            {"variant": variant, "image": primary_images.get(variant.id)}
+        )
+    print(f"Product count: {len(product_data)}")
     return render(
         request,
         "core/home.html",
-        {"categories": categories, "product_images": product_images},
+        {"categories": categories, "product_data": product_data},
     )
 
-@role_required(allowed_roles=['CUSTOMER'])
+
+@role_required(allowed_roles=["CUSTOMER"])
 def register_view(request):
     if request.method == "POST":
         username = request.POST.get("username")
@@ -88,7 +121,7 @@ def register_view(request):
 
 
 @login_required
-@role_required(allowed_roles=['CUSTOMER'])
+@role_required(allowed_roles=["CUSTOMER"])
 def edit_address(request, id):
     address = Address.objects.get(id=id, user=request.user)
     if request.method == "POST":
@@ -111,14 +144,15 @@ def edit_address(request, id):
 
 
 @login_required
-@role_required(allowed_roles=['CUSTOMER'])
+@role_required(allowed_roles=["CUSTOMER"])
 def delete_address(request, id):
     address = Address.objects.get(id=id, user=request.user)
     address.delete()
     return redirect("manage_addresses")
 
+
 @login_required
-@role_required(allowed_roles=['CUSTOMER'])
+@role_required(allowed_roles=["CUSTOMER"])
 def user_address(request):
     if request.method == "POST":
         full_name = request.POST.get("fullname")
@@ -148,10 +182,11 @@ def user_address(request):
 
 
 @login_required
-@role_required(allowed_roles=['CUSTOMER'])
+@role_required(allowed_roles=["CUSTOMER"])
 def manage_addresses(request):
     addresses = Address.objects.filter(user=request.user).order_by("-is_default", "-id")
     return render(request, "core/addresses.html", {"addresses": addresses})
+
 
 @login_required
 def logout_view(request):

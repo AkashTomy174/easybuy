@@ -7,11 +7,11 @@ from easybuy.core.views import all_login
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("core/", include("easybuy.core.urls")),
+    path("", include("easybuy.core.urls")),
     path("seller/", include("easybuy.seller.urls")),
     path("easy_admin/", include("easybuy.easybuy_admin.urls")),
     path("user/", include("easybuy.user.urls")),
-    path("accounts/login/", all_login, name="login"),
+    path("login/", all_login, name="login"),
     
 ]
 if settings.DEBUG:

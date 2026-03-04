@@ -1,0 +1,461 @@
+{% extends "seller/seller_base.html" %}
+{% load static %}
+
+{% block title %}Add Product - EasyBuy Seller{% endblock %}
+
+{% block extra_css %}
+<style>
+    .image-upload-area {
+        border: 2px dashed #d1d5db;
+        transition: all 0.2s ease;
+    }
+    .image-upload-area:hover {
+        border-color: #2d5a27;
+        background-color: #fdfaf6;
+    }
+    .image-preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 0.75rem;
+    }
+    .image-preview-item {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        border: 2px solid #e5e7eb;
+    }
+    .image-preview-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .image-preview-item .remove-btn {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: rgba(239, 68, 68, 0.9);
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        cursor: pointer;
+    }
+    .form-section {
+        background: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    .dark .form-section {
+        background: #232622;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .toggle-switch {
+        position: relative;
+        width: 44px;
+        height: 24px;
+    }
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #d1d5db;
+        transition: 0.3s;
+        border-radius: 24px;
+    }
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+    }
+    input:checked + .toggle-slider {
+        background-color: #2d5a27;
+    }
+    input:checked + .toggle-slider:before {
+        transform: translateX(20px);
+    }
+</style>
+{% endblock %}
+
+{% block store_name %}{{ seller.store_name|default:"My Store" }}{% endblock %}
+{% block header_store_name %}{{ seller.store_name|default:"My Store" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-stone-900 dark:text-white">Add New Product</h1>
+        <p class="text-stone-500 dark:text-stone-400 mt-1">Create a new product listing with variants and images</p>
+    </div>
+
+    <script>
+document.addEventListener('DOMContentLoaded', function () {
+    const returnableCheckbox = document.querySelector('input[name="returnable"]');
+    const returnDaysDiv = document.querySelector('input[name="return"]').closest('div');
+
+    // Initialize visibility on page load
+    returnDaysDiv.style.display = returnableCheckbox.checked ? 'block' : 'none';
+
+    // Listen for changes
+    returnableCheckbox.addEventListener('change', function () {
+        if (this.checked) {
+            returnDaysDiv.style.display = 'block';
+        } else {
+            returnDaysDiv.style.display = 'none';
+        }
+    });
+});
+</script>
+
+    <form method="POST" action="{% url 'add_product' %}" enctype="multipart/form-data" id="productForm">
+        {% csrf_token %}
+        
+        <!-- Product Information -->
+        <div class="form-section">
+            <h2 class="text-lg font-semibold text-stone-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">inventory_2</span>
+                Product Information
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- SubCategory -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Category / SubCategory <span class="text-red-500">*</span>
+                    </label>
+                    <select name="subcategory" required
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                        <option value="">Select SubCategory</option>
+                        {% for subcategory in subcategories %}
+                        <option value="{{ subcategory.id }}">{{ subcategory.category.name }} > {{ subcategory.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Product Name -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Product Name <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="name" required placeholder="Enter product name"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+
+                <!-- Brand -->
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Brand <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="brand" required placeholder="e.g., Samsung, Apple"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+
+                <!-- Model Number -->
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Model Number <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="model" required placeholder="e.g., SM-A146B"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+
+                <!-- Description -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Description <span class="text-red-500">*</span>
+                    </label>
+                    <textarea name="des" rows="4" required placeholder="Describe your product in detail..."
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all resize-none"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pricing & Inventory -->
+        <div class="form-section">
+            <h2 class="text-lg font-semibold text-stone-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">sell</span>
+                Pricing & Inventory
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- SKU Code -->
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        SKU Code <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="sku" required placeholder="e.g., PROD-001"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+
+                <!-- Stock Quantity -->
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Stock Quantity <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="stock" required min="0" placeholder="0"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+
+                <!-- Tax Percentage -->
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Tax Percentage <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="tax" required min="0" max="100" step="0.01" placeholder="e.g., 18"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+
+                <!-- MRP -->
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        MRP (₹) <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="mrp" required min="0" step="0.01" placeholder="0.00"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+
+                <!-- Selling Price -->
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Selling Price (₹) <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="price" required min="0" step="0.01" placeholder="0.00"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+
+                <!-- Cost Price -->
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Cost Price (₹) <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="cost" required min="0" step="0.01" placeholder="0.00"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+            </div>
+        </div>
+
+        <!-- Dimensions -->
+        <div class="form-section">
+            <h2 class="text-lg font-semibold text-stone-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">straighten</span>
+                Package Dimensions
+            </h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <!-- Weight -->
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Weight (kg)
+                    </label>
+                    <input type="number" name="weight" step="0.01" min="0" placeholder="0.00"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+
+                <!-- Length -->
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Length (cm)
+                    </label>
+                    <input type="number" name="length" step="0.01" min="0" placeholder="0.00"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+
+                <!-- Width -->
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Width (cm)
+                    </label>
+                    <input type="number" name="width" step="0.01" min="0" placeholder="0.00"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+
+                <!-- Height -->
+                <div>
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Height (cm)
+                    </label>
+                    <input type="number" name="height" step="0.01" min="0" placeholder="0.00"
+                        class="w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Status -->
+        <div class="form-section">
+            <h2 class="text-lg font-semibold text-stone-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">toggle_on</span>
+                Product Status
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Is Active -->
+                <div class="flex items-center justify-between p-4 bg-stone-50 dark:bg-stone-800 rounded-xl">
+                    <div>
+                        <p class="font-medium text-stone-900 dark:text-white">Is Active</p>
+                        <p class="text-sm text-stone-500 dark:text-stone-400">Product will be visible to customers</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="is_active" value="1" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <!-- Cancellable -->
+                <div class="flex items-center justify-between p-4 bg-stone-50 dark:bg-stone-800 rounded-xl">
+                    <div>
+                        <p class="font-medium text-stone-900 dark:text-white">Cancellable</p>
+                        <p class="text-sm text-stone-500 dark:text-stone-400">Allow customers to cancel this order</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="cancellable" value="1" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <!-- Returnable -->
+                <div class="flex items-center justify-between p-4 bg-stone-50 dark:bg-stone-800 rounded-xl">
+                    <div>
+                        <p class="font-medium text-stone-900 dark:text-white">Returnable</p>
+                        <p class="text-sm text-stone-500 dark:text-stone-400">Allow customers to return this product</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="returnable" value="1" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <!-- Return Days -->{%if returnable == true %}
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                        Return Days (if returnable)
+                    </label>
+                    <input type="number" name="return" min="1" max="365" value="7" placeholder="7"
+                        class="w-full md:w-1/3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Product Images -->
+        <div class="form-section">
+            <h2 class="text-lg font-semibold text-stone-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">image</span>
+                Product Images
+            </h2>
+            
+            <div class="image-upload-area rounded-xl p-8 text-center cursor-pointer" id="uploadArea">
+                <input type="file" name="images" id="imageInput" multiple accept="image/*" class="hidden">
+                <span class="material-symbols-outlined text-4xl text-stone-400 mb-2">cloud_upload</span>
+                <p class="text-stone-600 dark:text-stone-400 font-medium">Click to upload or drag and drop</p>
+                <p class="text-stone-400 dark:text-stone-500 text-sm mt-1">PNG, JPG, GIF up to 10MB each</p>
+            </div>
+            
+            <div class="mt-4 image-preview-grid" id="imagePreviewGrid"></div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="flex items-center justify-end gap-4">
+            <a href="{% url 'seller_products_list' %}" class="px-6 py-2.5 border border-stone-300 dark:border-stone-600 rounded-xl text-stone-700 dark:text-stone-300 font-medium hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+                Cancel
+            </a>
+            <button type="submit" class="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl font-medium shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
+                <span class="material-symbols-outlined">add_shopping_cart</span>
+                Add Product
+            </button>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+    const uploadArea = document.getElementById('uploadArea');
+    const imageInput = document.getElementById('imageInput');
+    const imagePreviewGrid = document.getElementById('imagePreviewGrid');
+    let selectedFiles = [];
+
+    // Click to upload
+    uploadArea.addEventListener('click', () => imageInput.click());
+
+    // File input change
+    imageInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+
+    // Drag and drop
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '#2d5a27';
+        uploadArea.style.backgroundColor = '#fdfaf6';
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '#d1d5db';
+        uploadArea.style.backgroundColor = '';
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '#d1d5db';
+        uploadArea.style.backgroundColor = '';
+        handleFiles(e.dataTransfer.files);
+    });
+
+    function handleFiles(files) {
+        const newFiles = Array.from(files);
+        selectedFiles = [...selectedFiles, ...newFiles];
+        updatePreview();
+        updateInputFiles();
+    }
+
+    function updatePreview() {
+        imagePreviewGrid.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const div = document.createElement('div');
+                div.className = 'image-preview-item';
+                div.innerHTML = `
+                    <img src="${e.target.result}" alt="Preview">
+                    <span class="remove-btn" onclick="removeImage(${index})">×</span>
+                `;
+                imagePreviewGrid.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function removeImage(index) {
+        selectedFiles.splice(index, 1);
+        updatePreview();
+        updateInputFiles();
+    }
+
+    function updateInputFiles() {
+        const dataTransfer = new DataTransfer();
+        selectedFiles.forEach(file => dataTransfer.items.add(file));
+        imageInput.files = dataTransfer.files;
+    }
+</script>
+{% endblock %}
+{% endblock %}

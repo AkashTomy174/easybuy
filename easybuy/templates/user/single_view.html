@@ -3,34 +3,15 @@
 
 {% block content %}
 <main class="flex-1 mx-auto max-w-7xl w-full px-4 py-12 lg:px-12">
-    {% if error %}
-        <div class="text-center py-20">
-            <h1 class="text-2xl font-bold">{{ error }}</h1>
-            <a href="{% url 'all_products' %}" class="text-primary underline mt-4 inline-block">Back to Shopping</a>
-        </div>
-    {% else %}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
         
         <!-- Image Gallery -->
         <div class="space-y-6">
             <div class="aspect-square rounded-[3rem] overflow-hidden bg-white dark:bg-surface-dark border border-stone-200 dark:border-stone-700 shadow-sm">
-                {% with product.variants.first as first_variant %}
-                    {% for img in first_variant.images.all %}
-                        {% if img.is_primary %}
-                            <img src="{{ img.image.url }}" id="main-image" class="w-full h-full object-cover transition-all duration-500">
-                        {% endif %}
-                    {% endfor %}
-                {% endwith %}
+                <img src="" id="main-image" class="w-full h-full object-cover transition-all duration-500">
             </div>
-            <div class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
-                {% for variant in product.variants.all %}
-                    {% for img in variant.images.all %}
-                        <button onclick="document.getElementById('main-image').src='{{ img.image.url }}'" 
-                                class="h-20 w-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary transition-all bg-white dark:bg-stone-800">
-                            <img src="{{ img.image.url }}" class="w-full h-full object-cover">
-                        </button>
-                    {% endfor %}
-                {% endfor %}
+            <div class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar" id="thumbnail-container">
+                <!-- Thumbnails will be populated by JavaScript -->
             </div>
         </div>
 
@@ -82,6 +63,11 @@
 
             <!-- Action Buttons -->
             <div class="flex flex-col sm:flex-row gap-4 mb-12">
+                <a href="{% url 'all_products' %}" 
+                    class="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl border-2 border-stone-200 dark:border-stone-700 font-bold text-sm text-stone-600 dark:text-stone-300 hover:border-primary hover:text-primary transition-all">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    Continue Shopping
+                </a>
                 <button 
                     id="addtocart-btn"
                     onclick="addToCart()"
@@ -98,13 +84,51 @@
                     {{ product.description|safe|default:"No description available for this product." }}
                 </div>
             </div>
+            
+            <!-- Product Details -->
+            <div class="border-t border-stone-200 dark:border-stone-700 pt-8 mt-8">
+                <h3 class="text-sm font-bold text-stone-900 dark:text-white mb-4 uppercase tracking-widest">Product Details</h3>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="bg-stone-50 dark:bg-stone-800/50 p-4 rounded-xl">
+                        <span class="text-stone-500 dark:text-stone-400 block mb-1">Brand</span>
+                        <span class="font-bold text-stone-900 dark:text-white">{{ product.brand|default:"N/A" }}</span>
+                    </div>
+                    <div class="bg-stone-50 dark:bg-stone-800/50 p-4 rounded-xl">
+                        <span class="text-stone-500 dark:text-stone-400 block mb-1">Model</span>
+                        <span class="font-bold text-stone-900 dark:text-white">{{ product.model_number|default:"N/A" }}</span>
+                    </div>
+                    <div class="bg-stone-50 dark:bg-stone-800/50 p-4 rounded-xl">
+                        <span class="text-stone-500 dark:text-stone-400 block mb-1">Cancellation</span>
+                        <span class="font-bold text-stone-900 dark:text-white">{% if product.is_cancellable %}Allowed{% else %}Not Allowed{% endif %}</span>
+                    </div>
+                    <div class="bg-stone-50 dark:bg-stone-800/50 p-4 rounded-xl">
+                        <span class="text-stone-500 dark:text-stone-400 block mb-1">Return Policy</span>
+                        <span class="font-bold text-stone-900 dark:text-white">{% if product.is_returnable %}{{ product.return_days }} Days Return{% else %}Not Returnable{% endif %}</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    {% endif %}
 </main>
 
 <!-- Toast -->
 <div id="toast-container" class="fixed bottom-4 right-4 z-50"></div>
+
+<!-- Variant Images Data -->
+<script>
+const variantImages = {
+    {% for variant in product.variants.all %}
+    {{ variant.id }}: [
+        {% for img in variant.images.all %}
+        {
+            url: "{{ img.image.url }}",
+            isPrimary: {% if img.is_primary %}true{% else %}false{% endif %}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ]{% if not forloop.last %},{% endif %}
+    {% endfor %}
+};
+</script>
 
 <script>
 let selectedVariantId = null;
@@ -117,8 +141,36 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedVariantId = firstBtn.dataset.variantId;
         selectedVariantStock = parseInt(firstBtn.dataset.stock);
         updateButtonState();
+        // Load first variant's images
+        updateImages(selectedVariantId);
     }
 });
+
+function updateImages(variantId) {
+    const images = variantImages[variantId];
+    const mainImage = document.getElementById('main-image');
+    const thumbnailContainer = document.getElementById('thumbnail-container');
+    
+    if (!images || images.length === 0) {
+        // No images for this variant
+        mainImage.src = '';
+        mainImage.alt = 'No image available';
+        thumbnailContainer.innerHTML = '<span class="text-stone-400 text-sm">No images available</span>';
+        return;
+    }
+    
+    // Find primary image or use first image
+    const primaryImage = images.find(img => img.isPrimary) || images[0];
+    mainImage.src = primaryImage.url;
+    
+    // Update thumbnails
+    thumbnailContainer.innerHTML = images.map((img, index) => `
+        <button onclick="document.getElementById('main-image').src='${img.url}'" 
+                class="h-20 w-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary transition-all bg-white dark:bg-stone-800">
+            <img src="${img.url}" class="w-full h-full object-cover">
+        </button>
+    `).join('');
+}
 
 function selectVariant(id, price, mrp, stock) {
     selectedVariantId = id;
@@ -151,6 +203,9 @@ function selectVariant(id, price, mrp, stock) {
         stockStatus.className = 'text-red-600 font-bold text-sm';
     }
 
+    // Update images for selected variant
+    updateImages(id);
+    
     updateButtonState();
 }
 
@@ -183,7 +238,7 @@ function addToCart() {
     .then(data => {
         if (data.message === "Item added to cart successfully") {
             showToast(data.message, 'success');
-            updateCartCount(data.quantity);
+            updateCartCount(data.cart_count);
         } else {
             showToast(data.message, 'error');
         }
@@ -227,3 +282,4 @@ function getCookie(name) {
 }
 </script>
 {% endblock %}
+

@@ -33,7 +33,7 @@
 
     <div class="grid grid-cols-2 gap-6 md:grid-cols-4">
         {% for category in categories %}
-        <a href="{% url 'category_products' category.id %}" class="group flex flex-col items-center gap-4 text-center cursor-pointer">
+        <a href="{% url 'category_products' category.slug %}" class="group flex flex-col items-center gap-4 text-center cursor-pointer">
             <div class="relative flex aspect-square w-full items-center justify-center rounded-3xl bg-white shadow-md ring-1 ring-stone-100 transition-all group-hover:shadow-2xl group-hover:ring-primary/20 overflow-hidden dark:bg-surface-dark">
                 {% if category.image_url %}
                     <img alt="{{ category.name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="{{ category.image_url.url }}"/>
@@ -65,13 +65,13 @@
         </div>
             
         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {% for pi in product_images %}
+            {% for item in product_data %}
             <div class="group relative flex flex-col rounded-3xl border border-stone-200 bg-white p-4 shadow-sm transition-all hover:shadow-2xl hover:-translate-y-1 dark:border-stone-700 dark:bg-surface-dark">
                 
                 <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800 mb-4">
-                    {% if pi.image %}
-                        <img src="{{ pi.image.url }}" 
-                            alt="{{ pi.variant.product.name }}" 
+                    {% if item.image %}
+                        <img src="{{ item.image.image.url }}" 
+                            alt="{{ item.variant.product.name }}" 
                             class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110">
                     {% else %}
                         <div class="flex h-full w-full items-center justify-center bg-stone-100 dark:bg-stone-800">
@@ -85,18 +85,20 @@
                 </div>
 
                 <div class="flex flex-1 flex-col px-2">
-                    <p class="text-xs font-medium text-stone-400 uppercase tracking-wide">{{ pi.variant.product.brand }}</p>
+                    <p class="text-xs font-medium text-stone-400 uppercase tracking-wide">{{ item.variant.product.brand }}</p>
                     <h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-2">
-                        {{ pi.variant.product.name }}
+                        <a href="{% url 'product_detail' item.variant.product.slug %}" class="hover:text-primary transition-colors">
+                            {{ item.variant.product.name }}
+                        </a>
                     </h3>
                     
                     <div class="mt-4 flex items-center justify-between">
                         <div class="flex flex-col">
-                            <span class="text-xs text-stone-400 line-through">₹{{ pi.variant.mrp }}</span>
-                            <span class="text-xl font-black text-primary">₹{{ pi.variant.selling_price }}</span>
+                            <span class="text-xs text-stone-400 line-through">₹{{ item.variant.mrp }}</span>
+                            <span class="text-xl font-black text-primary">₹{{ item.variant.selling_price }}</span>
                         </div>
                         
-                        <button class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
+                        <button onclick="addToCart({{ item.variant.id }})" class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
                             <span class="material-symbols-outlined">add_shopping_cart</span>
                         </button>
                     </div>

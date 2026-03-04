@@ -35,7 +35,7 @@
                 </h2>
                 <div class="flex lg:flex-col gap-2 overflow-x-auto hide-scrollbar pb-4 lg:pb-0">
                     {% if categories %}
-                    <a href="{% url 'category_products' categories.id %}" 
+                    <a href="{% url 'category_products' categories.slug %}" 
                        class="whitespace-nowrap px-5 py-3 rounded-2xl text-sm font-bold transition-all border border-transparent
                        {% if not active_sub %} bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg shadow-primary/30 {% else %} text-stone-600 dark:text-stone-300 hover:bg-white dark:hover:bg-stone-800 hover:border-stone-200 {% endif %}">
                         All Items
@@ -43,7 +43,7 @@
                     {% endif %}
 
                     {% for sub in subcategory %}
-                    <a href="{% url 'subcategory_products' sub.id %}" 
+                    <a href="{% url 'subcategory_products' sub.slug %}"
                        class="whitespace-nowrap px-5 py-3 rounded-2xl text-sm font-bold transition-all border border-transparent flex items-center justify-between gap-4
                        {% if active_sub == sub.id %} 
                             bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg shadow-primary/30
@@ -62,7 +62,7 @@
         <section class="flex-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {% for p in product %}
-                <div class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary/30">
+                <a href="{% url 'single_product' p.slug %}" class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary/30">
                     
                     <div class="relative aspect-square overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4">
                         {% with p.variants.first as v %}
@@ -79,7 +79,7 @@
                             {% endif %}
                         {% endwith %}
 
-                        <button class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm">
+                        <button onclick="event.stopPropagation()" class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm">
                             <span class="material-symbols-outlined text-[20px]">favorite_border</span>
                         </button>
                     </div>
@@ -102,14 +102,16 @@
                                         <span class="text-sm font-bold text-stone-400 italic uppercase">Coming Soon</span>
                                     {% endif %}
                                 </div>
+                                {% if v %}
+                                <button onclick="event.stopPropagation(); addToCart({{ v.id }})"
+                                        class="h-12 w-12 rounded-full bg-accent-terracotta text-white flex items-center justify-center hover:bg-stone-800 transition-colors shadow-sm">
+                                    <span class="material-symbols-outlined">add_shopping_cart</span>
+                                </button>
+                                {% endif %}
                             {% endwith %}
-                            
-                            <a href="#" class="h-12 w-12 flex items-center justify-center rounded-2xl bg-gradient-to-r from-stone-800 to-stone-900 dark:from-stone-700 dark:to-stone-600 text-white shadow-lg hover:bg-gradient-to-r hover:from-primary hover:to-primary-dark hover:shadow-primary/30 transition-all">
-                                <span class="material-symbols-outlined">add_shopping_cart</span>
-                            </a>
                         </div>
                     </div>
-                </div>
+                </a>
                 {% empty %}
                 <div class="col-span-full py-32 text-center bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-3xl border border-stone-200 dark:border-stone-700">
                     <div class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-stone-100 dark:bg-stone-800 text-stone-300 mb-6">

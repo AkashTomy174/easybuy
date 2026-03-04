@@ -25,7 +25,7 @@
         {% for product in products %}
         {% with product.variants.first as variant %}
         {% with variant.images.first as product_image %}
-        <div class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary/30">
+        <a href="{% url 'single_product' product.slug %}" class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary/30 relative">
             
             <!-- Badge -->
             <div class="absolute top-4 left-4 z-10">
@@ -42,7 +42,7 @@
                     </div>
                 {% endif %}
                 
-                <button class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm">
+                <button onclick="event.stopPropagation()" class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm">
                     <span class="material-symbols-outlined text-[20px]">favorite_border</span>
                 </button>
             </div>
@@ -53,7 +53,7 @@
                     {{ product.name }}
                 </h3>
                 
-                <div class="mt-4 flex items-center justify-between">
+                <div class="mt-4 flex items-center justify-between gap-2">
                     {% if variant %}
                     <div class="flex flex-col">
                         <span class="text-xl font-black text-primary">₹{{ variant.selling_price }}</span>
@@ -61,15 +61,19 @@
                         <span class="text-xs font-medium text-stone-400 line-through">₹{{ variant.mrp }}</span>
                         {% endif %}
                     </div>
+                    <button 
+                        type="button"
+                        onclick="event.stopPropagation(); addToCart({{ variant.id }})"
+                        class="h-10 px-4 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-all flex items-center gap-1">
+                        <span class="material-symbols-outlined">shopping_cart</span>
+                        Add to Cart
+                    </button>
                     {% else %}
                     <span class="text-sm font-bold text-stone-400 italic uppercase">Coming Soon</span>
                     {% endif %}
-                    <a href="#" class="h-10 w-10 flex items-center justify-center rounded-2xl bg-stone-100 dark:bg-stone-700 text-stone-400 hover:bg-primary hover:text-white transition-all">
-                        <span class="material-symbols-outlined text-xl">add_shopping_cart</span>
-                    </a>
                 </div>
             </div>
-        </div>
+        </a>
         {% endwith %}
         {% endwith %}
         {% empty %}
@@ -80,4 +84,39 @@
         {% endfor %}
     </div>
 </section>
+
+<script>
+function addToCart(variantId) {
+    if (!variantId) { alert('Variant not selected'); return; }
+
+    fetch(`/user/addtocart/${variantId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.message === "Item added to cart successfully") {
+            alert(data.message); // replace with your toast if available
+            // updateCartCount(data.quantity);
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(err => console.error(err));
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        document.cookie.split(';').forEach(cookie => {
+            const [k,v] = cookie.trim().split('=');
+            if (k === name) cookieValue = decodeURIComponent(v);
+        });
+    }
+    return cookieValue;
+}
+</script>
 {% endblock %}
