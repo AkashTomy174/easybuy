@@ -1,0 +1,117 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}Rejected Products - Admin | EasyBuy{% endblock %}
+
+{% block header_title %}Rejected Products{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-black tracking-tight mb-2">Rejected Products</h1>
+<p class="text-slate-500 mb-8">View all products that have been rejected from the approval process.</p>
+
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <table class="w-full text-left border-collapse">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Product</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Seller</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Category</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Brand</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Submitted</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Status</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% if page_obj %}
+                {% for product in page_obj %}
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 font-bold overflow-hidden">
+                                {% if product.variants.first.images.first %}
+                                <img src="{{ product.variants.first.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
+                                {% else %}
+                                {{ product.name|first|upper }}
+                                {% endif %}
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-slate-900">{{ product.name }}</p>
+                                <p class="text-xs text-slate-500">{{ product.model_number }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="text-sm font-medium">{{ product.seller.store_name }}</p>
+                        <p class="text-xs text-slate-500">{{ product.seller.user.email }}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="text-sm font-medium">{{ product.subcategory.name }}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="text-sm font-medium">{{ product.brand }}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="text-sm font-medium">{{ product.created_at|date:"M d, Y" }}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                            REJECTED
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center">
+                        <span class="material-symbols-outlined text-5xl text-slate-300">inventory_2</span>
+                        <p class="text-slate-500 mt-3 font-medium">No rejected products</p>
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="mt-6 flex items-center justify-between">
+    <p class="text-sm text-slate-500">
+        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} products
+    </p>
+    <div class="flex items-center gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+            Previous
+        </a>
+        {% else %}
+        <span class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-400 cursor-not-allowed">
+            Previous
+        </span>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <span class="px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-bold">
+                {{ num }}
+            </span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a href="?page={{ num }}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                {{ num }}
+            </a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+            Next
+        </a>
+        {% else %}
+        <span class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-400 cursor-not-allowed">
+            Next
+        </span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

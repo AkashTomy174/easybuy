@@ -1,0 +1,101 @@
+{% extends 'core/core_base.html' %}
+{% block title %}Order Success | EasyBuy{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-2xl px-4 py-16 sm:px-12">
+    <div class="bg-white dark:bg-surface-dark rounded-3xl border border-stone-200 dark:border-stone-700 p-8 shadow-lg text-center">
+        
+        <!-- Success Icon -->
+        <div class="w-24 h-24 mx-auto mb-6 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+            <span class="material-symbols-outlined text-5xl text-green-600">check_circle</span>
+        </div>
+        
+        <h1 class="text-3xl font-black text-stone-900 dark:text-white mb-4">Order Placed Successfully!</h1>
+        
+        <p class="text-stone-500 dark:text-stone-400 mb-8">
+            Thank you for your order. Your order has been confirmed and will be shipped soon.
+        </p>
+        
+        <!-- Order Details -->
+        <div class="bg-stone-50 dark:bg-stone-800 rounded-2xl p-6 mb-8 text-left">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Order Number</span>
+                    <p class="font-black text-stone-900 dark:text-white text-lg">{{ order.order_number }}</p>
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Total Amount</span>
+                    <p class="font-black text-primary text-lg">₹{{ order.total_amount|floatformat:2 }}</p>
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Payment Method</span>
+                    <p class="font-bold text-stone-900 dark:text-white">
+                        {% if payment_method == 'COD' %}Cash on Delivery
+                        {% elif payment_method == 'UPI' %}UPI
+                        {% elif payment_method == 'CARD' %}Card Payment
+                        {% elif payment_method == 'NETBANKING' %}Net Banking
+                        {% else %}{{ payment_method }}
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Payment Status</span>
+                    <p class="font-bold text-yellow-600">{{ order.payment_status }}</p>
+                </div>
+                <div class="col-span-2">
+                    <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Order Status</span>
+                    <p class="font-bold text-green-600">{{ order.order_status }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Items -->
+        <div class="mb-8">
+            <h3 class="text-sm font-bold text-stone-400 uppercase tracking-wider mb-4">Order Items</h3>
+            <div class="space-y-3">
+                {% for item in order.items.all %}
+                <div class="flex items-center gap-4 p-3 bg-stone-50 dark:bg-stone-800 rounded-xl">
+                    <div class="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-stone-200 dark:bg-stone-700">
+                        {% if item.variant.images.first %}
+                            <img src="{{ item.variant.images.first.image.url }}" alt="{{ item.variant.product.name }}" class="w-full h-full object-cover">
+                        {% else %}
+                            <span class="material-symbols-outlined text-xl text-stone-400 flex items-center justify-center w-full h-full">image</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex-1 text-left">
+                        <h4 class="font-bold text-stone-900 dark:text-white">{{ item.variant.product.name }}</h4>
+                        <p class="text-xs text-stone-500">Qty: {{ item.quantity }} × ₹{{ item.price_at_purchase }}</p>
+                    </div>
+                    <div class="font-bold text-stone-900 dark:text-white">
+                        ₹{% widthratio item.price_at_purchase 1 item.quantity %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Delivery Address -->
+        <div class="mb-8 text-left">
+            <h3 class="text-sm font-bold text-stone-400 uppercase tracking-wider mb-3">Delivery Address</h3>
+            <div class="p-4 bg-stone-50 dark:bg-stone-800 rounded-xl">
+                <p class="font-bold text-stone-900 dark:text-white">{{ order.shipping_name }}</p>
+                <p class="text-sm text-stone-500 dark:text-stone-400">{{ order.shipping_address }}</p>
+                <p class="text-sm text-stone-500 dark:text-stone-400 mt-2">Phone: {{ order.shipping_phone }}</p>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4">
+            <a href="{% url 'all_products' %}" class="flex-1 bg-primary text-white font-bold py-3 px-6 rounded-2xl hover:bg-primary-dark transition-all text-center">
+                Continue Shopping
+            </a>
+            <a href="#" class="flex-1 border-2 border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 font-bold py-3 px-6 rounded-2xl hover:border-primary hover:text-primary transition-all text-center">
+                Track Order
+            </a>
+        </div>
+        
+    </div>
+</section>
+
+{% endblock %}
+

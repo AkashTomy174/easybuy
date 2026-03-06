@@ -66,7 +66,7 @@
             
         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {% for item in product_data %}
-            <div class="group relative flex flex-col rounded-3xl border border-stone-200 bg-white p-4 shadow-sm transition-all hover:shadow-2xl hover:-translate-y-1 dark:border-stone-700 dark:bg-surface-dark">
+            <a href="{% url 'product_detail' item.variant.product.slug %}" class="group relative flex flex-col rounded-3xl border border-stone-200 bg-white p-4 shadow-sm transition-all hover:shadow-2xl hover:-translate-y-1 dark:border-stone-700 dark:bg-surface-dark">
                 
                 <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800 mb-4">
                     {% if item.image %}
@@ -87,9 +87,7 @@
                 <div class="flex flex-1 flex-col px-2">
                     <p class="text-xs font-medium text-stone-400 uppercase tracking-wide">{{ item.variant.product.brand }}</p>
                     <h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-2">
-                        <a href="{% url 'product_detail' item.variant.product.slug %}" class="hover:text-primary transition-colors">
-                            {{ item.variant.product.name }}
-                        </a>
+                        {{ item.variant.product.name }}
                     </h3>
                     
                     <div class="mt-4 flex items-center justify-between">
@@ -98,12 +96,13 @@
                             <span class="text-xl font-black text-primary">₹{{ item.variant.selling_price }}</span>
                         </div>
                         
-                        <button onclick="addToCart({{ item.variant.id }})" class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
+
+                        <button onclick="event.preventDefault(); event.stopPropagation(); addToCart({{ item.variant.id }}); return false;" class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
                             <span class="material-symbols-outlined">add_shopping_cart</span>
                         </button>
                     </div>
                 </div>
-            </div>
+            </a>
             {% empty %}
             <div class="col-span-full py-10 text-center">
                 <p class="text-stone-500 italic">No products available at the moment.</p>

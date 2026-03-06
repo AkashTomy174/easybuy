@@ -141,7 +141,7 @@
                                 <span class="text-2xl font-black text-stone-900">₹{{ pi.variant.selling_price }}</span>
                             </div>
                             
-                            <button onclick="event.stopPropagation(); addToCart({{ pi.variant.id }})" class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/30 hover:bg-primary-dark transition-all">
+                            <button onclick="event.preventDefault(); event.stopPropagation(); addToCart({{ pi.variant.id }}); return false;" class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/30 hover:bg-primary-dark transition-all">
                                 <span class="material-symbols-outlined">shopping_cart</span>
                             </button>
                         </div>
@@ -181,5 +181,42 @@
         <p class="text-[10px] text-stone-300 font-bold uppercase tracking-[0.1em]">© 2026 EasyBuy Inc. Designed for Excellence.</p>
     </footer>
 </div>
+
+<script>
+function addToCart(variantId) {
+    if (!variantId) return;
+
+    fetch(`/user/addtocart/${variantId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.message === "Item added to cart successfully") {
+            alert('Added to cart');
+        } else {
+            alert(data.message || 'Error adding to cart');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Error adding to cart');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        document.cookie.split(';').forEach(cookie => {
+            const [k,v] = cookie.trim().split('=');
+            if (k === name) cookieValue = decodeURIComponent(v);
+        });
+    }
+    return cookieValue;
+}
+</script>
 </body>
 </html>

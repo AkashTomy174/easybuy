@@ -4,122 +4,267 @@
 {% block extra_css %}
 <style>
     .product-card-shadow { box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.08); }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #525252; }
+    
+    /* Mobile filter toggle */
+    .filter-toggle:checked + .filter-panel { display: block; }
 </style>
 {% endblock %}
 
 {% block content %}
 <!-- Page Header -->
-<section class="bg-white/60 dark:bg-surface-dark/60 border-b border-stone-200 dark:border-stone-700 py-16">
+<section class="bg-white/60 dark:bg-surface-dark/60 border-b border-stone-200 dark:border-stone-700 py-8">
     <div class="mx-auto max-w-7xl px-4 lg:px-12 text-center">
-        <span class="text-xs font-black uppercase tracking-[0.3em] text-accent-terracotta mb-4 block">Premium Selection</span>
-        <h1 class="text-5xl font-black text-stone-900 dark:text-white md:text-6xl tracking-tight">Our Entire Collection</h1>
-        <p class="mt-4 mx-auto max-w-xl text-stone-500 dark:text-stone-400 text-lg">Discover high-end electronics and designer tech essentials.</p>
+        <span class="text-xs font-black uppercase tracking-[0.3em] text-accent-terracotta mb-2 block">Premium Selection</span>
+        <h1 class="text-3xl md:text-4xl font-black text-stone-900 dark:text-white tracking-tight">Our Entire Collection</h1>
+        <!-- Mobile Filter Toggle -->
+        <div class="lg:hidden mt-4">
+            <label for="filter-toggle" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white font-bold text-sm">
+                <span class="material-symbols-outlined">filter_list</span>
+                Filters
+            </label>
+            <input type="checkbox" id="filter-toggle" class="hidden filter-toggle">
+        </div>
     </div>
 </section>
 
-<!-- Products Section -->
-<section class="mx-auto max-w-7xl px-4 py-20 sm:px-12">
-    
-    <!-- Results Info -->
-    <div class="flex flex-col sm:flex-row justify-between items-center mb-12 gap-4">
-        <div class="text-sm font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest">
-            SHOWING <span class="text-stone-900 dark:text-white">{{ page_obj.start_index }}-{{ page_obj.end_index }}</span> OF {{ page_obj.paginator.count }} PRODUCTS
-        </div>
-    </div>
+<!-- Main Content with Sidebar -->
+<div class="max-w-7xl mx-auto px-4 lg:px-12 py-8">
+    <div class="flex flex-col lg:flex-row gap-8">
+        
+        <!-- Filter Sidebar -->
+        <aside class="w-full lg:w-72 flex-shrink-0{% if not request.GET %} lg:block{% endif %}">
+            <div class="bg-white dark:bg-surface-dark rounded-3xl shadow-card p-6 {% if request.GET %}{% else %}sticky top-24{% endif %}">
+                <form method="GET" id="filterForm">
+                    <!-- Search -->
+                    <!-- <div class="mb-6">
+                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Search Products</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">search</span>
+                            <input type="text" name="q" value="{{ selected_product }}"
+                                class="w-full h-11 pl-10 pr-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
+                                placeholder="Product name...">
+                        </div>
+                    </div> -->
 
-    <!-- Products Grid -->
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {% for item in page_obj %}
-        <div class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary/30 cursor-pointer">
-            
-            <!-- Product Image (clickable link to single product) -->
-            <a href="{% url 'single_product' item.variant.product.slug %}" class="block">
-                <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4">
-                    {% if item.image %}
-                    <img src="{{ item.image.image.url }}" alt="{{ item.variant.product.name }}" 
-                         class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
-                    {% else %}
-                    <div class="h-full w-full flex items-center justify-center">
-                        <span class="material-symbols-outlined text-7xl text-stone-300">image</span>
+                    <!-- Category -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Category</label>
+                        <select name="category" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
+                            <option value="">All Categories</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.slug }}" {% if selected_category == cat.slug|stringformat:"s" %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    {% endif %}
-                    
-                    <button onclick="event.stopPropagation()" class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm">
-                        <span class="material-symbols-outlined text-[20px]">favorite_border</span>
-                    </button>
-                </div>
 
-                <!-- Product Info -->
-                <div class="flex flex-1 flex-col px-2">
-                    <span class="text-[10px] font-black text-stone-400 dark:text-stone-500 uppercase tracking-[0.2em] mb-1">{{ item.variant.product.brand }}</span>
-                    <h3 class="font-bold text-stone-900 dark:text-white text-lg leading-tight line-clamp-1 group-hover:text-primary transition-colors">
-                        {{ item.variant.product.name }}
-                    </h3>
-                </div>
-            </a>
+                    <!-- Subcategory -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Subcategory</label>
+                        <select name="subcategory" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
+                            <option value="">All Subcategories</option>
+                            {% for sub in subcategories %}
+                            <option value="{{ sub.slug }}" {% if selected_subcategory == sub.slug|stringformat:"s" %}selected{% endif %}>
+                                {{ sub.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-            <!-- Add to Cart Button (outside the link) -->
-            <div class="mt-4 flex items-center justify-between gap-2 px-2">
-                <div class="flex flex-col">
-                    <span class="text-xl font-black text-primary">₹{{ item.variant.selling_price }}</span>
-                    {% if item.variant.mrp > item.variant.selling_price %}
-                    <span class="text-xs font-medium text-stone-400 line-through">₹{{ item.variant.mrp }}</span>
-                    {% endif %}
-                </div>
+                    <!-- Brand Checkboxes -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-3">Brand</label>
+                        <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                            {% for brand in all_brands %}
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <input type="checkbox" name="brand" value="{{ brand }}" 
+                                    {% if brand in selected_brands %}checked{% endif %}
+                                    class="w-5 h-5 rounded-lg border-2 border-stone-300 dark:border-stone-600 text-primary focus:ring-primary/20 accent-primary">
+                                <span class="text-sm font-medium text-stone-600 dark:text-stone-300 group-hover:text-primary transition-colors">{{ brand }}</span>
+                            </label>
+                            {% empty %}
+                            <p class="text-sm text-stone-400 italic">No brands available</p>
+                            {% endfor %}
+                        </div>
+                    </div>
 
-                <!-- Add to Cart Button -->
-                <button 
-                    type="button"
-                    onclick="addToCart({{ item.variant.id }})"
-                    class="h-10 px-4 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-all flex items-center gap-1">
-                    <span class="material-symbols-outlined">shopping_cart</span>
-                    Add
-                </button>
+                    <!-- Price Range -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Price Range</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" name="min" value="{{ selected_min_price }}" 
+                                class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
+                                placeholder="Min">
+                            <span class="text-stone-400">-</span>
+                            <input type="number" name="max" value="{{ selected_max_price }}" 
+                                class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
+                                placeholder="Max">
+                        </div>
+                    </div>
+
+                    <!-- Sort -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Sort By</label>
+                        <select name="sort" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
+                            <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest First</option>
+                            <option value="price_low" {% if selected_sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                            <option value="price_high" {% if selected_sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                            <option value="name_asc" {% if selected_sort == 'name_asc' %}selected{% endif %}>Name: A to Z</option>
+                            <option value="name_desc" {% if selected_sort == 'name_desc' %}selected{% endif %}>Name: Z to A</option>
+                        </select>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex gap-3">
+                        <button type="submit" class="flex-1 h-12 rounded-2xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors shadow-button">
+                            Apply Filters
+                        </button>
+                        <a href="{% url 'all_products' %}" class="h-12 px-4 rounded-2xl border-2 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors flex items-center justify-center">
+                            <span class="material-symbols-outlined">refresh</span>
+                        </a>
+                    </div>
+                </form>
             </div>
-        </div>
-        {% empty %}
-        <div class="col-span-full py-24 text-center bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-3xl border border-stone-200 dark:border-stone-700">
-            <span class="material-symbols-outlined text-7xl text-stone-300">inventory_2</span>
-            <p class="text-stone-400 dark:text-stone-500 mt-4 text-lg font-medium italic">We couldn't find any products in this collection.</p>
-        </div>
-        {% endfor %}
-    </div>
+        </aside>
 
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <div class="mt-24 flex flex-col items-center gap-6">
-        <div class="flex items-center gap-2 p-2 bg-white dark:bg-surface-dark rounded-[2rem] border border-stone-200 dark:border-stone-700 shadow-sm">
-            
-            {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}" class="h-10 w-10 flex items-center justify-center rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
-                <span class="material-symbols-outlined">chevron_left</span>
-            </a>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <span class="h-10 w-10 flex items-center justify-center rounded-2xl bg-gradient-to-r from-primary to-primary-dark text-white font-black shadow-lg shadow-primary/20">
-                        {{ num }}
+        <!-- Products Grid -->
+        <div class="flex-1">
+            <!-- Results Count & Active Filters -->
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div class="text-sm font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest">
+                    SHOWING <span class="text-stone-900 dark:text-white">{{ page_obj.start_index }}-{{ page_obj.end_index }}</span> OF {{ page_obj.paginator.count }} PRODUCTS
+                </div>
+                
+                <!-- Active Filters -->
+                {% if selected_category or selected_subcategory or selected_brands or selected_min_price or selected_max_price or selected_product %}
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-sm text-stone-500">Active filters:</span>
+                    {% if selected_category %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                        {{ selected_category }}
+<a href="?{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for b in selected_brands %}brand={{ b }}&{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}q={{ selected_product }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}" class="ml-1">
+                            <span class="material-symbols-outlined text-[14px]">close</span>
+                        </a>
                     </span>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <a href="?page={{ num }}" class="h-10 w-10 flex items-center justify-center rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 font-bold text-stone-400">
-                        {{ num }}
-                    </a>
+                    {% endif %}
+                    {% if selected_brands %}
+                    {% for b in selected_brands %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                        {{ b }}
+                        <a href="?{% if selected_category %}category={{ selected_category }}&{% endif %}{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for br in selected_brands %}{% if br != b %}brand={{ br }}&{% endif %}{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}q={{ selected_product }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}" class="ml-1">
+                            <span class="material-symbols-outlined text-[14px]">close</span>
+                        </a>
+                    </span>
+                    {% endfor %}
+                    {% endif %}
+                </div>
                 {% endif %}
-            {% endfor %}
+            </div>
 
-            {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}" class="h-10 w-10 flex items-center justify-center rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
-                <span class="material-symbols-outlined">chevron_right</span>
-            </a>
+            <!-- Products Grid -->
+            {% if page_obj %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                {% for item in page_obj %}
+                <a href="{% url 'single_product' item.variant.product.slug %}" class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary/30">
+                    
+                    <!-- Product Image -->
+                    <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4">
+                        {% if item.image %}
+                        <img src="{{ item.image.image.url }}" alt="{{ item.variant.product.name }}" 
+                             class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
+                        {% else %}
+                        <div class="h-full w-full flex items-center justify-center">
+                            <span class="material-symbols-outlined text-7xl text-stone-300">image</span>
+                        </div>
+                        {% endif %}
+                        
+                        <button onclick="event.stopPropagation()" class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm">
+                            <span class="material-symbols-outlined text-[20px]">favorite_border</span>
+                        </button>
+                    </div>
+
+                    <!-- Product Info -->
+                    <div class="flex flex-1 flex-col px-2">
+                        <span class="text-[10px] font-black text-stone-400 dark:text-stone-500 uppercase tracking-[0.2em] mb-1">{{ item.variant.product.brand }}</span>
+                        <h3 class="font-bold text-stone-900 dark:text-white text-lg leading-tight line-clamp-1 group-hover:text-primary transition-colors">
+                            {{ item.variant.product.name }}
+                        </h3>
+                    </div>
+
+                    <!-- Add to Cart Button -->
+                    <div class="mt-4 flex items-center justify-between gap-2 px-2">
+                        <div class="flex flex-col">
+                            <span class="text-xl font-black text-primary">₹{{ item.variant.selling_price }}</span>
+                            {% if item.variant.mrp > item.variant.selling_price %}
+                            <span class="text-xs font-medium text-stone-400 line-through">₹{{ item.variant.mrp }}</span>
+                            {% endif %}
+                        </div>
+
+                        <button 
+                            type="button"
+                            onclick="event.preventDefault(); event.stopPropagation(); addToCart({{ item.variant.id }}); return false;"
+                            class="h-10 px-4 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-all flex items-center gap-1">
+                            <span class="material-symbols-outlined">shopping_cart</span>
+                            Add
+                        </button>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- No Results -->
+            <div class="col-span-full py-24 text-center bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-3xl border border-stone-200 dark:border-stone-700">
+                <span class="material-symbols-outlined text-7xl text-stone-300">inventory_2</span>
+                <p class="text-stone-400 dark:text-stone-500 mt-4 text-lg font-medium italic">We couldn't find any products in this collection.</p>
+                <a href="{% url 'all_products' %}" class="inline-flex items-center gap-2 mt-4 px-6 py-3 rounded-2xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors">
+                    <span class="material-symbols-outlined">refresh</span>
+                    Clear Filters
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="mt-16 flex flex-col items-center gap-6">
+                <div class="flex items-center gap-2 p-2 bg-white dark:bg-surface-dark rounded-[2rem] border border-stone-200 dark:border-stone-700 shadow-sm">
+                    
+                    {% if page_obj.has_previous %}
+<a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.subcategory %}subcategory={{ request.GET.subcategory }}&{% endif %}{% for b in request.GET.brand %}brand={{ b }}&{% endfor %}{% if request.GET.min %}min={{ request.GET.min }}&{% endif %}{% if request.GET.max %}max={{ request.GET.max }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ page_obj.previous_page_number }}" class="h-10 w-10 flex items-center justify-center rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+                        <span class="material-symbols-outlined">chevron_left</span>
+                    </a>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <span class="h-10 w-10 flex items-center justify-center rounded-2xl bg-gradient-to-r from-primary to-primary-dark text-white font-black shadow-lg shadow-primary/20">
+                                {{ num }}
+                            </span>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+<a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.subcategory %}subcategory={{ request.GET.subcategory }}&{% endif %}{% for b in request.GET.brand %}brand={{ b }}&{% endfor %}{% if request.GET.min %}min={{ request.GET.min }}&{% endif %}{% if request.GET.max %}max={{ request.GET.max }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ num }}" class="h-10 w-10 flex items-center justify-center rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 font-bold text-stone-400">
+                                {{ num }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+<a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.subcategory %}subcategory={{ request.GET.subcategory }}&{% endif %}{% for b in request.GET.brand %}brand={{ b }}&{% endfor %}{% if request.GET.min %}min={{ request.GET.min }}&{% endif %}{% if request.GET.max %}max={{ request.GET.max }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ page_obj.next_page_number }}" class="h-10 w-10 flex items-center justify-center rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+                        <span class="material-symbols-outlined">chevron_right</span>
+                    </a>
+                    {% endif %}
+                </div>
+                <p class="text-[10px] font-black text-stone-300 dark:text-stone-600 uppercase tracking-[0.2em]">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </p>
+            </div>
             {% endif %}
         </div>
-        <p class="text-[10px] font-black text-stone-300 dark:text-stone-600 uppercase tracking-[0.2em]">
-            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-        </p>
     </div>
-    {% endif %}
-</section>
+</div>
 
 <!-- Toast Container -->
 <div id="toast-container" class="fixed bottom-4 right-4 z-50"></div>

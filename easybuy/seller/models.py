@@ -55,7 +55,12 @@ class Product(models.Model):
     is_cancellable = models.BooleanField(default=True)
     is_returnable = models.BooleanField(default=True)
     return_days = models.IntegerField(default=7)
-    approval_status = models.CharField(max_length=20, default="PENDING")
+    CHOICES=(
+        ("APPROVED","approved"),
+        ("PENDING","pending"),
+        ("REJECTED","rejected"),
+    )
+    approval_status = models.CharField(max_length=20,choices=CHOICES, default="PENDING")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

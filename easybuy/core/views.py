@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from easybuy.seller.models import Product, ProductVariant, ProductImage
 from django.core.paginator import Paginator
 from easybuy.core.decorators import role_required
+from django.db.models import Q
 
 
 # Create your views here.
@@ -35,41 +36,102 @@ def profile_settings(request):
 
 
 def all_products(request):
-    # Get all variants directly instead of relying on ProductImage
-    variants = (
-        ProductVariant.objects.filter(product__is_active=True)
-        .select_related("product", "product__seller")
-        .order_by("-id")
+    icategory = request.GET.get("category")
+    isubCategory = request.GET.get("subcategory")
+    ibrand = request.GET.getlist("brand")
+    min_price = request.GET.get("min")
+    max_price = request.GET.get("max")
+    iprod = request.GET.get("q")
+    sort = request.GET.get("sort", "newest")
+    variants = ProductVariant.objects.filter(
+        product__is_active=True,
+        product__approval_status="APPROVED",
+        product__seller__status="APPROVED",
+    ).select_related(
+        "product",
+        "product__seller",
+        "product__subcategory",
+        "product__subcategory__category",
     )
-    # Get primary images for each variant
-    variant_ids = [v.id for v in variants]
+    if icategory:
+        variants = variants.filter(product__subcategory__category__slug=icategory)
+    if isubCategory:
+        variants = variants.filter(product__subcategory__slug=isubCategory)
+    if ibrand:
+        variants = variants.filter(product__brand__in=ibrand)
+
+    if iprod:
+        search_query = iprod.strip()
+        variants = variants.filter(
+            Q(product__name__icontains=search_query)
+            | Q(product__description__icontains=search_query)
+            | Q(product__brand__icontains=search_query)
+        )
+    if min_price:
+        min_price = float(min_price)
+        variants = variants.filter(selling_price__gte=min_price)
+    if max_price:
+        max_price = float(max_price)
+        variants = variants.filter(selling_price__lte=max_price)
+    if sort == "price_low":
+        variants = variants.order_by("selling_price")
+    elif sort == "price_high":
+        variants = variants.order_by("-selling_price")
+    elif sort == "name_asc":
+        variants = variants.order_by("product__name")
+    elif sort == "name_desc":
+        variants = variants.order_by("-product__name")
+    else:
+        variants = variants.order_by("-id")
+    all_brands = (
+        Product.objects.filter(
+            is_active=True, approval_status="APPROVED", seller__status="APPROVED"
+        )
+        .values_list("brand", flat=True)
+        .distinct()
+    )
+    categories = Category.objects.filter(is_active=True)
+    subcategories = SubCategory.objects.filter(is_active=True)
+    variant_list = list(variants)
+    variant_ids = [v.id for v in variant_list]
     primary_images = {
         img.variant_id: img
         for img in ProductImage.objects.filter(
             variant_id__in=variant_ids, is_primary=True
         )
     }
-    # Create a list of objects with variant and image
     product_data = []
-    for variant in variants:
+    for variant in variant_list:
         product_data.append(
             {"variant": variant, "image": primary_images.get(variant.id)}
         )
-    paginator = Paginator(product_data, 8)
+    paginator = Paginator(product_data, 12)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
-    return render(request, "user/all_products.html", {"page_obj": page_obj})
+
+    context = {
+        "page_obj": page_obj,
+        "all_brands": all_brands,
+        "categories": categories,
+        "subcategories": subcategories,
+        "selected_category": icategory or "",
+        "selected_subcategory": isubCategory or "",
+        "selected_brands": ibrand,
+        "selected_min_price": min_price or "",
+        "selected_max_price": max_price or "",
+        "selected_product": iprod or "",
+        "selected_sort": sort,
+    }
+    return render(request, "user/all_products.html", context)
 
 
 def home_view(request):
     categories = Category.objects.filter(is_active=True)
-    # Get variants directly instead of relying on ProductImage
     variants = (
         ProductVariant.objects.filter(product__is_active=True)
         .select_related("product", "product__seller")
         .order_by("-id")[:8]
     )
-    # Get primary images for each variant
     variant_ids = [v.id for v in variants]
     primary_images = {
         img.variant_id: img
@@ -77,7 +139,6 @@ def home_view(request):
             variant_id__in=variant_ids, is_primary=True
         )
     }
-    # Create a list of objects with variant and image
     product_data = []
     for variant in variants:
         product_data.append(
@@ -91,7 +152,6 @@ def home_view(request):
     )
 
 
-@role_required(allowed_roles=["CUSTOMER"])
 def register_view(request):
     if request.method == "POST":
         username = request.POST.get("username")

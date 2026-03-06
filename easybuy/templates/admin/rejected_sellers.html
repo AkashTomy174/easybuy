@@ -1,0 +1,110 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}Rejected Sellers - Admin | EasyBuy{% endblock %}
+
+{% block header_title %}Rejected Sellers{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-black tracking-tight mb-2">Rejected Sellers</h1>
+<p class="text-slate-500 mb-8">View all sellers that have been rejected from the verification process.</p>
+
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <table class="w-full text-left border-collapse">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Seller Name</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Application Date</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Status</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Documents</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% if page_obj %}
+                {% for seller in page_obj %}
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 font-bold">
+                                {{ seller.store_name|first|upper }}
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold">{{ seller.store_name }}</p>
+                                <p class="text-xs text-slate-500">{{ seller.user.email }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="text-sm font-medium">{{ seller.created_at|date:"M d, Y" }}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                            REJECTED
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex gap-1">
+                            {% if seller.doc %}
+                            <a href="{{ seller.doc.url }}" target="_blank" class="material-symbols-outlined text-slate-400 text-lg hover:text-primary">description</a>
+                            {% else %}
+                            <span class="material-symbols-outlined text-red-400 text-lg">error</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="4" class="px-6 py-12 text-center">
+                        <span class="material-symbols-outlined text-5xl text-slate-300">storefront</span>
+                        <p class="text-slate-500 mt-3 font-medium">No rejected sellers</p>
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="mt-6 flex items-center justify-between">
+    <p class="text-sm text-slate-500">
+        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} sellers
+    </p>
+    <div class="flex items-center gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+            Previous
+        </a>
+        {% else %}
+        <span class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-400 cursor-not-allowed">
+            Previous
+        </span>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <span class="px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-bold">
+                {{ num }}
+            </span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a href="?page={{ num }}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                {{ num }}
+            </a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+            Next
+        </a>
+        {% else %}
+        <span class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-400 cursor-not-allowed">
+            Next
+        </span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

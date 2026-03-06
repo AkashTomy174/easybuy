@@ -1,4 +1,3 @@
-
 from django.db import models
 from easybuy.core.models import User
 from easybuy.seller.models import ProductVariant, SellerProfile, Product
@@ -24,7 +23,9 @@ class Wishlist(models.Model):
 
 
 class WishlistItem(models.Model):
-    wishlist = models.ForeignKey(Wishlist, on_delete=models.CASCADE, related_name="items")
+    wishlist = models.ForeignKey(
+        Wishlist, on_delete=models.CASCADE, related_name="items"
+    )
     variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE)
     added_at = models.DateTimeField(auto_now_add=True)
 
@@ -43,6 +44,9 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_status = models.CharField(max_length=20)
     order_status = models.CharField(max_length=20)
+    shipping_name = models.CharField(max_length=100, null=True, blank=True)
+    shipping_phone = models.CharField(max_length=15, null=True, blank=True)
+    shipping_address = models.TextField(null=True, blank=True)
     ordered_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -53,25 +57,34 @@ class OrderItem(models.Model):
     quantity = models.IntegerField()
     price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
 
+
 class PaymentTransaction(models.Model):
-    order = models.ForeignKey("Order", on_delete=models.CASCADE, related_name="transactions")
+    order = models.ForeignKey(
+        "Order", on_delete=models.CASCADE, related_name="transactions"
+    )
     transaction_id = models.CharField(max_length=255)
     payment_gateway = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=50)
     gateway_response = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
+
 class ReturnRequest(models.Model):
-    order_item = models.ForeignKey("OrderItem", on_delete=models.CASCADE, related_name="return_requests")
+    order_item = models.ForeignKey(
+        "OrderItem", on_delete=models.CASCADE, related_name="return_requests"
+    )
     reason = models.TextField()
     status = models.CharField(max_length=20, default="PENDING")
     approved_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
+
 class Shipment(models.Model):
-    order = models.ForeignKey("Order", on_delete=models.CASCADE, related_name="shipments")
+    order = models.ForeignKey(
+        "Order", on_delete=models.CASCADE, related_name="shipments"
+    )
     tracking_number = models.CharField(max_length=100)
     courier_name = models.CharField(max_length=100)
     shipped_at = models.DateTimeField(null=True, blank=True)

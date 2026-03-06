@@ -1,0 +1,333 @@
+{% extends 'core/core_base.html' %}
+{% block title %}Checkout | EasyBuy{% endblock %}
+
+{% block extra_css %}
+<style>
+.checkout-section { transition: all 0.2s ease; }
+.checkout-section:hover { border-color: #2d5a27; }
+.address-card.selected { border-color: #2d5a27; background-color: #f0f7ef; }
+.dark .address-card.selected { background-color: #1e3d1a; }
+.payment-option.selected { border-color: #2d5a27; background-color: #f0f7ef; }
+.dark .payment-option.selected { background-color: #1e3d1a; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-7xl px-4 py-12 sm:px-12">
+    <h1 class="text-3xl font-black text-stone-900 dark:text-white mb-8">Checkout</h1>
+
+    {% if cart.items.exists %}
+    <form method="POST" action="{% url 'checkout' %}" id="checkout-form">
+        {% csrf_token %}
+        <input type="hidden" name="selected_address_id" id="selected_address_id" value="">
+        <input type="hidden" name="payment_method" id="payment_method" value="">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Column - Details -->
+            <div class="lg:col-span-8 space-y-8">
+                
+                <!-- Delivery Address Section -->
+                <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="material-symbols-outlined text-2xl text-primary">location_on</span>
+                        <h2 class="text-xl font-black text-stone-900 dark:text-white">Delivery Address</h2>
+                    </div>
+                    
+                    {% if addresses %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        {% for addr in addresses %}
+                        <div class="address-card cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all {% if addr.is_default %}selected{% endif %}"
+                             onclick="selectAddress('{{ addr.id }}', this)" data-address-id="{{ addr.id }}">
+                            <div class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-stone-400 mt-1">{% if addr.address_type == 'Home' %}home{% else %}work{% endif %}</span>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <h4 class="font-bold text-stone-900 dark:text-white">{{ addr.full_name }}</h4>
+                                        {% if addr.is_default %}
+                                        <span class="text-[10px] font-black uppercase bg-primary text-white px-2 py-0.5 rounded">Default</span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="text-sm text-stone-500 dark:text-stone-400">{{ addr.house_info }}, {{ addr.locality }}</p>
+                                    <p class="text-sm text-stone-500 dark:text-stone-400">{{ addr.city }}, {{ addr.state }} - {{ addr.pincode }}</p>
+                                    <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Phone: {{ addr.phone_number }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8 bg-stone-50 dark:bg-stone-800 rounded-xl mb-4">
+                        <span class="material-symbols-outlined text-stone-300 text-4xl mb-2">location_off</span>
+                        <p class="text-stone-500 dark:text-stone-400 mb-4">No address found</p>
+                        <a href="{% url 'manage_addresses' %}" class="text-primary font-bold hover:underline">Add Address</a>
+                    </div>
+                    {% endif %}
+                    
+                    <a href="{% url 'manage_addresses' %}?next={% url 'checkout' %}" class="inline-flex items-center gap-2 text-primary font-bold hover:underline">
+                        <span class="material-symbols-outlined text-sm">add</span>
+                        Add New Address
+                    </a>
+                </div>
+
+                <!-- Order Items Section -->
+                <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="material-symbols-outlined text-2xl text-primary">shopping_cart</span>
+                        <h2 class="text-xl font-black text-stone-900 dark:text-white">Order Summary</h2>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        {% for item in cart.items.all %}
+                        <div class="flex gap-4 p-4 rounded-xl border border-stone-200 dark:border-stone-700">
+                            <!-- Product Image -->
+                            <div class="w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-stone-100 dark:bg-stone-800">
+                                {% if item.variant.images.first %}
+                                    <img src="{{ item.variant.images.first.image.url }}" alt="{{ item.variant.product.name }}" class="w-full h-full object-cover">
+                                {% else %}
+                                    <span class="material-symbols-outlined text-3xl text-stone-300 flex items-center justify-center w-full h-full">image</span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Product Info -->
+                            <div class="flex-1 flex flex-col justify-between">
+                                <div>
+                                    <h3 class="font-bold text-stone-900 dark:text-white">{{ item.variant.product.name }}</h3>
+                                    <p class="text-sm text-stone-500 dark:text-stone-400">Variant: {{ item.variant.name|default:"Standard" }}</p>
+                                </div>
+                                <div class="flex items-center justify-between mt-2">
+                                    <span class="text-sm text-stone-500">Qty: {{ item.quantity }}</span>
+                                    <span class="font-bold text-stone-900 dark:text-white">₹{{ item.price_at_time|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Item Total -->
+                            <div class="text-right">
+                                <span class="font-black text-lg text-stone-900 dark:text-white">₹{{ item.price_at_time|floatformat:2 }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Payment Method Section -->
+                <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="material-symbols-outlined text-2xl text-primary">payment</span>
+                        <h2 class="text-xl font-black text-stone-900 dark:text-white">Payment Method</h2>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <!-- UPI Payment -->
+                        <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
+                             onclick="selectPayment('UPI', this)">
+                            <div class="flex items-center gap-3">
+                                <input type="radio" name="payment" value="UPI" class="w-5 h-5 text-primary focus:ring-primary">
+                                <span class="material-symbols-outlined text-stone-600">qr_code</span>
+                                <div>
+                                    <h4 class="font-bold text-stone-900 dark:text-white">UPI Payment</h4>
+                                    <p class="text-sm text-stone-500">Pay via Google Pay, PhonePe, Paytm</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Card Payment -->
+                        <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
+                             onclick="selectPayment('CARD', this)">
+                            <div class="flex items-center gap-3">
+                                <input type="radio" name="payment" value="CARD" class="w-5 h-5 text-primary focus:ring-primary">
+                                <span class="material-symbols-outlined text-stone-600">credit_card</span>
+                                <div>
+                                    <h4 class="font-bold text-stone-900 dark:text-white">Credit / Debit Card</h4>
+                                    <p class="text-sm text-stone-500">Visa, Mastercard, RuPay</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Net Banking -->
+                        <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
+                             onclick="selectPayment('NETBANKING', this)">
+                            <div class="flex items-center gap-3">
+                                <input type="radio" name="payment" value="NETBANKING" class="w-5 h-5 text-primary focus:ring-primary">
+                                <span class="material-symbols-outlined text-stone-600">account_balance</span>
+                                <div>
+                                    <h4 class="font-bold text-stone-900 dark:text-white">Net Banking</h4>
+                                    <p class="text-sm text-stone-500">All major banks supported</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Cash on Delivery -->
+                        <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
+                             onclick="selectPayment('COD', this)">
+                            <div class="flex items-center gap-3">
+                                <input type="radio" name="payment" value="COD" class="w-5 h-5 text-primary focus:ring-primary">
+                                <span class="material-symbols-outlined text-stone-600">payments</span>
+                                <div>
+                                    <h4 class="font-bold text-stone-900 dark:text-white">Cash on Delivery</h4>
+                                    <p class="text-sm text-stone-500">Pay when you receive</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Order Summary -->
+            <div class="lg:col-span-4">
+                <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm sticky top-28">
+                    <h3 class="text-xl font-black text-stone-900 dark:text-white mb-6">Order Total</h3>
+                    
+                    <div class="space-y-3 mb-6">
+                        <div class="flex justify-between text-stone-600 dark:text-stone-300">
+                            <span class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-lg">shopping_bag</span>
+                                Items ({{ cart.items.count }})
+                            </span>
+                            <span>₹{{ cart.total_amount|floatformat:2 }}</span>
+                        </div>
+                        
+                        <div class="flex justify-between text-stone-600 dark:text-stone-300">
+                            <span class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-lg">local_shipping</span>
+                                Shipping
+                            </span>
+                            <span id="shipping-cost">
+                                {% if cart.total_amount >= 999 %}
+                                <span class="text-green-600">FREE</span>
+                                {% else %}
+                                ₹99.00
+                                {% endif %}
+                            </span>
+                        </div>
+                        
+                        <div class="flex justify-between text-stone-600 dark:text-stone-300">
+                            <span class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-lg">receipt</span>
+                                Tax (GST 18%)
+                            </span>
+                            <span>₹{{ tax_amount|floatformat:2 }}</span>
+                        </div>
+                        
+                        {% if cart.total_amount < 999 %}
+                        <div class="flex justify-between text-green-600 text-sm">
+                            <span class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-lg">savings</span>
+                                Shipping Discount
+                            </span>
+                            <span>-₹99.00</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="border-t border-stone-200 dark:border-stone-700 pt-4 mb-6">
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-black text-stone-900 dark:text-white">Total</span>
+                            <span class="text-2xl font-black text-primary" id="grand-total">₹{{ grand_total|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" id="place-order-btn" 
+                            class="w-full bg-primary text-white font-black py-4 rounded-2xl hover:bg-primary-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            {% if not addresses %}disabled{% endif %}>
+                        <span class="material-symbols-outlined">lock</span>
+                        Place Order
+                    </button>
+                    
+                    <p class="text-xs text-stone-400 text-center mt-4 flex items-center justify-center gap-1">
+                        <span class="material-symbols-outlined text-sm">verified</span>
+                        Secure checkout • SSL Encrypted
+                    </p>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% else %}
+    <div class="text-center py-20">
+        <span class="material-symbols-outlined text-7xl text-stone-300">shopping_cart</span>
+        <h2 class="text-2xl font-bold mt-4 text-stone-900 dark:text-white">Your cart is empty</h2>
+        <a href="{% url 'all_products' %}" class="mt-4 inline-block text-primary underline font-bold">Shop Now</a>
+    </div>
+    {% endif %}
+</section>
+
+<script>
+let selectedAddressId = null;
+let selectedPaymentMethod = null;
+
+// Initialize with default address
+document.addEventListener('DOMContentLoaded', function() {
+    const defaultAddress = document.querySelector('.address-card.selected');
+    if (defaultAddress) {
+        selectAddress(defaultAddress.dataset.addressId, defaultAddress);
+    }
+});
+
+function selectAddress(addressId, element) {
+    // Remove selected class from all address cards
+    document.querySelectorAll('.address-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Add selected class to clicked card
+    element.classList.add('selected');
+    
+    // Update hidden input
+    selectedAddressId = addressId;
+    document.getElementById('selected_address_id').value = addressId;
+    
+    // Enable/disable place order button
+    updatePlaceOrderButton();
+}
+
+function selectPayment(method, element) {
+    // Remove selected class from all payment options
+    document.querySelectorAll('.payment-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+    
+    // Add selected class to clicked option
+    element.classList.add('selected');
+    
+    // Check the radio button
+    element.querySelector('input[type="radio"]').checked = true;
+    
+    // Update hidden input
+    selectedPaymentMethod = method;
+    document.getElementById('payment_method').value = method;
+}
+
+function updatePlaceOrderButton() {
+    const btn = document.getElementById('place-order-btn');
+    const paymentSelected = document.querySelector('input[name="payment"]:checked');
+    
+    if (selectedAddressId && paymentSelected) {
+        btn.disabled = false;
+    } else {
+        btn.disabled = true;
+    }
+}
+
+// Listen for payment selection changes
+document.querySelectorAll('input[name="payment"]').forEach(radio => {
+    radio.addEventListener('change', updatePlaceOrderButton);
+});
+
+// Form submission
+document.getElementById('checkout-form').addEventListener('submit', function(e) {
+    if (!selectedAddressId) {
+        e.preventDefault();
+        alert('Please select a delivery address');
+        return;
+    }
+    
+    const paymentSelected = document.querySelector('input[name="payment"]:checked');
+    if (!paymentSelected) {
+        e.preventDefault();
+        alert('Please select a payment method');
+        return;
+    }
+});
+</script>
+{% endblock %}
+

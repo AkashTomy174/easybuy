@@ -26,7 +26,7 @@ SECRET_KEY = "django-insecure-^)u*jj7fz&x=wuyqi4t_#8z%94go$-g32m4r7m=b$ck21sr04t
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 AUTH_USER_MODEL = "core.User"
 # Application definition
@@ -137,3 +137,12 @@ MEDIA_ROOT = r"C:\Users\hp\OneDrive\Desktop\BESTBUY\project\images\category"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+EMAIL_HOST_USER = "easybuyadmin@gmail.com"
+EMAIL_HOST_PASSWORD = "nryveglvlttybnwn"
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

@@ -3,12 +3,12 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from easybuy.core.decorators import role_required
 from .models import SellerProfile, Product
 from easybuy.core.models import Category, SubCategory
-from .models import Product, ProductVariant, ProductImage
+from .models import Product, ProductVariant, ProductImage, InventoryLog
 from django.db import transaction
 
 User = get_user_model()
@@ -21,6 +21,7 @@ def seller_regi_success(request):
 def seller_regi(request):
     if request.method == "POST":
         username = request.POST.get("username")
+        email = request.POST.get("email")
         password = request.POST.get("password")
         store_name = request.POST.get("store_name")
         gst_number = request.POST.get("gst_number")
@@ -29,25 +30,76 @@ def seller_regi(request):
         bank_account_number = request.POST.get("bank_account_number")
         ifsc_code = request.POST.get("ifsc_code")
         business_address = request.POST.get("business_address")
-        with transaction.atomic():
-            user = User.objects.create_user(
-                username=username,
-                password=password,
-                role="SELLER",
+        if User.objects.filter(username=username).exists():
+            return render(
+                request,
+                "seller/sellerregistration.html",
+                {
+                    "error": "Username already exists. Please choose a different username.",
+                    "username": username,
+                    "email": email,
+                    "store_name": store_name,
+                    "gst_number": gst_number,
+                    "pan_number": pan_number,
+                    "bank_account_number": bank_account_number,
+                    "ifsc_code": ifsc_code,
+                    "business_address": business_address,
+                },
             )
-            SellerProfile.objects.create(
-                user=user,
-                store_name=store_name,
-                store_slug=slugify(store_name),
-                gst_number=gst_number,
-                pan_number=pan_number,
-                doc=doc,
-                status="PENDING",
-                bank_account_number=bank_account_number,
-                ifsc_code=ifsc_code,
-                business_address=business_address,
+        if email and User.objects.filter(email=email).exists():
+            return render(
+                request,
+                "seller/sellerregistration.html",
+                {
+                    "error": "Email already registered. Please use a different email.",
+                    "username": username,
+                    "email": email,
+                    "store_name": store_name,
+                    "gst_number": gst_number,
+                    "pan_number": pan_number,
+                    "bank_account_number": bank_account_number,
+                    "ifsc_code": ifsc_code,
+                    "business_address": business_address,
+                },
             )
-        return redirect("seller_registration_success")
+
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password,
+                    role="SELLER",
+                )
+                SellerProfile.objects.create(
+                    user=user,
+                    store_name=store_name,
+                    store_slug=slugify(store_name),
+                    gst_number=gst_number,
+                    pan_number=pan_number,
+                    doc=doc,
+                    status="PENDING",
+                    bank_account_number=bank_account_number,
+                    ifsc_code=ifsc_code,
+                    business_address=business_address,
+                )
+            return redirect("seller_registration_success")
+        except Exception as e:
+            return render(
+                request,
+                "seller/sellerregistration.html",
+                {
+                    "error": f"Registration failed: {str(e)}",
+                    "username": username,
+                    "email": email,
+                    "store_name": store_name,
+                    "gst_number": gst_number,
+                    "pan_number": pan_number,
+                    "bank_account_number": bank_account_number,
+                    "ifsc_code": ifsc_code,
+                    "business_address": business_address,
+                },
+            )
     return render(request, "seller/sellerregistration.html")
 
 
@@ -78,7 +130,7 @@ def seller_inventory(request):
     seller = request.user.seller_profile
     if seller:
         products = (
-            Product.objects.filter(seller=seller, is_active=True)
+            Product.objects.filter(seller=seller)
             .prefetch_related("variants", "variants__images")
             .select_related("subcategory")
             .order_by("-created_at")
@@ -172,7 +224,6 @@ def add_product(request):
         with transaction.atomic():
             subcategory_id = request.POST.get("subcategory")
             subcategory_obj = SubCategory.objects.get(id=subcategory_id)
-            # slug will be auto-generated by the model's save() method
             product = Product.objects.create(
                 seller=request.user.seller_profile,
                 subcategory=subcategory_obj,
@@ -182,8 +233,7 @@ def add_product(request):
                 model_number=request.POST.get("model"),
                 is_cancellable=True if request.POST.get("cancellable") else False,
                 is_returnable=True if request.POST.get("returnable") else False,
-                is_active=request.POST.get("is_active")
-                != "on",  # Default True, False only when explicitly unchecked
+                is_active=request.POST.get("is_active") != "on",
                 return_days=(
                     int(request.POST.get("return"))
                     if request.POST.get("returnable")
@@ -208,7 +258,7 @@ def add_product(request):
                 ProductImage.objects.create(
                     variant=variant,
                     image=img,
-                    is_primary=(idx == 0),  # First image is set as primary
+                    is_primary=(idx == 0),
                 )
 
         return redirect("seller_products_list")
@@ -221,3 +271,75 @@ def add_product(request):
         "seller/add_product.html",
         {"subcategories": subcategories, "active_menu": "add_product"},
     )
+
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def add_stock(request):
+    if request.method == "POST":
+        try:
+            variant_id = request.POST.get("variant_id")
+            stock_to_add = int(request.POST.get("stock_amount", 0))
+            reason = request.POST.get("reason", "Manual stock addition")
+
+            if stock_to_add <= 0:
+                return JsonResponse({"success": False, "error": "Invalid stock amount"})
+            variant = ProductVariant.objects.select_related("product").get(
+                id=variant_id, product__seller=request.user.seller_profile
+            )
+
+            variant.stock_quantity += stock_to_add
+            variant.save()
+            InventoryLog.objects.create(
+                variant=variant,
+                change_amount=stock_to_add,
+                reason=reason,
+                performed_by=request.user,
+            )
+
+            return JsonResponse(
+                {
+                    "success": True,
+                    "new_stock": variant.stock_quantity,
+                    "message": f"Successfully added {stock_to_add} units",
+                }
+            )
+        except ProductVariant.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Variant not found"})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+
+    return JsonResponse({"success": False, "error": "Invalid request method"})
+
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def deactivate(request, id):
+    if request.method != "POST":
+        return JsonResponse(
+            {"success": False, "error": "Invalid request method"}, status=405
+        )
+
+    try:
+        variant = ProductVariant.objects.select_related("product").get(
+            id=id, product__seller=request.user.seller_profile
+        )
+        product = variant.product
+
+        product.is_active = not product.is_active
+        product.save()
+
+        return JsonResponse(
+            {
+                "success": True,
+                "is_active": product.is_active,
+                "message": f"Product {'activated' if product.is_active else 'deactivated'} successfully",
+            }
+        )
+
+    except ProductVariant.DoesNotExist:
+        return JsonResponse(
+            {"success": False, "error": "Variant not found"}, status=404
+        )
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)

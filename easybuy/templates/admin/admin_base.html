@@ -77,6 +77,21 @@
                 <span class="material-symbols-outlined">gavel</span>
                 <span class="text-sm font-{% if active_menu == 'verification' %}semibold{% else %}medium{% endif %}">Seller Verification</span>
             </a>
+            <!-- Product Approval -->
+            <a href="{% url 'approve_products' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'approve_product' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
+                <span class="material-symbols-outlined">verified</span>
+                <span class="text-sm font-{% if active_menu == 'approve_product' %}semibold{% else %}medium{% endif %}">Product Approval</span>
+            </a>
+            <!-- Rejected Products -->
+            <a href="{% url 'rejectedproducts' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'rejected_products' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
+                <span class="material-symbols-outlined">cancel</span>
+                <span class="text-sm font-{% if active_menu == 'rejected_products' %}semibold{% else %}medium{% endif %}">Rejected Products</span>
+            </a>
+            <!-- Rejected Sellers -->
+            <a href="{% url 'rejectedsellers' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'rejected_sellers' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
+                <span class="material-symbols-outlined">person_off</span>
+                <span class="text-sm font-{% if active_menu == 'rejected_sellers' %}semibold{% else %}medium{% endif %}">Rejected Sellers</span>
+            </a>
             
             <div class="pt-4 pb-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">System</div>
             <!-- Settings -->

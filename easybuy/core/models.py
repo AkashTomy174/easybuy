@@ -4,9 +4,7 @@ from django.utils.text import slugify
 
 
 def generate_unique_category_slug(klass, field, slug_field="slug"):
-    """
-    Generate unique slug by appending incremental numbers if slug exists.
-    """
+ 
     origin_slug = slugify(field)
     unique_slug = origin_slug
     counter = 1
@@ -29,6 +27,7 @@ class User(AbstractUser):
         ("O", "Other"),
     )
 
+    email = models.EmailField(unique=True, null=True, blank=True)
     phone_number = models.CharField(max_length=15, unique=True, null=True, blank=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="CUSTOMER")
     profile_image = models.ImageField(

@@ -13,4 +13,9 @@ urlpatterns = [
     path("users/", views.all_users, name="all_users"),
     path("sellers/", views.all_sellers, name="all_sellers"),
     path("logout/", logout_view, name="logout"),
+    path("approve_products/", views.approve_product, name="approve_products"),
+    path("approve_product/<int:id>/",views.approve_single_product,name="approve_single_product"),
+    path("reject_product/<int:id>/",views.reject_single_product,name="reject_single_product"),
+    path("rejectedseller/",views.rejected_sellers,name="rejectedsellers"),
+    path("rejectedproduct/",views.rejected_products,name="rejectedproducts"),
 ]
