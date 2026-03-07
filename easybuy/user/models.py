@@ -55,6 +55,13 @@ class OrderItem(models.Model):
     variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE)
     seller = models.ForeignKey(SellerProfile, on_delete=models.CASCADE)
     quantity = models.IntegerField()
+    CHOICES=(
+        ("SHIPPED","approved"),
+        ("PENDING","pending"),
+        ("CANCELLED","rejected"),
+        ("RETURNED","returned")
+    )
+    status=models.CharField(max_length=50,choices=CHOICES,default="PENDING")
     price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
 
 

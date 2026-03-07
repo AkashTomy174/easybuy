@@ -131,6 +131,12 @@
                 <span class="hidden lg:inline text-sm font-medium">Wishlist</span>
             </a>
             
+            <!-- Dark Mode Toggle -->
+            <button id="darkModeToggle" class="flex items-center justify-center p-2.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300" aria-label="Toggle dark mode">
+                <span class="material-symbols-outlined text-[24px] dark:hidden">dark_mode</span>
+                <span class="material-symbols-outlined text-[24px] hidden dark:block">light_mode</span>
+            </button>
+            
             <!-- Cart -->
             <a href="{% url 'cart' %}" class="flex items-center gap-2 p-2.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative">
                 <span class="material-symbols-outlined text-[24px]">shopping_cart</span>
@@ -351,6 +357,26 @@ function showToast(message) {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
+
+// Dark Mode Toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    const html = document.documentElement;
+    
+    // Check for saved preference
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        html.classList.add('dark');
+    }
+    
+    if (darkModeToggle) {
+        darkModeToggle.addEventListener('click', function() {
+            html.classList.toggle('dark');
+            const isDark = html.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+    }
+});
 
 function addToCart(variantId) {
     if (!variantId) return;

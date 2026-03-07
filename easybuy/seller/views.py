@@ -3,13 +3,16 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 from django.db import transaction
+from django.db.models import F
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from easybuy.core.decorators import role_required
 from .models import SellerProfile, Product
 from easybuy.core.models import Category, SubCategory
-from .models import Product, ProductVariant, ProductImage, InventoryLog
+from .models import Product, ProductImage, InventoryLog
 from django.db import transaction
+from easybuy.user.models import Order, OrderItem
+from django.shortcuts import get_object_or_404
 
 User = get_user_model()
 
@@ -115,7 +118,7 @@ def seller_product_list(request):
 def seller_dashboard(request):
     seller = request.user.seller_profile
     products = Product.objects.filter(seller=seller).prefetch_related(
-        "variants", "variants__images"
+        "items", "items__images"
     )
     return render(
         request,
@@ -131,7 +134,7 @@ def seller_inventory(request):
     if seller:
         products = (
             Product.objects.filter(seller=seller)
-            .prefetch_related("variants", "variants__images")
+            .prefetch_related("items", "items__images")
             .select_related("subcategory")
             .order_by("-created_at")
         )
@@ -139,21 +142,19 @@ def seller_inventory(request):
         total_stock = 0
         low_stock_count = 0
         out_of_stock_count = 0
-        all_variants = []
+        all_items = []
         for product in products:
-            for variant in product.variants.all():
-                all_variants.append(variant)
-                total_stock += variant.stock_quantity
-                total_inventory_value += (
-                    float(variant.selling_price) * variant.stock_quantity
-                )
-                if variant.stock_quantity == 0:
+            for item in product.items.all():
+                all_items.append(item)
+                total_stock += item.stock_quantity
+                total_inventory_value += float(item.selling_price) * item.stock_quantity
+                if item.stock_quantity == 0:
                     out_of_stock_count += 1
-                elif variant.stock_quantity <= 10:
+                elif item.stock_quantity <= 10:
                     low_stock_count += 1
     else:
         products = []
-        all_variants = []
+        all_items = []
         total_inventory_value = 1000
         total_stock = 0
         low_stock_count = 0
@@ -161,9 +162,9 @@ def seller_inventory(request):
     context = {
         "seller": seller,
         "products": products,
-        "all_variants": all_variants,
+        "all_items": all_items,
         "total_products": len(products),
-        "total_variants": len(all_variants),
+        "total_items": len(all_items),
         "total_stock": total_stock,
         "total_inventory_value": total_inventory_value,
         "low_stock_count": low_stock_count,
@@ -191,8 +192,8 @@ def seller_inventory(request):
 #         return self.name
 
 
-# class ProductVariant(models.Model):
-#     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="variants")
+# class Productitem(models.Model):
+#     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="items")
 #     sku_code = models.CharField(max_length=100, unique=True)
 #     mrp = models.DecimalField(max_digits=10, decimal_places=2)
 #     selling_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -209,12 +210,12 @@ def seller_inventory(request):
 
 
 # class ProductImage(models.Model):
-#     variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, related_name="images")
-#     image = models.ImageField(upload_to='products/variants/',null=True, blank=True)
+#     item = models.ForeignKey(Productitem, on_delete=models.CASCADE, related_name="images")
+#     image = models.ImageField(upload_to='products/items/',null=True, blank=True)
 #     alt_text = models.CharField(max_length=255, blank=True)
 #     is_primary = models.BooleanField(default=False)
 #     def __str__(self):
-#         return f"{self.variant.sku_code} Image"
+#         return f"{self.item.sku_code} Image"
 
 
 @login_required
@@ -240,7 +241,7 @@ def add_product(request):
                     else 0
                 ),
             )
-            variant = ProductVariant.objects.create(
+            item = Productitem.objects.create(
                 product=product,
                 sku_code=request.POST.get("sku"),
                 mrp=request.POST.get("mrp"),
@@ -256,7 +257,7 @@ def add_product(request):
             images = request.FILES.getlist("images")
             for idx, img in enumerate(images):
                 ProductImage.objects.create(
-                    variant=variant,
+                    item=item,
                     image=img,
                     is_primary=(idx == 0),
                 )
@@ -278,20 +279,20 @@ def add_product(request):
 def add_stock(request):
     if request.method == "POST":
         try:
-            variant_id = request.POST.get("variant_id")
+            item_id = request.POST.get("item_id")
             stock_to_add = int(request.POST.get("stock_amount", 0))
             reason = request.POST.get("reason", "Manual stock addition")
 
             if stock_to_add <= 0:
                 return JsonResponse({"success": False, "error": "Invalid stock amount"})
-            variant = ProductVariant.objects.select_related("product").get(
-                id=variant_id, product__seller=request.user.seller_profile
+            item = Productitem.objects.select_related("product").get(
+                id=item_id, product__seller=request.user.seller_profile
             )
 
-            variant.stock_quantity += stock_to_add
-            variant.save()
+            item.stock_quantity += stock_to_add
+            item.save()
             InventoryLog.objects.create(
-                variant=variant,
+                item=item,
                 change_amount=stock_to_add,
                 reason=reason,
                 performed_by=request.user,
@@ -300,12 +301,12 @@ def add_stock(request):
             return JsonResponse(
                 {
                     "success": True,
-                    "new_stock": variant.stock_quantity,
+                    "new_stock": item.stock_quantity,
                     "message": f"Successfully added {stock_to_add} units",
                 }
             )
-        except ProductVariant.DoesNotExist:
-            return JsonResponse({"success": False, "error": "Variant not found"})
+        except Productitem.DoesNotExist:
+            return JsonResponse({"success": False, "error": "item not found"})
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)})
 
@@ -321,10 +322,10 @@ def deactivate(request, id):
         )
 
     try:
-        variant = ProductVariant.objects.select_related("product").get(
+        item = Productitem.objects.select_related("product").get(
             id=id, product__seller=request.user.seller_profile
         )
-        product = variant.product
+        product = item.product
 
         product.is_active = not product.is_active
         product.save()
@@ -337,9 +338,72 @@ def deactivate(request, id):
             }
         )
 
-    except ProductVariant.DoesNotExist:
-        return JsonResponse(
-            {"success": False, "error": "Variant not found"}, status=404
-        )
+    except Productitem.DoesNotExist:
+        return JsonResponse({"success": False, "error": "item not found"}, status=404)
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+    # class Order(models.Model):
+
+
+#     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
+#     order_number = models.CharField(max_length=100, unique=True)
+#     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+#     payment_status = models.CharField(max_length=20)
+#     order_status = models.CharField(max_length=20)
+#     shipping_name = models.CharField(max_length=100, null=True, blank=True)
+#     shipping_phone = models.CharField(max_length=15, null=True, blank=True)
+#     shipping_address = models.TextField(null=True, blank=True)
+#     ordered_at = models.DateTimeField(auto_now_add=True)
+
+
+# class OrderItem(models.Model):
+#     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
+#     item = models.ForeignKey(Productitem, on_delete=models.CASCADE)
+#     seller = models.ForeignKey(SellerProfile, on_delete=models.CASCADE)
+#     quantity = models.IntegerField()
+#     price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
+
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def seller_order(request):
+    seller = request.user.seller_profile
+    order_items = (
+        OrderItem.objects.filter(seller=seller)
+        .select_related("order", "variant", "variant__product")
+        .annotate(subtotal=F("price_at_purchase") * F("quantity"))
+        .order_by("-order__ordered_at")
+    )
+    total_orders = order_items.count()
+    total_revenue = sum(
+        float(item.price_at_purchase * item.quantity) for item in order_items
+    )
+    pending_orders = order_items.filter(order__order_status="PENDING").count()
+    shipped_orders = order_items.filter(order__order_status="SHIPPED").count()
+
+    context = {
+        "order_items": order_items,
+        "total_orders": total_orders,
+        "total_revenue": total_revenue,
+        "pending_orders": pending_orders,
+        "shipped_orders": shipped_orders,
+        "active_menu": "orders",
+    }
+
+    return render(request, "seller/orders.html", context)
+
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def status(request, id):
+   
+    seller = request.user.seller_profile
+    order_item = get_object_or_404(OrderItem, seller=seller, id=id)
+
+    status = request.POST.get("status")
+    if status:
+        order_item.order.order_status = status
+        order_item.order.save()
+
+    return redirect("seller_orders")

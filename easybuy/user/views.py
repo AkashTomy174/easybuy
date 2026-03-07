@@ -12,6 +12,9 @@ from django.http import Http404
 from django.db.models import Q
 from django.db import transaction
 from decimal import Decimal
+from django.utils import timezone
+import random
+import string
 
 
 def new_arrival(request):
@@ -279,7 +282,6 @@ def filtering(request):
     ibrand = request.GET.getlist("brand")
     min_price = request.GET.get("min")
     max_price = request.GET.get("max")
-    # Support both 'q' and 'product' parameters for search
     iprod = request.GET.get("q") or request.GET.get("product")
     sort = request.GET.get("sort", "newest")
     if icategory:
@@ -397,9 +399,6 @@ def checkout(request):
             context["error"] = "Please select a payment method"
             return render(request, "user/checkout.html", context)
 
-        from django.utils import timezone
-        import random
-        import string
 
         address = get_object_or_404(Address, id=address_id, user=user)
         order_number = f"EB{timezone.now().strftime('%Y%m%d')}{''.join(random.choices(string.ascii_uppercase + string.digits, k=8))}"
@@ -444,3 +443,4 @@ def checkout(request):
         )
 
     return render(request, "user/checkout.html", context)
+

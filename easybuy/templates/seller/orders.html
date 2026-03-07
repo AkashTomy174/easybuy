@@ -1,0 +1,136 @@
+{% extends 'seller/seller_base.html' %}
+{% block title %}Orders - EasyBuy Seller{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+    <div>
+        <h1 class="text-4xl font-black tracking-tight text-stone-900 dark:text-white">Orders</h1>
+        <p class="text-stone-500 mt-2 font-medium">Manage your <span class="text-primary">{{ total_orders }}</span> orders across your ecosystem.</p>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm hover:shadow-md transition-shadow">
+        <div class="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-2xl">shopping_cart</span>
+        </div>
+        <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Total Orders</p>
+        <div class="flex items-baseline gap-2 mt-2">
+            <h3 class="text-3xl font-black">{{ total_orders }}</h3>
+        </div>
+    </div>
+
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+        <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-2xl">payments</span>
+        </div>
+        <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Total Revenue</p>
+        <h3 class="text-3xl font-black mt-2">${{ total_revenue|floatformat:2 }}</h3>
+    </div>
+
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+        <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-2xl">pending</span>
+        </div>
+        <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Pending Orders</p>
+        <h3 class="text-3xl font-black mt-2 text-orange-600 dark:text-orange-400">{{ pending_orders }}</h3>
+    </div>
+
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-2xl">local_shipping</span>
+        </div>
+        <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Shipped Orders</p>
+        <h3 class="text-3xl font-black mt-2 text-blue-600 dark:text-blue-400">{{ shipped_orders }}</h3>
+    </div>
+</div>
+
+<!-- Orders Table -->
+<div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-stone-100 dark:border-stone-700 flex items-center justify-between">
+        <h4 class="text-xl font-bold">Order Details</h4>
+        <span class="text-xs bg-stone-100 dark:bg-stone-800 px-3 py-1 rounded-full font-semibold text-stone-500">Updated just now</span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="text-[11px] font-bold text-stone-400 uppercase tracking-[0.15em]">
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Order #</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Product</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Quantity</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Price</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Total</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Status</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Date</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-100 dark:divide-stone-700">
+                {% for item in order_items %}
+                <tr class="group hover:bg-stone-50/50 dark:hover:bg-stone-800/30 transition-colors">
+                    <td class="px-6 py-5">
+                        <span class="font-mono text-xs font-bold text-stone-500 bg-stone-100 dark:bg-stone-800 px-2 py-1 rounded">
+                            {{ item.order.order_number }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex items-center gap-4">
+                            <div class="h-10 w-10 bg-stone-100 dark:bg-stone-800 rounded-lg overflow-hidden flex-shrink-0">
+                                {% with item.variant.images.first as img %}
+                                    {% if img %}<img src="{{ img.image.url }}" class="h-full w-full object-cover">{% else %}
+                                    <div class="h-full w-full flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-stone-300 text-sm">image</span>
+                                    </div>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-stone-900 dark:text-white">{{ item.variant.product.name }}</p>
+                                <p class="text-xs text-stone-500">{{ item.variant.sku_code }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <span class="text-sm font-bold text-stone-900 dark:text-white">{{ item.quantity }} units</span>
+                    </td>
+                    <td class="px-6 py-5">
+                        <span class="text-sm font-bold text-stone-900 dark:text-white">${{ item.price_at_purchase }}</span>
+                    </td>
+                    <td class="px-6 py-5">
+                        <span class="text-sm font-black text-stone-900 dark:text-white">${{ item.subtotal|floatformat:2 }}</span>
+                    </td>
+                    <td class="px-6 py-5">
+                        <form action="{% url 'status' item.id %}" method="POST" class="inline">
+                            {% csrf_token %}
+                            <select name="status" onchange="this.form.submit()" 
+                                class="text-[10px] font-black uppercase tracking-wider bg-transparent border-0 cursor-pointer focus:ring-0 
+                                {% if item.order.order_status == 'PENDING' %}text-orange-600{% elif item.order.order_status == 'SHIPPED' %}text-blue-600{% elif item.order.order_status == 'DELIVERED' %}text-emerald-600{% elif item.order.order_status == 'CANCELLED' %}text-red-600{% else %}text-stone-600{% endif %}">
+                                <option value="PENDING" {% if item.order.order_status == 'PENDING' %}selected{% endif %}>Pending</option>
+                                <option value="SHIPPED" {% if item.order.order_status == 'SHIPPED' %}selected{% endif %}>Shipped</option>
+                                <option value="DELIVERED" {% if item.order.order_status == 'DELIVERED' %}selected{% endif %}>Delivered</option>
+                                <option value="CANCELLED" {% if item.order.order_status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                            </select>
+                        </form>
+                    </td>
+                    <td class="px-6 py-5">
+                        <span class="text-xs text-stone-500">{{ item.order.ordered_at|date:"M d, Y" }}</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-20 text-center">
+                        <div class="flex flex-col items-center">
+                            <div class="w-20 h-20 bg-stone-100 dark:bg-stone-800 rounded-3xl flex items-center justify-center mb-4">
+                                <span class="material-symbols-outlined text-4xl text-stone-300">receipt_long</span>
+                            </div>
+                            <h5 class="text-lg font-bold text-stone-900 dark:text-white">No orders yet</h5>
+                            <p class="text-stone-500 text-sm max-w-xs mx-auto mt-2">Orders for your products will appear here.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
