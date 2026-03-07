@@ -71,16 +71,75 @@
                     <!-- Price Range -->
                     <div class="mb-6">
                         <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Price Range</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" name="min" value="{{ selected_min_price }}" 
-                                class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                                placeholder="Min">
-                            <span class="text-stone-400">-</span>
-                            <input type="number" name="max" value="{{ selected_max_price }}" 
-                                class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                                placeholder="Max">
+                        <div class="relative h-8 select-none" style="padding: 12px 0;">
+                            <!-- Background Track -->
+                            <div class="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-1.5 bg-stone-200 dark:bg-stone-700 rounded-full"></div>
+                            <!-- Active Range Track -->
+                            <div id="price-range-track" class="absolute top-1/2 -translate-y-1/2 h-1.5 bg-primary rounded-full pointer-events-none" style="left: 0%; width: 100%;"></div>
+                            
+                            <!-- Range Inputs (invisible but handle interaction) -->
+                            <input type="range" name="min" min="0" max="100000" step="500" value="{{ selected_min_price|default:"0" }}"
+                                class="absolute w-full h-full opacity-0 cursor-pointer z-30 range-input"
+                                id="price-min-slider">
+                            <input type="range" name="max" min="0" max="100000" step="500" value="{{ selected_max_price|default:"100000" }}"
+                                class="absolute w-full h-full opacity-0 cursor-pointer z-30 range-input"
+                                id="price-max-slider">
+                            
+                            <!-- Visual Thumbs (pointer-events: none to allow clicks through to inputs) -->
+                            <div id="price-min-thumb" class="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-primary rounded-full shadow-md z-20 pointer-events-none" style="left: 0%;"></div>
+                            <div id="price-max-thumb" class="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-primary rounded-full shadow-md z-20 pointer-events-none" style="left: 100%;"></div>
+                        </div>
+                        <div class="flex items-center justify-between text-sm text-stone-500 mt-1">
+                            <span>₹<span id="price-min-val">{{ selected_min_price|default:"0" }}</span></span>
+                            <span>₹<span id="price-max-val">{{ selected_max_price|default:"100000" }}</span></span>
                         </div>
                     </div>
+
+                    <script>
+                    (function() {
+                        var minSlider = document.getElementById('price-min-slider');
+                        var maxSlider = document.getElementById('price-max-slider');
+                        var minThumb = document.getElementById('price-min-thumb');
+                        var maxThumb = document.getElementById('price-max-thumb');
+                        var rangeTrack = document.getElementById('price-range-track');
+                        var minVal = document.getElementById('price-min-val');
+                        var maxVal = document.getElementById('price-max-val');
+                        
+                        function updateSlider() {
+                            var minValInt = parseInt(minSlider.value);
+                            var maxValInt = parseInt(maxSlider.value);
+                            
+                            if (minValInt > maxValInt) {
+                                if (event && event.target === minSlider) {
+                                    minSlider.value = maxValInt;
+                                } else if (event && event.target === maxSlider) {
+                                    maxSlider.value = minValInt;
+                                } else {
+                                    var temp = minSlider.value;
+                                    minSlider.value = maxSlider.value;
+                                    maxSlider.value = temp;
+                                }
+                            }
+                            
+                            var minPercent = (minSlider.value / 100000) * 100;
+                            var maxPercent = (maxSlider.value / 100000) * 100;
+                            
+                            minThumb.style.left = minPercent + '%';
+                            maxThumb.style.left = maxPercent + '%';
+                            rangeTrack.style.left = minPercent + '%';
+                            rangeTrack.style.width = (maxPercent - minPercent) + '%';
+                            
+                            minVal.textContent = minSlider.value;
+                            maxVal.textContent = maxSlider.value;
+                        }
+                        
+                        minSlider.addEventListener('input', updateSlider);
+                        maxSlider.addEventListener('input', updateSlider);
+                        
+                        // Initialize on load
+                        updateSlider();
+                    })();
+                    </script>
 
                     <!-- Sort -->
                     <div class="mb-6">
@@ -183,7 +242,7 @@
                             
 
                             {% if item.in_stock %}
-                            <button onclick="event.preventDefault(); event.stopPropagation(); addToCart({{ item.product.variants.first.id }}); return false;" class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
+                            <button data-addtocart-btn data-variant-id="{{ item.product.variants.first.id }}" data-product-image="{% if item.image %}{{ item.image.image.url }}{% endif %}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;" class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
                                 <span class="material-symbols-outlined">add_shopping_cart</span>
                             </button>
                             {% else %}

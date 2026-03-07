@@ -82,13 +82,22 @@
 
             <!-- Action Buttons -->
             <div class="flex flex-col sm:flex-row gap-4 mb-12">
-                <button 
+                <button
                     id="addtocart-btn"
-                    onclick="addToCart()"
+                    data-addtocart-btn
+                    onclick="handleAddToCart()"
                     class="flex-1 h-16 bg-primary text-white rounded-[2rem] font-black text-lg hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                     <span class="material-symbols-outlined" id="cart-icon">shopping_cart</span>
                     <span id="addtocart-text">Add to Cart</span>
                 </button>
+                <a
+                    id="buynow-btn"
+                    href="#"
+                    onclick="handleBuyNow(event)"
+                    class="flex-1 h-16 bg-accent-terracotta text-white rounded-[2rem] font-black text-lg hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined" id="buy-icon">bolt</span>
+                    <span id="buynow-text">Buy Now</span>
+                </a>
             </div>
 
             <!-- Description -->
@@ -156,23 +165,65 @@ function selectVariant(id, price, mrp, stock) {
 
 function updateButtonState() {
     const btn = document.getElementById('addtocart-btn');
+    const buyBtn = document.getElementById('buynow-btn');
     if (selectedVariantStock <= 0) {
-        btn.disabled = true;
+        if (btn) btn.disabled = true;
+        if (buyBtn) {
+            buyBtn.classList.add('pointer-events-none', 'opacity-50');
+        }
     } else {
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
+        if (buyBtn) {
+            buyBtn.classList.remove('pointer-events-none', 'opacity-50');
+        }
     }
 }
 
-function addToCart() {
-    if (!selectedVariantId) { showToast('Please select a variant', 'error'); return; }
+// Handle Buy Now button click
+function handleBuyNow(event) {
+    event.preventDefault();
+    if (!selectedVariantId) {
+        showToast('Please select a variant', 'error');
+        return;
+    }
+    if (selectedVariantStock <= 0) {
+        showToast('Product is out of stock', 'error');
+        return;
+    }
+    // Redirect to buy_now view with variant_id
+    window.location.href = '/user/buy_now/' + selectedVariantId + '/';
+}
 
+// Wrapper function to handle add to cart with animations
+function handleAddToCart() {
     const btn = document.getElementById('addtocart-btn');
-    const originalText = document.getElementById('addtocart-text').textContent;
-    btn.disabled = true;
-    document.getElementById('addtocart-text').textContent = 'Adding...';
-    document.getElementById('cart-icon').textContent = 'hourglass_empty';
+    const imgEl = document.getElementById('main-image');
+    const productImage = imgEl && imgEl.src ? imgEl.src : null;
+    addToCart(selectedVariantId, btn, productImage);
+}
 
-    fetch(`/user/addtocart/${selectedVariantId}/`, {
+// Main addToCart function with animation support
+function addToCart(variantId, buttonElement, productImageUrl) {
+    // Use selectedVariantId if variantId not provided
+    const vid = variantId || selectedVariantId;
+    if (!vid) { showToast('Please select a variant', 'error'); return; }
+
+    const btn = buttonElement || document.getElementById('addtocart-btn');
+    const textEl = document.getElementById('addtocart-text');
+    const iconEl = document.getElementById('cart-icon');
+    const originalText = textEl ? textEl.textContent : 'Add to Cart';
+    const originalIcon = iconEl ? iconEl.textContent : 'shopping_cart';
+
+    if (btn) btn.disabled = true;
+    if (textEl) textEl.textContent = 'Adding...';
+    if (iconEl) iconEl.textContent = 'hourglass_empty';
+
+    // Create flying product animation if image is provided
+    if (productImageUrl && btn) {
+        createFlyingProductAnimation(productImageUrl, btn);
+    }
+
+    fetch(`/user/addtocart/${vid}/`, {
         method: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken'),
@@ -184,6 +235,7 @@ function addToCart() {
         if (data.message === "Item added to cart successfully") {
             showToast(data.message, 'success');
             updateCartCount(data.quantity);
+            animateCartIcon();
         } else {
             showToast(data.message, 'error');
         }
@@ -193,10 +245,54 @@ function addToCart() {
         showToast('An error occurred. Please try again.', 'error');
     })
     .finally(() => {
-        btn.disabled = false;
-        document.getElementById('addtocart-text').textContent = 'Add to Cart';
-        document.getElementById('cart-icon').textContent = 'shopping_cart';
+        if (btn) btn.disabled = false;
+        if (textEl) textEl.textContent = 'Add to Cart';
+        if (iconEl) iconEl.textContent = 'shopping_cart';
     });
+}
+
+// Create flying product animation
+function createFlyingProductAnimation(imageUrl, sourceButton) {
+    if (!imageUrl || !sourceButton) return;
+    try {
+        const cartLink = document.querySelector('a[href*="cart"]');
+        if (!cartLink) return;
+        const cartIcon = cartLink.querySelector('.material-symbols-outlined');
+        if (!cartIcon) return;
+        const sourceRect = sourceButton.getBoundingClientRect();
+        const targetRect = cartIcon.getBoundingClientRect();
+        const flyingImg = document.createElement('img');
+        flyingImg.src = imageUrl;
+        flyingImg.className = 'fixed z-[9999] rounded-lg shadow-2xl pointer-events-none';
+        flyingImg.style.width = '60px';
+        flyingImg.style.height = '60px';
+        flyingImg.style.objectFit = 'cover';
+        flyingImg.style.left = sourceRect.left + sourceRect.width / 2 - 30 + 'px';
+        flyingImg.style.top = sourceRect.top + sourceRect.height / 2 - 30 + 'px';
+        flyingImg.style.setProperty('--fly-x', (targetRect.left - sourceRect.left) + 'px');
+        flyingImg.style.setProperty('--fly-y', (targetRect.top - sourceRect.top) + 'px');
+        flyingImg.classList.add('flying-product');
+        document.body.appendChild(flyingImg);
+        setTimeout(() => flyingImg.remove(), 700);
+    } catch (e) { console.log('Animation skipped:', e); }
+}
+
+// Animate cart icon in header
+function animateCartIcon() {
+    const cartLink = document.querySelector('a[href*="cart"]');
+    if (!cartLink) return;
+    const cartIcon = cartLink.querySelector('.material-symbols-outlined');
+    if (cartIcon) {
+        cartIcon.classList.add('cart-bounce');
+        setTimeout(() => cartIcon.classList.remove('cart-bounce'), 400);
+    }
+    const cartCountEl = document.getElementById('header-cart-count');
+    if (cartCountEl) {
+        cartCountEl.classList.remove('count-pulse');
+        void cartCountEl.offsetWidth;
+        cartCountEl.classList.add('count-pulse');
+        setTimeout(() => cartCountEl.classList.remove('count-pulse'), 400);
+    }
 }
 
 function showToast(message, type) {

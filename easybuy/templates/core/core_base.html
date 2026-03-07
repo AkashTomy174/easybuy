@@ -19,11 +19,14 @@
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#2d5a27",
-                        "primary-dark": "#1e3d1a",
-                        "primary-light": "#3d7a35",
-                        "accent-terracotta": "#c05e46",
+                        "primary": "#4a7c43",
+                        "primary-dark": "#2d5a27",
+                        "primary-light": "#6b9e5f",
+                        "accent-terracotta": "#ff7f50",
+                        "accent-coral": "#ff6b6b",
+                        "accent-gold": "#f59e0b",
                         "accent-blue": "#0ea5e9",
+                        "accent-emerald": "#10b981",
                         "background-light": "#fdfaf6",
                         "background-dark": "#1a1c19",
                         "surface-dark": "#232622",
@@ -44,7 +47,9 @@
                     boxShadow: {
                         'card': '0 4px 20px -2px rgba(0, 0, 0, 0.06)',
                         'card-hover': '0 20px 40px -12px rgba(0, 0, 0, 0.12)',
-                        'button': '0 4px 14px -3px rgba(45, 90, 39, 0.3)',
+                        'button': '0 4px 14px -3px rgba(74, 124, 67, 0.3)',
+                        'gold': '0 4px 14px -3px rgba(245, 158, 11, 0.3)',
+                        'coral': '0 4px 14px -3px rgba(255, 107, 107, 0.3)',
                     }
                 },
             },
@@ -80,6 +85,92 @@
             border-radius: 8px;
             font-size: 14px;
             z-index: 9999;
+        }
+
+        /* Add to Cart Animations */
+        @keyframes btnLoading {
+            0% { transform: scale(0.95); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(0.95); }
+        }
+        .addtocart-loading {
+            animation: btnLoading 0.8s ease-in-out infinite;
+        }
+
+        @keyframes cartShake {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-15deg); }
+            75% { transform: rotate(15deg); }
+        }
+        .cart-shake {
+            animation: cartShake 0.4s ease-in-out;
+        }
+
+        @keyframes cartBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+        .cart-bounce {
+            animation: cartBounce 0.4s ease-out;
+        }
+
+        @keyframes flyToCart {
+            0% {
+                opacity: 1;
+                transform: scale(1) translate(0, 0);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.3) translate(var(--fly-x), var(--fly-y));
+            }
+        }
+        .flying-product {
+            animation: flyToCart 0.7s ease-in-out forwards;
+        }
+
+        @keyframes toastSlideIn {
+            0% {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        @keyframes toastSlideOut {
+            0% {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+        }
+        .toast-animate-in {
+            animation: toastSlideIn 0.4s ease-out forwards;
+        }
+        .toast-animate-out {
+            animation: toastSlideOut 0.3s ease-in forwards;
+        }
+
+        @keyframes successPop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .success-pop {
+            animation: successPop 0.5s ease-out forwards;
+        }
+
+        @keyframes countPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4); }
+            100% { transform: scale(1); }
+        }
+        .count-pulse {
+            animation: countPulse 0.4s ease-out;
         }
     </style>
     
@@ -177,7 +268,7 @@
                             <span class="material-symbols-outlined text-[20px]">location_on</span>
                             My Addresses
                         </a>
-                        <a href="#" class="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
+                        <a href="{% url 'user_orders' %}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
                             <span class="material-symbols-outlined text-[20px]">receipt_long</span>
                             My Orders
                         </a>
@@ -307,7 +398,7 @@
                     <h3 class="text-sm font-bold text-stone-900 dark:text-white uppercase tracking-wider mb-4">Account</h3>
                     <ul class="space-y-3">
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">My Account</a></li>
-                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">My Orders</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'user_orders' %}">My Orders</a></li>
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Wishlist</a></li>
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Addresses</a></li>
                     </ul>
@@ -350,25 +441,47 @@
 {% block extra_js %}{% endblock %}
 
 <script>
-function showToast(message) {
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container') || createToastContainer();
     const toast = document.createElement('div');
-    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#333;color:white;padding:12px 24px;border-radius:8px;font-size:14px;z-index:9999';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+
+    const bgColor = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-gray-800';
+    const icon = type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info';
+
+    toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 mb-2 toast-animate-in`;
+    toast.innerHTML = `
+        <span class="material-symbols-outlined text-[24px]">${icon}</span>
+        <span class="font-medium">${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.remove('toast-animate-in');
+        toast.classList.add('toast-animate-out');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'fixed bottom-4 right-4 z-50';
+    document.body.appendChild(container);
+    return container;
 }
 
 // Dark Mode Toggle
 document.addEventListener('DOMContentLoaded', function() {
     const darkModeToggle = document.getElementById('darkModeToggle');
     const html = document.documentElement;
-    
+
     // Check for saved preference
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         html.classList.add('dark');
     }
-    
+
     if (darkModeToggle) {
         darkModeToggle.addEventListener('click', function() {
             html.classList.toggle('dark');
@@ -378,8 +491,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function addToCart(variantId) {
+// Enhanced addToCart with animations
+function addToCart(variantId, buttonElement = null, productImageUrl = null) {
     if (!variantId) return;
+
+    // Get the button element and store original state
+    const btn = buttonElement || document.querySelector('[data-addtocart-btn]');
+    const originalBtnContent = btn ? btn.innerHTML : '';
+    const wasDisabled = btn ? btn.disabled : false;
+
+    // Add loading animation to button if it exists
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('addtocart-loading');
+        btn.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span><span>Adding...</span>';
+    }
+
+    // Create flying product animation if product image is provided
+    if (productImageUrl) {
+        createFlyingProduct(productImageUrl, btn);
+    }
 
     fetch(`/user/addtocart/${variantId}/`, {
         method: 'POST',
@@ -392,12 +523,79 @@ function addToCart(variantId) {
     .then(data => {
         if (data.message === "Item added to cart successfully") {
             updateHeaderCartCount(data.cart_count);
-            showToast('Added to cart');
+            animateCartIcon();
+            showToast('Added to cart!', 'success');
         } else if (data.message) {
-            showToast(data.message);
+            showToast(data.message, 'error');
         }
     })
-    .catch(err => console.error(err));
+    .catch(err => {
+        console.error(err);
+        showToast('Error adding to cart', 'error');
+    })
+    .finally(() => {
+        // Restore button state
+        if (btn) {
+            btn.disabled = wasDisabled;
+            btn.classList.remove('addtocart-loading');
+            btn.innerHTML = originalBtnContent;
+        }
+    });
+}
+
+// Create flying product animation
+function createFlyingProduct(imageUrl, sourceButton) {
+    if (!imageUrl || !sourceButton) return;
+
+    try {
+        const cartLink = document.querySelector('a[href*="cart"]');
+        if (!cartLink) return;
+
+        const cartIcon = cartLink.querySelector('.material-symbols-outlined');
+        if (!cartIcon) return;
+
+        const sourceRect = sourceButton.getBoundingClientRect();
+        const targetRect = cartIcon.getBoundingClientRect();
+
+        const flyingImg = document.createElement('img');
+        flyingImg.src = imageUrl;
+        flyingImg.className = 'fixed z-[9999] rounded-lg shadow-2xl pointer-events-none';
+        flyingImg.style.width = '60px';
+        flyingImg.style.height = '60px';
+        flyingImg.style.objectFit = 'cover';
+        flyingImg.style.left = sourceRect.left + sourceRect.width / 2 - 30 + 'px';
+        flyingImg.style.top = sourceRect.top + sourceRect.height / 2 - 30 + 'px';
+        flyingImg.style.setProperty('--fly-x', (targetRect.left - sourceRect.left) + 'px');
+        flyingImg.style.setProperty('--fly-y', (targetRect.top - sourceRect.top) + 'px');
+        flyingImg.classList.add('flying-product');
+
+        document.body.appendChild(flyingImg);
+
+        setTimeout(() => flyingImg.remove(), 700);
+    } catch (e) {
+        console.log('Flying animation skipped:', e);
+    }
+}
+
+// Animate cart icon in header
+function animateCartIcon() {
+    const cartLink = document.querySelector('a[href*="cart"]');
+    if (!cartLink) return;
+
+    const cartIcon = cartLink.querySelector('.material-symbols-outlined');
+    if (cartIcon) {
+        cartIcon.classList.add('cart-bounce');
+        setTimeout(() => cartIcon.classList.remove('cart-bounce'), 400);
+    }
+
+    // Animate cart count
+    const cartCountEl = document.getElementById('header-cart-count');
+    if (cartCountEl) {
+        cartCountEl.classList.remove('count-pulse');
+        void cartCountEl.offsetWidth; // Trigger reflow
+        cartCountEl.classList.add('count-pulse');
+        setTimeout(() => cartCountEl.classList.remove('count-pulse'), 400);
+    }
 }
 
 function updateHeaderCartCount(count) {

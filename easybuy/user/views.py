@@ -399,7 +399,6 @@ def checkout(request):
             context["error"] = "Please select a payment method"
             return render(request, "user/checkout.html", context)
 
-
         address = get_object_or_404(Address, id=address_id, user=user)
         order_number = f"EB{timezone.now().strftime('%Y%m%d')}{''.join(random.choices(string.ascii_uppercase + string.digits, k=8))}"
         shipping_address = f"{address.house_info}, {address.locality}, {address.city}, {address.state} - {address.pincode}"
@@ -416,7 +415,6 @@ def checkout(request):
                 shipping_address=shipping_address,
             )
 
-
             for item in cart.items.all():
                 OrderItem.objects.create(
                     order=order,
@@ -426,15 +424,12 @@ def checkout(request):
                     price_at_purchase=item.price_at_time,
                 )
 
-
                 item.variant.stock_quantity -= item.quantity
                 item.variant.save()
-
 
             cart.items.all().delete()
             cart.total_amount = 0
             cart.save()
-
 
         return render(
             request,
@@ -444,3 +439,119 @@ def checkout(request):
 
     return render(request, "user/checkout.html", context)
 
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def display_order(request):
+    user = request.user
+    orders = (
+        Order.objects.prefetch_related(
+            "items__variant__product", "items__variant__images"
+        )
+        .filter(user=user)
+        .order_by("-ordered_at")
+    )
+    return render(request, "user/orders.html", {"orders": orders})
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def order_cancel(request, order_id):
+    if request.method != "POST":
+        return JsonResponse({"message": "Invalid request"}, status=400)
+
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    if order.order_status in ["DELIVERED", "SHIPPED", "CANCELLED"]:
+        return JsonResponse(
+            {"success": False, "message": "This order cannot be cancelled"}, status=400
+        )
+
+    with transaction.atomic():
+        order.order_status = "CANCELLED"
+        order.save()
+        for item in order.items.all():
+            item.status = "CANCELLED"
+            item.variant.stock_quantity += item.quantity
+            item.variant.save()
+            item.save()
+    return JsonResponse({"success": True, "message": "Order cancelled successfully"})
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def buy_now(request, variant_id):
+    """Direct checkout for a single product"""
+    if not request.user.is_authenticated:
+        return redirect("all_login")
+
+    variant = get_object_or_404(ProductVariant, id=variant_id)
+
+    if variant.stock_quantity <= 0:
+        return render(
+            request, "user/checkout.html", {"error": "Product is out of stock"}
+        )
+
+    addresses = request.user.addresses.all().order_by("-is_default", "-id")
+
+    subtotal = variant.selling_price
+    shipping = Decimal("99") if subtotal < 999 else Decimal("0")
+    tax_amount = subtotal * Decimal("0.18")
+    grand_total = subtotal + shipping + tax_amount
+
+    context = {
+        "single_product": True,
+        "variant": variant,
+        "addresses": addresses,
+        "subtotal": subtotal,
+        "shipping": shipping,
+        "tax_amount": tax_amount,
+        "grand_total": grand_total,
+    }
+
+    if request.method == "POST":
+        address_id = request.POST.get("selected_address_id")
+        payment_method = request.POST.get("payment_method")
+
+        if not address_id:
+            context["error"] = "Please select a delivery address"
+            return render(request, "user/checkout.html", context)
+
+        if not payment_method:
+            context["error"] = "Please select a payment method"
+            return render(request, "user/checkout.html", context)
+
+        address = get_object_or_404(Address, id=address_id, user=request.user)
+        order_number = f"EB{timezone.now().strftime('%Y%m%d')}{''.join(random.choices(string.ascii_uppercase + string.digits, k=8))}"
+        shipping_address = f"{address.house_info}, {address.locality}, {address.city}, {address.state} - {address.pincode}"
+
+        with transaction.atomic():
+            order = Order.objects.create(
+                user=request.user,
+                order_number=order_number,
+                total_amount=grand_total,
+                payment_status="PENDING",
+                order_status="CONFIRMED",
+                shipping_name=address.full_name,
+                shipping_phone=address.phone_number,
+                shipping_address=shipping_address,
+            )
+
+            OrderItem.objects.create(
+                order=order,
+                variant=variant,
+                seller=variant.product.seller,
+                quantity=1,
+                price_at_purchase=variant.selling_price,
+            )
+
+            variant.stock_quantity -= 1
+            variant.save()
+
+        return render(
+            request,
+            "user/order_success.html",
+            {"order": order, "payment_method": payment_method},
+        )
+
+    return render(request, "user/checkout.html", context)

@@ -61,11 +61,14 @@
                         <span class="text-xs font-medium text-stone-400 line-through">₹{{ variant.mrp }}</span>
                         {% endif %}
                     </div>
-                    <button 
+                    <button
                         type="button"
-                        onclick="event.preventDefault(); event.stopPropagation(); addToCart({{ variant.id }}); return false;"
+                        data-addtocart-btn
+                        data-variant-id="{{ variant.id }}"
+                        data-product-image="{% if product_image and product_image.image %}{{ product_image.image.url }}{% endif %}"
+                        onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;"
                         class="h-10 px-4 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-all flex items-center gap-1">
-                        <span class="material-symbols-outlined">shopping_cart</span>
+                        <span class="material-symbols-outlined add-cart-icon">shopping_cart</span>
                         Add to Cart
                     </button>
                     {% else %}
@@ -85,38 +88,4 @@
     </div>
 </section>
 
-<script>
-function addToCart(variantId) {
-    if (!variantId) { alert('Variant not selected'); return; }
-
-    fetch(`/user/addtocart/${variantId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.message === "Item added to cart successfully") {
-            alert(data.message); // replace with your toast if available
-            // updateCartCount(data.quantity);
-        } else {
-            alert(data.message);
-        }
-    })
-    .catch(err => console.error(err));
-}
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        document.cookie.split(';').forEach(cookie => {
-            const [k,v] = cookie.trim().split('=');
-            if (k === name) cookieValue = decodeURIComponent(v);
-        });
-    }
-    return cookieValue;
-}
-</script>
 {% endblock %}

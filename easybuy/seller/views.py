@@ -381,6 +381,7 @@ def seller_order(request):
     )
     pending_orders = order_items.filter(order__order_status="PENDING").count()
     shipped_orders = order_items.filter(order__order_status="SHIPPED").count()
+    cancelled_orders = order_items.filter(order__order_status="CANCELLED").count()
 
     context = {
         "order_items": order_items,
@@ -388,6 +389,7 @@ def seller_order(request):
         "total_revenue": total_revenue,
         "pending_orders": pending_orders,
         "shipped_orders": shipped_orders,
+        "cancelled_orders": cancelled_orders,
         "active_menu": "orders",
     }
 
@@ -397,7 +399,7 @@ def seller_order(request):
 @login_required
 @role_required(allowed_roles=["SELLER"])
 def status(request, id):
-   
+
     seller = request.user.seller_profile
     order_item = get_object_or_404(OrderItem, seller=seller, id=id)
 

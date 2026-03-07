@@ -102,8 +102,8 @@
                                         <span class="text-sm font-bold text-stone-400 italic uppercase">Coming Soon</span>
                                     {% endif %}
                                 </div>
-                                {% if v %}
-                                <button onclick="event.preventDefault(); event.stopPropagation(); addToCart({{ v.id }}); return false;"
+{% if v %}
+                                <button data-addtocart-btn data-variant-id="{{ v.id }}" data-product-image="{% for img in v.images.all %}{% if img.is_primary %}{{ img.image.url }}{% endif %}{% endfor %}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;"
                                         class="h-12 w-12 rounded-full bg-accent-terracotta text-white flex items-center justify-center hover:bg-stone-800 transition-colors shadow-sm">
                                     <span class="material-symbols-outlined">add_shopping_cart</span>
                                 </button>

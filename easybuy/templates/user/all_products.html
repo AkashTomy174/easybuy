@@ -96,16 +96,141 @@
                     <!-- Price Range -->
                     <div class="mb-6">
                         <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Price Range</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" name="min" value="{{ selected_min_price }}" 
-                                class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                                placeholder="Min">
-                            <span class="text-stone-400">-</span>
-                            <input type="number" name="max" value="{{ selected_max_price }}" 
-                                class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                                placeholder="Max">
+                        <div class="relative h-10 mt-2" id="slider-container">
+                            <!-- Track -->
+                            <div class="absolute top-1/2 -translate-y-1/2 left-2 right-2 h-1.5 bg-stone-200 dark:bg-stone-700 rounded-full"></div>
+                            <div id="slider-track" class="absolute top-1/2 -translate-y-1/2 left-2 h-1.5 bg-primary rounded-full" style="width: 100%;"></div>
+                            
+                            <!-- Min Thumb -->
+                            <div id="slider-thumb-min" class="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-primary rounded-full shadow-md cursor-pointer z-20" style="left: 0%;"></div>
+                            <!-- Max Thumb -->
+                            <div id="slider-thumb-max" class="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-primary rounded-full shadow-md cursor-pointer z-20" style="left: 100%;"></div>
                         </div>
+                        <div class="flex items-center justify-between text-sm text-stone-500 mt-3">
+                            <span>₹<span id="price-min-val">{{ selected_min_price|default:"0" }}</span></span>
+                            <span>₹<span id="price-max-val">{{ selected_max_price|default:"100000" }}</span></span>
+                        </div>
+                        <input type="hidden" name="min" id="input-min" value="{{ selected_min_price|default:"0" }}">
+                        <input type="hidden" name="max" id="input-max" value="{{ selected_max_price|default:"100000" }}">
                     </div>
+
+                    <script>
+                    (function() {
+                        var container = document.getElementById('slider-container');
+                        var track = document.getElementById('slider-track');
+                        var thumbMin = document.getElementById('slider-thumb-min');
+                        var thumbMax = document.getElementById('slider-thumb-max');
+                        var minValEl = document.getElementById('price-min-val');
+                        var maxValEl = document.getElementById('price-max-val');
+                        var inputMin = document.getElementById('input-min');
+                        var inputMax = document.getElementById('input-max');
+                        
+                        var minValue = parseInt(inputMin.value) || 0;
+                        var maxValue = parseInt(inputMax.value) || 100000;
+                        var min = 0, max = 100000;
+                        
+                        var isDraggingMin = false;
+                        var isDraggingMax = false;
+                        var containerRect = null;
+                        
+                        function updateDisplay() {
+                            var minPercent = ((minValue - min) / (max - min)) * 100;
+                            var maxPercent = ((maxValue - min) / (max - min)) * 100;
+                            
+                            thumbMin.style.left = 'calc(' + minPercent + '% - 10px)';
+                            thumbMax.style.left = 'calc(' + maxPercent + '% - 10px)';
+                            track.style.left = thumbMin.style.left;
+                            track.style.width = (maxPercent - minPercent) + '%';
+                            
+                            minValEl.textContent = minValue;
+                            maxValEl.textContent = maxValue;
+                            inputMin.value = minValue;
+                            inputMax.value = maxValue;
+                        }
+                        
+                        function getValueFromPosition(clientX) {
+                            if (!containerRect) containerRect = container.getBoundingClientRect();
+                            var percent = (clientX - containerRect.left - 16) / (containerRect.width - 32);
+                            percent = Math.max(0, Math.min(1, percent));
+                            return Math.round((min + percent * (max - min)) / 500) * 500;
+                        }
+                        
+                        thumbMin.addEventListener('mousedown', function(e) {
+                            isDraggingMin = true;
+                            e.preventDefault();
+                        });
+                        
+                        thumbMax.addEventListener('mousedown', function(e) {
+                            isDraggingMax = true;
+                            e.preventDefault();
+                        });
+                        
+                        document.addEventListener('mousemove', function(e) {
+                            containerRect = container.getBoundingClientRect();
+                            
+                            if (isDraggingMin) {
+                                var newVal = getValueFromPosition(e.clientX);
+                                if (newVal < maxValue) {
+                                    minValue = newVal;
+                                    updateDisplay();
+                                }
+                            }
+                            
+                            if (isDraggingMax) {
+                                var newVal = getValueFromPosition(e.clientX);
+                                if (newVal > minValue) {
+                                    maxValue = newVal;
+                                    updateDisplay();
+                                }
+                            }
+                        });
+                        
+                        document.addEventListener('mouseup', function() {
+                            isDraggingMin = false;
+                            isDraggingMax = false;
+                        });
+                        
+                        // Touch support
+                        thumbMin.addEventListener('touchstart', function(e) {
+                            isDraggingMin = true;
+                            e.preventDefault();
+                        });
+                        
+                        thumbMax.addEventListener('touchstart', function(e) {
+                            isDraggingMax = true;
+                            e.preventDefault();
+                        });
+                        
+                        document.addEventListener('touchmove', function(e) {
+                            containerRect = container.getBoundingClientRect();
+                            var touch = e.touches[0];
+                            
+                            if (isDraggingMin) {
+                                var newVal = getValueFromPosition(touch.clientX);
+                                if (newVal < maxValue) {
+                                    minValue = newVal;
+                                    updateDisplay();
+                                }
+                            }
+                            
+                            if (isDraggingMax) {
+                                var newVal = getValueFromPosition(touch.clientX);
+                                if (newVal > minValue) {
+                                    maxValue = newVal;
+                                    updateDisplay();
+                                }
+                            }
+                        });
+                        
+                        document.addEventListener('touchend', function() {
+                            isDraggingMin = false;
+                            isDraggingMax = false;
+                        });
+                        
+                        // Initialize
+                        updateDisplay();
+                    })();
+                    </script>
 
                     <!-- Sort -->
                     <div class="mb-6">
@@ -207,7 +332,10 @@
 
                         <button 
                             type="button"
-                            onclick="event.preventDefault(); event.stopPropagation(); addToCart({{ item.variant.id }}); return false;"
+                            data-addtocart-btn
+                            data-variant-id="{{ item.variant.id }}"
+                            data-product-image="{% if item.image %}{{ item.image.image.url }}{% endif %}"
+                            onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;"
                             class="h-10 px-4 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-all flex items-center gap-1">
                             <span class="material-symbols-outlined">shopping_cart</span>
                             Add
@@ -261,58 +389,9 @@
                     Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
                 </p>
             </div>
-            {% endif %}
+{% endif %}
         </div>
     </div>
 </div>
-
-<!-- Toast Container -->
-<div id="toast-container" class="fixed bottom-4 right-4 z-50"></div>
-
-<script>
-// Add to Cart Function
-function addToCart(variantId) {
-    if (!variantId) { alert('Variant not selected'); return; }
-
-    fetch(`/user/addtocart/${variantId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.message === "Item added to cart successfully") {
-            showToast(data.message, 'success');
-        } else {
-            showToast(data.message, 'error');
-        }
-    })
-    .catch(err => console.error(err));
-}
-
-// Toast Notification
-function showToast(message, type) {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = (type==='success'?'bg-green-600':'bg-red-600') + ' text-white px-6 py-4 rounded-lg shadow-lg mb-2 flex items-center gap-3';
-    toast.textContent = message;
-    container.appendChild(toast);
-    setTimeout(()=>container.removeChild(toast), 3000);
-}
-
-// CSRF Cookie
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        document.cookie.split(';').forEach(cookie => {
-            const [k,v] = cookie.trim().split('=');
-            if (k === name) cookieValue = decodeURIComponent(v);
-        });
-    }
-    return cookieValue;
-}
-</script>
 
 {% endblock %}

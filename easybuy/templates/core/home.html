@@ -9,14 +9,14 @@
         <div class="absolute inset-0 bg-gradient-to-r from-stone-950/80 via-stone-950/30 to-transparent"></div>
     </div>
     <div class="relative mx-auto flex h-full max-w-7xl flex-col justify-center px-4 sm:px-12">
-        <span class="mb-4 text-xs font-bold uppercase tracking-widest text-accent-terracotta">Biggest Sale of the Season</span>
-        <h1 class="max-w-2xl text-5xl font-black text-white md:text-7xl leading-[1.1]">Super Savings on Premium Tech</h1>
-        <p class="mt-6 max-w-lg text-lg text-stone-200 leading-relaxed">Grab the best deals on top electronics. Limited time offers you don't want to miss!</p>
-        <div class="mt-10 flex flex-wrap gap-4">
+        <span class="mb-4 text-xs font-bold uppercase tracking-widest text-accent-terracotta animate-fade-in-up">Biggest Sale of the Season</span>
+        <h1 class="max-w-2xl text-5xl font-black text-white md:text-7xl leading-[1.1] animate-fade-in-up delay-100">Super Savings on Premium Tech</h1>
+        <p class="mt-6 max-w-lg text-lg text-stone-200 leading-relaxed animate-fade-in-up delay-200">Grab the best deals on top electronics. Limited time offers you don't want to miss!</p>
+        <div class="mt-10 flex flex-wrap gap-4 animate-fade-in-up delay-300">
             <a href="{% url 'all_products' %}">
-                <button class="rounded-2xl bg-primary px-10 py-4 font-bold text-white transition-all hover:bg-primary-dark hover:scale-105 shadow-lg shadow-primary/20">Shop Now</button>
+                <button class="rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-10 py-4 font-bold text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/30 shadow-lg shadow-primary/20">Shop Now</button>
             </a>
-            <button class="rounded-2xl border border-white/30 bg-white/10 px-10 py-4 font-bold text-white backdrop-blur-md transition-all hover:bg-white/20">Learn More</button>
+            <button class="rounded-2xl border border-white/30 bg-white/10 px-10 py-4 font-bold text-white backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:scale-105">Learn More</button>
         </div>
     </div>
 </section>
@@ -28,20 +28,21 @@
             <h2 class="text-3xl font-black text-stone-900 dark:text-white">Shop by Category</h2>
             <p class="mt-2 text-stone-500">Find exactly what you're looking for</p>
         </div>
-        <a class="font-bold text-primary hover:underline transition-all" href="{% url 'all_categories' %}">View All Categories</a>
+        <a class="font-bold text-primary hover:underline transition-all duration-300" href="{% url 'all_categories' %}">View All Categories</a>
     </div>
 
     <div class="grid grid-cols-2 gap-6 md:grid-cols-4">
         {% for category in categories %}
         <a href="{% url 'category_products' category.slug %}" class="group flex flex-col items-center gap-4 text-center cursor-pointer">
-            <div class="relative flex aspect-square w-full items-center justify-center rounded-3xl bg-white shadow-md ring-1 ring-stone-100 transition-all group-hover:shadow-2xl group-hover:ring-primary/20 overflow-hidden dark:bg-surface-dark">
+            <div class="relative flex aspect-square w-full items-center justify-center rounded-3xl bg-white shadow-md ring-1 ring-stone-100 transition-all duration-500 group-hover:shadow-2xl group-hover:shadow-primary/20 group-hover:ring-primary/30 overflow-hidden dark:bg-surface-dark transform group-hover:-translate-y-2">
                 {% if category.image_url %}
-                    <img alt="{{ category.name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="{{ category.image_url.url }}"/>
+                    <img alt="{{ category.name }}" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" src="{{ category.image_url.url }}"/>
                 {% else %}
                     <span class="material-symbols-outlined text-stone-300 text-5xl">category</span>
                 {% endif %}
+                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
-            <span class="text-lg font-bold text-stone-800 dark:text-stone-200 group-hover:text-primary transition-colors">{{ category.name }}</span>
+            <span class="text-lg font-bold text-stone-800 dark:text-stone-200 group-hover:text-primary transition-colors duration-300">{{ category.name }}</span>
         </a>
         {% empty %}
         <div class="col-span-full py-10 text-center">
@@ -60,13 +61,13 @@
                 <p class="mt-2 text-stone-500">The latest products just landed</p>
             </div>
             <a href="{% url 'new_arrivals' %}">
-                <button class="rounded-2xl border border-stone-300 bg-white px-6 py-2.5 text-sm font-bold shadow-sm transition-all hover:bg-stone-50 dark:border-stone-600 dark:bg-stone-800 dark:hover:bg-stone-700">View All</button>
+                <button class="rounded-2xl border border-stone-300 bg-gradient-to-r from-white to-stone-50 px-6 py-2.5 text-sm font-bold shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 dark:border-stone-600 dark:from-stone-800 dark:to-stone-700 dark:hover:shadow-primary/20">View All</button>
             </a>
         </div>
             
-        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {% for item in product_data %}
-            <a href="{% url 'product_detail' item.variant.product.slug %}" class="group relative flex flex-col rounded-3xl border border-stone-200 bg-white p-4 shadow-sm transition-all hover:shadow-2xl hover:-translate-y-1 dark:border-stone-700 dark:bg-surface-dark">
+            <a href="{% url 'product_detail' item.variant.product.slug %}" class="group relative flex flex-col rounded-3xl border border-stone-200 bg-white p-4 shadow-lg transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 dark:border-stone-700 dark:bg-surface-dark">
                 
                 <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800 mb-4">
                     {% if item.image %}
@@ -79,26 +80,35 @@
                         </div>
                     {% endif %}
                     
-                    <button class="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all hover:bg-white hover:text-accent-terracotta dark:bg-black/50">
+                    <!-- Sale Badge -->
+                    {% if item.variant.mrp > item.variant.selling_price %}
+                    <div class="absolute left-3 top-3 z-10 flex items-center justify-center rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-3 py-1 text-xs font-bold text-white shadow-lg shadow-red-500/30">
+                        SALE
+                    </div>
+                    {% endif %}
+                    
+                    <button class="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all duration-300 hover:bg-white hover:text-accent-terracotta hover:scale-110 dark:bg-black/50">
                         <span class="material-symbols-outlined text-[20px]">favorite_border</span>
                     </button>
                 </div>
 
                 <div class="flex flex-1 flex-col px-2">
                     <p class="text-xs font-medium text-stone-400 uppercase tracking-wide">{{ item.variant.product.brand }}</p>
-                    <h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-2">
+                    <h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors duration-300">
                         {{ item.variant.product.name }}
                     </h3>
                     
                     <div class="mt-4 flex items-center justify-between">
                         <div class="flex flex-col">
+                            {% if item.variant.mrp > item.variant.selling_price %}
                             <span class="text-xs text-stone-400 line-through">₹{{ item.variant.mrp }}</span>
+                            {% endif %}
                             <span class="text-xl font-black text-primary">₹{{ item.variant.selling_price }}</span>
                         </div>
                         
 
-                        <button onclick="event.preventDefault(); event.stopPropagation(); addToCart({{ item.variant.id }}); return false;" class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
-                            <span class="material-symbols-outlined">add_shopping_cart</span>
+                        <button data-addtocart-btn data-variant-id="{{ item.variant.id }}" data-product-image="{% if item.image %}{{ item.image.image.url }}{% endif %}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;" class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-primary/40">
+                            <span class="material-symbols-outlined add-cart-icon">add_shopping_cart</span>
                         </button>
                     </div>
                 </div>
@@ -116,35 +126,55 @@
 <section class="py-20 bg-white dark:bg-surface-dark">
     <div class="max-w-7xl mx-auto px-4 lg:px-12">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div class="text-center">
-                <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <span class="material-symbols-outlined text-3xl text-primary">local_shipping</span>
+            <div class="group text-center p-6 rounded-3xl transition-all duration-500 hover:bg-primary/5">
+                <div class="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform duration-300">
+                    <span class="material-symbols-outlined text-3xl text-white">local_shipping</span>
                 </div>
-                <h3 class="font-bold text-stone-900 dark:text-white mb-2">Free Shipping</h3>
+                <h3 class="font-bold text-stone-900 dark:text-white mb-2 group-hover:text-primary transition-colors">Free Shipping</h3>
                 <p class="text-sm text-stone-500">On orders above ₹999</p>
             </div>
-            <div class="text-center">
-                <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <span class="material-symbols-outlined text-3xl text-primary">replay</span>
+            <div class="group text-center p-6 rounded-3xl transition-all duration-500 hover:bg-primary/5">
+                <div class="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform duration-300">
+                    <span class="material-symbols-outlined text-3xl text-white">replay</span>
                 </div>
-                <h3 class="font-bold text-stone-900 dark:text-white mb-2">Easy Returns</h3>
+                <h3 class="font-bold text-stone-900 dark:text-white mb-2 group-hover:text-primary transition-colors">Easy Returns</h3>
                 <p class="text-sm text-stone-500">30-day return policy</p>
             </div>
-            <div class="text-center">
-                <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <span class="material-symbols-outlined text-3xl text-primary">verified_user</span>
+            <div class="group text-center p-6 rounded-3xl transition-all duration-500 hover:bg-primary/5">
+                <div class="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform duration-300">
+                    <span class="material-symbols-outlined text-3xl text-white">verified_user</span>
                 </div>
-                <h3 class="font-bold text-stone-900 dark:text-white mb-2">Secure Payment</h3>
+                <h3 class="font-bold text-stone-900 dark:text-white mb-2 group-hover:text-primary transition-colors">Secure Payment</h3>
                 <p class="text-sm text-stone-500">100% secure transactions</p>
             </div>
-            <div class="text-center">
-                <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <span class="material-symbols-outlined text-3xl text-primary">support_agent</span>
+            <div class="group text-center p-6 rounded-3xl transition-all duration-500 hover:bg-primary/5">
+                <div class="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform duration-300">
+                    <span class="material-symbols-outlined text-3xl text-white">support_agent</span>
                 </div>
-                <h3 class="font-bold text-stone-900 dark:text-white mb-2">24/7 Support</h3>
+                <h3 class="font-bold text-stone-900 dark:text-white mb-2 group-hover:text-primary transition-colors">24/7 Support</h3>
                 <p class="text-sm text-stone-500">Dedicated customer support</p>
             </div>
         </div>
     </div>
 </section>
+
+<!-- Add custom animations -->
+<style>
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out forwards;
+}
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+</style>
 {% endblock %}
