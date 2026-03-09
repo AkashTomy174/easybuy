@@ -7,7 +7,8 @@ from django.db.models import F
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from easybuy.core.decorators import role_required
-from .models import SellerProfile, Product
+from .models import SellerProfile, Product, ProductVariant, ProductImage, InventoryLog
+from .models import ProductVariant as Productitem
 from easybuy.core.models import Category, SubCategory
 from .models import Product, ProductImage, InventoryLog
 from django.db import transaction
@@ -118,7 +119,7 @@ def seller_product_list(request):
 def seller_dashboard(request):
     seller = request.user.seller_profile
     products = Product.objects.filter(seller=seller).prefetch_related(
-        "items", "items__images"
+        "variants", "variants__images"
     )
     return render(
         request,
@@ -134,7 +135,7 @@ def seller_inventory(request):
     if seller:
         products = (
             Product.objects.filter(seller=seller)
-            .prefetch_related("items", "items__images")
+            .prefetch_related("variants", "variants__images")
             .select_related("subcategory")
             .order_by("-created_at")
         )
@@ -144,7 +145,7 @@ def seller_inventory(request):
         out_of_stock_count = 0
         all_items = []
         for product in products:
-            for item in product.items.all():
+            for item in product.variants.all():
                 all_items.append(item)
                 total_stock += item.stock_quantity
                 total_inventory_value += float(item.selling_price) * item.stock_quantity
@@ -164,7 +165,7 @@ def seller_inventory(request):
         "products": products,
         "all_items": all_items,
         "total_products": len(products),
-        "total_items": len(all_items),
+        "total_variants": len(all_items),
         "total_stock": total_stock,
         "total_inventory_value": total_inventory_value,
         "low_stock_count": low_stock_count,
@@ -257,7 +258,7 @@ def add_product(request):
             images = request.FILES.getlist("images")
             for idx, img in enumerate(images):
                 ProductImage.objects.create(
-                    item=item,
+                    variant=item,
                     image=img,
                     is_primary=(idx == 0),
                 )
@@ -292,7 +293,7 @@ def add_stock(request):
             item.stock_quantity += stock_to_add
             item.save()
             InventoryLog.objects.create(
-                item=item,
+                variant=item,
                 change_amount=stock_to_add,
                 reason=reason,
                 performed_by=request.user,

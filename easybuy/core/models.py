@@ -4,7 +4,7 @@ from django.utils.text import slugify
 
 
 def generate_unique_category_slug(klass, field, slug_field="slug"):
- 
+
     origin_slug = slugify(field)
     unique_slug = origin_slug
     counter = 1
@@ -44,6 +44,16 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+class Otp(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="otp")
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    verified = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"OTP for {self.user.email}"
 
 
 class Address(models.Model):

@@ -481,7 +481,6 @@ def order_cancel(request, order_id):
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def buy_now(request, variant_id):
-    """Direct checkout for a single product"""
     if not request.user.is_authenticated:
         return redirect("all_login")
 

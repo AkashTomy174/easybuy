@@ -20,6 +20,7 @@ def admin_email(email, seller_name, status):
         subject = "Seller Account Approved"
         message = f"""Hello {seller_name},
 
+
 Congratulations! Your seller account has been approved.
 You can now log in and start listing your products.
 
@@ -34,6 +35,8 @@ Please contact support for more information.
 
 Best Regards,
 E-commerce Team"""
+
+
     else:
         return False
 
@@ -210,3 +213,32 @@ def rejected_sellers(request):
         "admin/rejected_sellers.html",
         {"page_obj": page_obj, "active_menu": "rejected_sellers"},
     )
+# import random
+# from django.core.mail import send_mail
+# from django.conf import settings
+
+# def snd_mail(request, mail, name):
+
+#     otp = random.randint(100000, 999999)
+
+#     subject = "OTP for verification"
+
+#     message = f"""Hello {name},
+
+# This is your verification code: {otp}
+
+# Enter this OTP to continue registration.
+
+# Best Regards,
+# E-commerce Team
+# """
+
+#     send_mail(
+#         subject,
+#         message,
+#         settings.DEFAULT_FROM_EMAIL,
+#         [mail],
+#         fail_silently=False,
+#     )
+
+#     return otp

@@ -317,6 +317,10 @@
                 <span class="text-[10px] font-medium">Account</span>
             </a>
             {% else %}
+            <a href="{% url 'register' %}" class="flex flex-col items-center gap-1 p-2 text-stone-500">
+                <span class="material-symbols-outlined">person_add</span>
+                <span class="text-[10px] font-medium">Register</span>
+            </a>
             <a href="{% url 'all_login' %}" class="flex flex-col items-center gap-1 p-2 text-stone-500">
                 <span class="material-symbols-outlined">login</span>
                 <span class="text-[10px] font-medium">Login</span>
