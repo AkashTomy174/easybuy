@@ -1,0 +1,52 @@
+<div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+    <div class="flex items-center gap-3 mb-6">
+        <span class="material-symbols-outlined text-2xl text-primary">payment</span>
+        <h2 class="text-xl font-black text-stone-900 dark:text-white">Payment Method</h2>
+    </div>
+    <div class="space-y-3">
+        <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
+             onclick="selectPayment('UPI', this)">
+            <div class="flex items-center gap-3">
+                <input type="radio" name="payment" value="UPI" class="w-5 h-5 text-primary focus:ring-primary">
+                <span class="material-symbols-outlined text-stone-600 dark:text-stone-400">qr_code</span>
+                <div>
+                    <h4 class="font-bold text-stone-900 dark:text-white">UPI Payment</h4>
+                    <p class="text-sm text-stone-500">Pay via Google Pay, PhonePe, Paytm</p>
+                </div>
+            </div>
+        </div>
+        <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
+             onclick="selectPayment('CARD', this)">
+            <div class="flex items-center gap-3">
+                <input type="radio" name="payment" value="CARD" class="w-5 h-5 text-primary focus:ring-primary">
+                <span class="material-symbols-outlined text-stone-600 dark:text-stone-400">credit_card</span>
+                <div>
+                    <h4 class="font-bold text-stone-900 dark:text-white">Credit / Debit Card</h4>
+                    <p class="text-sm text-stone-500">Visa, Mastercard, RuPay</p>
+                </div>
+            </div>
+        </div>
+        <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
+             onclick="selectPayment('NETBANKING', this)">
+            <div class="flex items-center gap-3">
+                <input type="radio" name="payment" value="NETBANKING" class="w-5 h-5 text-primary focus:ring-primary">
+                <span class="material-symbols-outlined text-stone-600 dark:text-stone-400">account_balance</span>
+                <div>
+                    <h4 class="font-bold text-stone-900 dark:text-white">Net Banking</h4>
+                    <p class="text-sm text-stone-500">All major banks supported</p>
+                </div>
+            </div>
+        </div>
+        <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
+             onclick="selectPayment('COD', this)">
+            <div class="flex items-center gap-3">
+                <input type="radio" name="payment" value="COD" class="w-5 h-5 text-primary focus:ring-primary">
+                <span class="material-symbols-outlined text-stone-600 dark:text-stone-400">payments</span>
+                <div>
+                    <h4 class="font-bold text-stone-900 dark:text-white">Cash on Delivery</h4>
+                    <p class="text-sm text-stone-500">Pay when you receive</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -124,9 +124,12 @@
                 <button class="relative p-2 text-slate-500 hover:bg-slate-100 rounded-lg">
                     <span class="material-symbols-outlined">notifications</span>
                 </button>
-                <a href="{% url 'logout' %}" class="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors" title="Logout">
-                    <span class="material-symbols-outlined">logout</span>
-                </a>
+                <form method="POST" action="{% url 'logout' %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors" title="Logout" aria-label="Logout">
+                        <span class="material-symbols-outlined">logout</span>
+                    </button>
+                </form>
             </div>
         </header>
 

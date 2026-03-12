@@ -12,6 +12,8 @@ from easybuy.user.views import (
 urlpatterns = [
     path("", views.home_view, name="home"),
     path("login/", views.all_login, name="all_login"),
+    path("admin_dashboard/",views.admin_dashboard,name="admin_dashboard"),
+    path("seller_dashboard/",views.seller_dashboard,name="seller_dashboard"),
     path("logout/", views.logout_view, name="logout"),
     path("register/", views.register_view, name="register"),
     path("profile/", views.profile_settings, name="profile_settings"),

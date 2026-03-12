@@ -11,6 +11,18 @@ from easybuy.core.decorators import role_required
 from django.contrib.auth.decorators import login_required
 from easybuy.seller.models import Product
 
+@login_required
+@role_required(allowed_roles=["ADMIN"])
+def admin_dashboard(request):
+    user = request.user
+    sellers = User.objects.filter(role="SELLER").count()
+    users = User.objects.filter(role="CUSTOMER").count()
+    return render(
+        request,
+        "admin/admin_dashboard.html",
+        {"sellers": sellers, "users": users},
+    )
+
 
 def admin_email(email, seller_name, status):
     if not email:
@@ -213,32 +225,3 @@ def rejected_sellers(request):
         "admin/rejected_sellers.html",
         {"page_obj": page_obj, "active_menu": "rejected_sellers"},
     )
-# import random
-# from django.core.mail import send_mail
-# from django.conf import settings
-
-# def snd_mail(request, mail, name):
-
-#     otp = random.randint(100000, 999999)
-
-#     subject = "OTP for verification"
-
-#     message = f"""Hello {name},
-
-# This is your verification code: {otp}
-
-# Enter this OTP to continue registration.
-
-# Best Regards,
-# E-commerce Team
-# """
-
-#     send_mail(
-#         subject,
-#         message,
-#         settings.DEFAULT_FROM_EMAIL,
-#         [mail],
-#         fail_silently=False,
-#     )
-
-#     return otp

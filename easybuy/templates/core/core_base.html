@@ -4,7 +4,8 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>{% block title %}EasyBuy | Premium E-Commerce{% endblock %}</title>
-    
+    <meta name="description" content="{% block meta_description %}EasyBuy — Your trusted destination for premium electronics and quality products with fast delivery.{% endblock %}"/>
+
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect"/>
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -307,9 +308,16 @@
                 <span class="material-symbols-outlined">grid_view</span>
                 <span class="text-[10px] font-medium">Shop</span>
             </a>
-            <a href="#" class="flex flex-col items-center gap-1 p-2 text-stone-500">
+            <a href="#" onclick="document.querySelector('input[name=q]')&&document.querySelector('input[name=q]').focus()" class="flex flex-col items-center gap-1 p-2 text-stone-500">
                 <span class="material-symbols-outlined">search</span>
                 <span class="text-[10px] font-medium">Search</span>
+            </a>
+            <a href="{% url 'cart' %}" class="flex flex-col items-center gap-1 p-2 {% if request.resolver_match.url_name == 'cart' %}text-primary{% else %}text-stone-500{% endif %} relative">
+                <span class="material-symbols-outlined">shopping_cart</span>
+                <span class="text-[10px] font-medium">Cart</span>
+                {% if request.user.is_authenticated and request.user.cart.items.count %}
+                <span class="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[8px] font-bold text-white">{{ request.user.cart.items.count }}</span>
+                {% endif %}
             </a>
             {% if request.user.is_authenticated %}
             <a href="{% url 'profile_settings' %}" class="flex flex-col items-center gap-1 p-2 text-stone-500">
@@ -339,8 +347,9 @@
         <div class="max-w-4xl mx-auto px-4 text-center">
             <h2 class="text-3xl font-black text-white mb-4">Join the EasyBuy Family</h2>
             <p class="text-white/80 mb-8 max-w-xl mx-auto">Subscribe to receive exclusive deals, early access to new products, and special discounts delivered to your inbox.</p>
-            <form class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-                <input class="flex-1 h-14 rounded-2xl border-0 bg-white/10 backdrop-blur-sm px-6 text-white placeholder:text-white/60 focus:ring-4 focus:ring-white/20" placeholder="Enter your email address" type="email"/>
+            <form class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto" method="POST" action="#">
+                {% csrf_token %}
+                <input class="flex-1 h-14 rounded-2xl border-0 bg-white/10 backdrop-blur-sm px-6 text-white placeholder:text-white/60 focus:ring-4 focus:ring-white/20" placeholder="Enter your email address" type="email" name="newsletter_email"/>
                 <button class="h-14 px-8 rounded-2xl bg-white text-primary font-bold hover:bg-stone-100 transition-colors shadow-lg" type="submit">Subscribe</button>
             </form>
             <p class="text-white/60 text-xs mt-4">By subscribing, you agree to our Privacy Policy and Terms of Service.</p>

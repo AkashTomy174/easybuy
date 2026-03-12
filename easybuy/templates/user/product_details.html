@@ -2,22 +2,24 @@
 {% block title %}{{ product.name }} | EasyBuy{% endblock %}
 
 {% block content %}
-<main class="flex-1 mx-auto max-w-7xl w-full px-4 py-12 lg:px-12">
+<div class="mx-auto max-w-7xl w-full px-4 py-12 lg:px-12 pb-24 md:pb-12">
     {% if error %}
         <div class="text-center py-20">
-            <h1 class="text-2xl font-bold">{{ error }}</h1>
-            <a href="{% url 'all_products' %}" class="text-primary underline mt-4 inline-block">Back to Shopping</a>
+            <span class="material-symbols-outlined text-7xl text-stone-300 block mb-4">search_off</span>
+            <h1 class="text-2xl font-bold text-stone-900 dark:text-white">{{ error }}</h1>
+            <a href="{% url 'all_products' %}" class="text-primary underline mt-4 inline-block font-bold">Back to Shopping</a>
         </div>
     {% else %}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
-        
+
         <!-- Image Gallery -->
         <div class="space-y-6">
             <div class="aspect-square rounded-[3rem] overflow-hidden bg-white dark:bg-surface-dark border border-stone-200 dark:border-stone-700 shadow-sm">
                 {% with product.variants.first as first_variant %}
                     {% for img in first_variant.images.all %}
                         {% if img.is_primary %}
-                            <img src="{{ img.image.url }}" id="main-image" class="w-full h-full object-cover transition-all duration-500">
+                            <img src="{{ img.image.url }}" id="main-image" alt="{{ product.name }}"
+                                 class="w-full h-full object-cover transition-all duration-500">
                         {% endif %}
                     {% endfor %}
                 {% endwith %}
@@ -25,9 +27,10 @@
             <div class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
                 {% for variant in product.variants.all %}
                     {% for img in variant.images.all %}
-                        <button onclick="document.getElementById('main-image').src='{{ img.image.url }}'" 
+                        <button onclick="document.getElementById('main-image').src='{{ img.image.url }}'"
+                                aria-label="View image {{ forloop.counter }}"
                                 class="h-20 w-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary transition-all bg-white dark:bg-stone-800">
-                            <img src="{{ img.image.url }}" class="w-full h-full object-cover">
+                            <img src="{{ img.image.url }}" alt="{{ product.name }} thumbnail {{ forloop.counter }}" class="w-full h-full object-cover">
                         </button>
                     {% endfor %}
                 {% endfor %}
@@ -39,26 +42,17 @@
             <div class="mb-8">
                 <span class="text-xs font-black uppercase tracking-[0.3em] text-accent-terracotta">{{ product.brand|default:"Premium Collection" }}</span>
                 <h1 class="text-4xl lg:text-5xl font-black text-stone-900 dark:text-white mt-2 leading-tight">{{ product.name }}</h1>
-                
+
+                <!-- Price — initialized by JS from the first variant's data attributes -->
                 <div class="flex items-center gap-4 mt-6" id="price-container">
-                    {% with product.variants.first as v %}
-                        <span class="text-3xl font-black text-primary" id="current-price">₹{{ v.selling_price }}</span>
-                        {% if v.mrp > v.selling_price %}
-                            <span class="text-lg text-stone-400 line-through" id="original-price">₹{{ v.mrp }}</span>
-                            <span class="bg-accent-terracotta/10 text-accent-terracotta px-3 py-1 rounded-full text-xs font-bold uppercase" id="discount-badge">Save ₹{{ v.mrp|add:"-v.selling_price" }}</span>
-                        {% endif %}
-                    {% endwith %}
+                    <span class="text-3xl font-black text-primary" id="current-price"></span>
+                    <span class="text-lg text-stone-400 line-through hidden" id="original-price"></span>
+                    <span class="bg-accent-terracotta/10 text-accent-terracotta px-3 py-1 rounded-full text-xs font-bold uppercase hidden" id="discount-badge"></span>
                 </div>
-                
+
                 <!-- Stock Status -->
                 <div class="mt-4">
-                    {% with product.variants.first as v %}
-                        {% if v.stock_quantity > 0 %}
-                            <span class="text-green-600 font-bold text-sm" id="stock-status">✓ In Stock ({{ v.stock_quantity }} available)</span>
-                        {% else %}
-                            <span class="text-red-600 font-bold text-sm" id="stock-status">✗ Out of Stock</span>
-                        {% endif %}
-                    {% endwith %}
+                    <span class="text-sm font-bold flex items-center gap-1" id="stock-status"></span>
                 </div>
             </div>
 
@@ -67,9 +61,9 @@
                 <h3 class="text-sm font-bold text-stone-900 dark:text-white mb-4 uppercase tracking-widest">Select Variant</h3>
                 <div class="flex flex-wrap gap-3" id="variant-buttons">
                     {% for variant in product.variants.all %}
-                    <button 
+                    <button
                         onclick="selectVariant({{ variant.id }}, {{ variant.selling_price }}, {{ variant.mrp|default:0 }}, {{ variant.stock_quantity }})"
-                        class="variant-btn px-6 py-3 rounded-2xl border-2 border-stone-200 dark:border-stone-700 font-bold text-sm hover:border-primary hover:text-primary transition-all dark:text-white {% if forloop.first %}selected border-primary text-primary{% endif %}"
+                        class="variant-btn px-6 py-3 rounded-2xl border-2 border-stone-200 dark:border-stone-700 font-bold text-sm hover:border-primary hover:text-primary transition-all dark:text-white"
                         data-variant-id="{{ variant.id }}"
                         data-selling-price="{{ variant.selling_price }}"
                         data-mrp="{{ variant.mrp|default:0 }}"
@@ -87,17 +81,17 @@
                     data-addtocart-btn
                     onclick="handleAddToCart()"
                     class="flex-1 h-16 bg-primary text-white rounded-[2rem] font-black text-lg hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span class="material-symbols-outlined" id="cart-icon">shopping_cart</span>
-                    <span id="addtocart-text">Add to Cart</span>
+                    <span class="material-symbols-outlined" id="cart-btn-icon">shopping_cart</span>
+                    <span id="cart-btn-text">Add to Cart</span>
                 </button>
-                <a
+                <button
                     id="buynow-btn"
-                    href="#"
-                    onclick="handleBuyNow(event)"
+                    onclick="handleBuyNow()"
+                    data-buynow-url="{% url 'buy_now' 0 %}"
                     class="flex-1 h-16 bg-accent-terracotta text-white rounded-[2rem] font-black text-lg hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span class="material-symbols-outlined" id="buy-icon">bolt</span>
-                    <span id="buynow-text">Buy Now</span>
-                </a>
+                    <span class="material-symbols-outlined">bolt</span>
+                    Buy Now
+                </button>
             </div>
 
             <!-- Description -->
@@ -110,22 +104,65 @@
         </div>
     </div>
     {% endif %}
-</main>
+</div>
 
-<!-- Toast -->
-<div id="toast-container" class="fixed bottom-4 right-4 z-50"></div>
+<!-- Related Products Section -->
+{% if related_products %}
+<section class="mx-auto max-w-7xl px-4 py-16 lg:px-12">
+    <div class="flex items-center justify-between mb-8">
+        <h2 class="text-2xl font-black text-stone-900 dark:text-white">Related Products</h2>
+        <a href="{% url 'category_products_user' product.subcategory.slug %}" class="text-primary font-bold text-sm hover:underline">View All</a>
+    </div>
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {% for related in related_products %}
+        {% with related.variants.first as r_variant %}
+        {% with r_variant.images.first as r_image %}
+        <a href="{% url 'product_detail_user' related.slug %}" class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 transition-all hover:shadow-xl hover:-translate-y-1 hover:border-primary/30">
+            <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4">
+                {% if r_image and r_image.image %}
+                    <img src="{{ r_image.image.url }}" alt="{{ related.name }}" 
+                         class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110">
+                {% else %}
+                    <div class="flex h-full w-full items-center justify-center">
+                        <span class="material-symbols-outlined text-5xl text-stone-300">image</span>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="flex flex-1 flex-col">
+                <span class="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-1">{{ related.brand }}</span>
+                <h3 class="font-bold text-stone-900 dark:text-white text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                    {{ related.name }}
+                </h3>
+                <div class="mt-3 flex items-center gap-2">
+                    {% if r_variant %}
+                    <span class="text-lg font-black text-primary">₹{{ r_variant.selling_price }}</span>
+                    {% if r_variant.mrp > r_variant.selling_price %}
+                    <span class="text-xs font-medium text-stone-400 line-through">₹{{ r_variant.mrp }}</span>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endwith %}
+        {% endwith %}
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 
 <script>
 let selectedVariantId = null;
 let selectedVariantStock = 0;
 
-// Initialize with first variant
+// Initialize with first variant on page load
 document.addEventListener('DOMContentLoaded', () => {
     const firstBtn = document.querySelector('.variant-btn');
     if (firstBtn) {
-        selectedVariantId = firstBtn.dataset.variantId;
-        selectedVariantStock = parseInt(firstBtn.dataset.stock);
-        updateButtonState();
+        const price = parseFloat(firstBtn.dataset.sellingPrice);
+        const mrp = parseFloat(firstBtn.dataset.mrp);
+        const stock = parseInt(firstBtn.dataset.stock);
+        // selectVariant handles price, discount badge, stock status, and button state
+        selectVariant(firstBtn.dataset.variantId, price, mrp, stock);
     }
 });
 
@@ -133,6 +170,7 @@ function selectVariant(id, price, mrp, stock) {
     selectedVariantId = id;
     selectedVariantStock = stock;
 
+    // Highlight selected variant button
     document.querySelectorAll('.variant-btn').forEach(btn => {
         btn.classList.remove('border-primary', 'text-primary');
         if (btn.dataset.variantId == id) {
@@ -140,186 +178,60 @@ function selectVariant(id, price, mrp, stock) {
         }
     });
 
+    // Update price
     document.getElementById('current-price').textContent = '₹' + price;
+
+    // Update MRP / discount badge
+    const origPrice = document.getElementById('original-price');
+    const discBadge = document.getElementById('discount-badge');
     if (mrp > price) {
-        document.getElementById('original-price').textContent = '₹' + mrp;
-        document.getElementById('original-price').style.display = 'inline';
-        document.getElementById('discount-badge').textContent = 'Save ₹' + (mrp - price);
-        document.getElementById('discount-badge').style.display = 'inline';
+        origPrice.textContent = '₹' + mrp;
+        origPrice.classList.remove('hidden');
+        discBadge.textContent = 'Save ₹' + (mrp - price).toFixed(0);
+        discBadge.classList.remove('hidden');
     } else {
-        document.getElementById('original-price').style.display = 'none';
-        document.getElementById('discount-badge').style.display = 'none';
+        origPrice.classList.add('hidden');
+        discBadge.classList.add('hidden');
     }
 
+    // Update stock status using Material Symbols icons
     const stockStatus = document.getElementById('stock-status');
     if (stock > 0) {
-        stockStatus.textContent = '✓ In Stock (' + stock + ' available)';
-        stockStatus.className = 'text-green-600 font-bold text-sm';
+        stockStatus.innerHTML = `<span class="material-symbols-outlined text-green-600 text-[18px]">check_circle</span><span class="text-green-600">In Stock (${stock} available)</span>`;
     } else {
-        stockStatus.textContent = '✗ Out of Stock';
-        stockStatus.className = 'text-red-600 font-bold text-sm';
+        stockStatus.innerHTML = `<span class="material-symbols-outlined text-red-600 text-[18px]">cancel</span><span class="text-red-600">Out of Stock</span>`;
     }
 
     updateButtonState();
 }
 
 function updateButtonState() {
-    const btn = document.getElementById('addtocart-btn');
+    const addBtn = document.getElementById('addtocart-btn');
     const buyBtn = document.getElementById('buynow-btn');
-    if (selectedVariantStock <= 0) {
-        if (btn) btn.disabled = true;
-        if (buyBtn) {
-            buyBtn.classList.add('pointer-events-none', 'opacity-50');
-        }
-    } else {
-        if (btn) btn.disabled = false;
-        if (buyBtn) {
-            buyBtn.classList.remove('pointer-events-none', 'opacity-50');
-        }
+    const outOfStock = selectedVariantStock <= 0;
+    if (addBtn) addBtn.disabled = outOfStock;
+    if (buyBtn) {
+        buyBtn.disabled = outOfStock;
+        buyBtn.classList.toggle('pointer-events-none', outOfStock);
+        buyBtn.classList.toggle('opacity-50', outOfStock);
     }
 }
 
-// Handle Buy Now button click
-function handleBuyNow(event) {
-    event.preventDefault();
-    if (!selectedVariantId) {
-        showToast('Please select a variant', 'error');
-        return;
-    }
-    if (selectedVariantStock <= 0) {
-        showToast('Product is out of stock', 'error');
-        return;
-    }
-    // Redirect to buy_now view with variant_id
-    window.location.href = '/user/buy_now/' + selectedVariantId + '/';
-}
-
-// Wrapper function to handle add to cart with animations
 function handleAddToCart() {
     const btn = document.getElementById('addtocart-btn');
     const imgEl = document.getElementById('main-image');
     const productImage = imgEl && imgEl.src ? imgEl.src : null;
+    // addToCart is defined in core_base.html
     addToCart(selectedVariantId, btn, productImage);
 }
 
-// Main addToCart function with animation support
-function addToCart(variantId, buttonElement, productImageUrl) {
-    // Use selectedVariantId if variantId not provided
-    const vid = variantId || selectedVariantId;
-    if (!vid) { showToast('Please select a variant', 'error'); return; }
-
-    const btn = buttonElement || document.getElementById('addtocart-btn');
-    const textEl = document.getElementById('addtocart-text');
-    const iconEl = document.getElementById('cart-icon');
-    const originalText = textEl ? textEl.textContent : 'Add to Cart';
-    const originalIcon = iconEl ? iconEl.textContent : 'shopping_cart';
-
-    if (btn) btn.disabled = true;
-    if (textEl) textEl.textContent = 'Adding...';
-    if (iconEl) iconEl.textContent = 'hourglass_empty';
-
-    // Create flying product animation if image is provided
-    if (productImageUrl && btn) {
-        createFlyingProductAnimation(productImageUrl, btn);
-    }
-
-    fetch(`/user/addtocart/${vid}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.message === "Item added to cart successfully") {
-            showToast(data.message, 'success');
-            updateCartCount(data.quantity);
-            animateCartIcon();
-        } else {
-            showToast(data.message, 'error');
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        showToast('An error occurred. Please try again.', 'error');
-    })
-    .finally(() => {
-        if (btn) btn.disabled = false;
-        if (textEl) textEl.textContent = 'Add to Cart';
-        if (iconEl) iconEl.textContent = 'shopping_cart';
-    });
-}
-
-// Create flying product animation
-function createFlyingProductAnimation(imageUrl, sourceButton) {
-    if (!imageUrl || !sourceButton) return;
-    try {
-        const cartLink = document.querySelector('a[href*="cart"]');
-        if (!cartLink) return;
-        const cartIcon = cartLink.querySelector('.material-symbols-outlined');
-        if (!cartIcon) return;
-        const sourceRect = sourceButton.getBoundingClientRect();
-        const targetRect = cartIcon.getBoundingClientRect();
-        const flyingImg = document.createElement('img');
-        flyingImg.src = imageUrl;
-        flyingImg.className = 'fixed z-[9999] rounded-lg shadow-2xl pointer-events-none';
-        flyingImg.style.width = '60px';
-        flyingImg.style.height = '60px';
-        flyingImg.style.objectFit = 'cover';
-        flyingImg.style.left = sourceRect.left + sourceRect.width / 2 - 30 + 'px';
-        flyingImg.style.top = sourceRect.top + sourceRect.height / 2 - 30 + 'px';
-        flyingImg.style.setProperty('--fly-x', (targetRect.left - sourceRect.left) + 'px');
-        flyingImg.style.setProperty('--fly-y', (targetRect.top - sourceRect.top) + 'px');
-        flyingImg.classList.add('flying-product');
-        document.body.appendChild(flyingImg);
-        setTimeout(() => flyingImg.remove(), 700);
-    } catch (e) { console.log('Animation skipped:', e); }
-}
-
-// Animate cart icon in header
-function animateCartIcon() {
-    const cartLink = document.querySelector('a[href*="cart"]');
-    if (!cartLink) return;
-    const cartIcon = cartLink.querySelector('.material-symbols-outlined');
-    if (cartIcon) {
-        cartIcon.classList.add('cart-bounce');
-        setTimeout(() => cartIcon.classList.remove('cart-bounce'), 400);
-    }
-    const cartCountEl = document.getElementById('header-cart-count');
-    if (cartCountEl) {
-        cartCountEl.classList.remove('count-pulse');
-        void cartCountEl.offsetWidth;
-        cartCountEl.classList.add('count-pulse');
-        setTimeout(() => cartCountEl.classList.remove('count-pulse'), 400);
-    }
-}
-
-function showToast(message, type) {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = (type === 'success' ? 'bg-green-600' : 'bg-red-600') + ' text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 mb-2 transition transform';
-    toast.innerHTML = '<span class="material-symbols-outlined">' + (type==='success'?'check_circle':'error') + '</span><span>' + message + '</span>';
-    container.appendChild(toast);
-    setTimeout(() => { toast.remove(); }, 3000);
-}
-
-function updateCartCount(count) {
-    document.querySelectorAll('.cart-count').forEach(el => {
-        el.textContent = count;
-        el.classList.remove('hidden');
-    });
-}
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        document.cookie.split(';').forEach(cookie => {
-            const [k,v] = cookie.trim().split('=');
-            if (k === name) cookieValue = decodeURIComponent(v);
-        });
-    }
-    return cookieValue;
+function handleBuyNow() {
+    if (!selectedVariantId) { showToast('Please select a variant', 'error'); return; }
+    if (selectedVariantStock <= 0) { showToast('Product is out of stock', 'error'); return; }
+    // Build URL by replacing the placeholder 0 with the real variant ID
+    const btn = document.getElementById('buynow-btn');
+    const baseUrl = btn.dataset.buynowUrl.replace('/0/', '/' + selectedVariantId + '/');
+    window.location.href = baseUrl;
 }
 </script>
 {% endblock %}

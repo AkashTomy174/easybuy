@@ -25,7 +25,6 @@ urlpatterns = [
         name="subcategory_products_user",
     ),
     path("products/<slug:slug>/", views.product_detail, name="product_detail_user"),
-    path("single_product/<slug:slug>/", views.single_product, name="single_product"),
     path("addtocart/<int:id>/", views.addtocart, name="add_to_cart"),
     path("cart/", views.cart_view, name="cart"),
     path(

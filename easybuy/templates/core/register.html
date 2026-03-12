@@ -1,151 +1,95 @@
-<!DOCTYPE html>
-<html class="light" lang="en">
-<head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>EasyBuy | Create Account</title>
+{% extends 'core/auth_base.html' %}
+{% block title %}Create Account | EasyBuy{% endblock %}
+{% block meta_description %}Create your EasyBuy account to start shopping for premium products with fast delivery.{% endblock %}
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+{% block content %}
+<div class="w-full max-w-[500px]">
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-3xl border border-stone-200 dark:border-stone-700 shadow-lg overflow-hidden">
 
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#2d5a27",
-                        "primary-dark": "#1e3d1a",
-                        "accent-terracotta": "#0ea5e9",
-                        "background-light": "#fdfaf6",
-                        "background-dark": "#1a1c19",
-                        "surface-dark": "#232622",
-                        "surface-light": "#ffffff",
-                    },
-                    fontFamily: { "display": ["Inter", "sans-serif"] },
-                },
-            },
-        }
-    </script>
+        <div class="p-10 pb-8 text-center">
+            <h1 class="text-3xl font-black text-stone-900 dark:text-white mb-2">Join EasyBuy</h1>
+            <p class="text-stone-500 dark:text-stone-400 text-sm">Create your account to start shopping.</p>
+        </div>
 
-    <style type="text/tailwindcss">
-        :root {
-            --cream-bg: #fdfaf6;
-        }
-        .content-bg {
-            background: linear-gradient(180deg, #f8f6f3 0%, #fdfaf6 100%);
-        }
-        .dark .content-bg {
-            background: linear-gradient(180deg, #1a1c19 0%, #232622 100%);
-        }
-    </style>
-</head>
-<body class="font-display bg-[var(--cream-bg)] dark:bg-background-dark text-slate-800 dark:text-slate-100 antialiased min-h-screen flex flex-col">
+        <form method="POST" action="{% url 'register' %}" class="p-10 pt-0 space-y-5">
+            {% csrf_token %}
 
-    <header class="h-20 flex items-center justify-between px-4 lg:px-12 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 sticky top-0 z-50">
-        <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg shadow-primary/30">
-                <span class="material-symbols-outlined">shopping_bag</span>
+            {% if messages %}
+            <div class="space-y-2">
+                {% for message in messages %}
+                <div class="{% if message.tags == 'error' %}bg-red-50 dark:bg-red-900/30 border-red-400 text-red-600 dark:text-red-400{% else %}bg-green-50 dark:bg-green-900/30 border-green-400 text-green-600 dark:text-green-400{% endif %} border px-4 py-3 rounded-2xl text-xs flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm flex-shrink-0">info</span>
+                    <p class="font-medium">{{ message }}</p>
+                </div>
+                {% endfor %}
             </div>
-            <h1 class="text-xl font-black tracking-tight text-stone-900 dark:text-white">EasyBuy</h1>
-        </div>
-        <div class="flex items-center gap-6">
-            <a class="text-sm font-medium text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Support</a>
-            <a class="text-primary font-bold text-sm border-2 border-primary/20 px-5 py-2 rounded-2xl hover:bg-primary hover:text-white transition-all" href="{% url 'all_login' %}">Login</a>
-        </div>
-    </header>
+            {% endif %}
 
-    <main class="flex-1 content-bg flex items-center justify-center py-12 px-6">
-        <div class="w-full max-w-[500px]">
-            <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-3xl border border-stone-200 dark:border-stone-700 shadow-lg overflow-hidden">
-
-                <div class="p-10 pb-8 text-center">
-                    <h1 class="text-3xl font-black text-stone-900 dark:text-white mb-2">Join EasyBuy</h1>
-                    <p class="text-stone-500 dark:text-stone-400 text-sm">Create your account to start shopping.</p>
+            <div class="space-y-4">
+                <div class="space-y-1.5">
+                    <label for="id_reg_username" class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Username</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-4 top-3 text-stone-400">person</span>
+                        <input id="id_reg_username" name="username"
+                            class="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                            placeholder="johndoe123" type="text" value="{{ request.POST.username }}" required autocomplete="username"/>
+                    </div>
                 </div>
 
-                <form method="POST" action="{% url 'register' %}" class="p-10 pt-0 space-y-5">
-                    {% csrf_token %}
-
-                    {% if messages %}
-                    <div class="space-y-2">
-                        {% for message in messages %}
-                        <div class="{% if message.tags == 'error' %}bg-red-50 dark:bg-red-900/30 border-red-400 text-red-600 dark:text-red-400{% else %}bg-green-50 dark:bg-green-900/30 border-green-400 text-green-600 dark:text-green-400{% endif %} border px-4 py-3 rounded-2xl text-xs flex items-center gap-2">
-                            <span class="material-symbols-outlined text-sm">info</span>
-                            <p class="font-medium">{{ message }}</p>
-                        </div>
-                        {% endfor %}
+                <div class="space-y-1.5">
+                    <label for="id_reg_email" class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Email Address</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-4 top-3 text-stone-400">mail</span>
+                        <input id="id_reg_email" name="email"
+                            class="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                            placeholder="name@email.com" type="email" value="{{ request.POST.email }}" required autocomplete="email"/>
                     </div>
-                    {% endif %}
+                </div>
 
-                    <div class="space-y-4">
-                        <div class="space-y-1.5">
-                            <label class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Username</label>
-                            <div class="relative">
-                                <span class="material-symbols-outlined absolute left-4 top-3 text-stone-400">person</span>
-                                <input name="username" class="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" placeholder="johndoe123" type="text" value="{{ request.POST.username }}" required/>
-                            </div>
-                        </div>
-
-                        <div class="space-y-1.5">
-                            <label class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Email Address</label>
-                            <div class="relative">
-                                <span class="material-symbols-outlined absolute left-4 top-3 text-stone-400">mail</span>
-                                <input name="email" class="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" placeholder="name@email.com" type="email" value="{{ request.POST.email }}" required/>
-                            </div>
-                        </div>
-
-                        <div class="space-y-1.5">
-                            <label class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Phone Number</label>
-                            <div class="relative">
-                                <span class="material-symbols-outlined absolute left-4 top-3 text-stone-400">call</span>
-                                <input name="phone_number" class="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" placeholder="+1 (555) 000-0000" type="tel" value="{{ request.POST.phone_number }}"/>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div class="space-y-1.5">
-                                <label class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Password</label>
-                                <input name="password1" class="w-full px-4 py-3.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" placeholder="••••••••" type="password" required/>
-                            </div>
-                            <div class="space-y-1.5">
-                                <label class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Confirm</label>
-                                <input name="password2" class="w-full px-4 py-3.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" placeholder="••••••••" type="password" required/>
-                            </div>
-                        </div>
+                <div class="space-y-1.5">
+                    <label for="id_reg_phone" class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Phone Number</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-4 top-3 text-stone-400">call</span>
+                        <input id="id_reg_phone" name="phone_number"
+                            class="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                            placeholder="+91 99999 00000" type="tel" value="{{ request.POST.phone_number }}" autocomplete="tel"/>
                     </div>
+                </div>
 
-                    <div class="flex items-start gap-3 py-2">
-                        <input class="mt-1 rounded text-primary focus:ring-primary border-stone-300" id="terms" type="checkbox" required/>
-                        <label class="text-xs text-stone-500 dark:text-stone-400 leading-relaxed" for="terms">
-                            I agree to the <a class="text-primary font-bold hover:underline" href="#">Terms of Service</a> and <a class="text-primary font-bold hover:underline" href="#">Privacy Policy</a>.
-                        </label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label for="id_reg_password1" class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Password</label>
+                        <input id="id_reg_password1" name="password1"
+                            class="w-full px-4 py-3.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                            placeholder="••••••••" type="password" required autocomplete="new-password"/>
                     </div>
-
-                    <button class="w-full bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]" type="submit">
-                        Create My Account
-                    </button>
-                </form>
-
-                <div class="bg-stone-50 dark:bg-stone-800 p-8 text-center border-t border-stone-100 dark:border-stone-700">
-                    <p class="text-sm text-stone-500 dark:text-stone-400">
-                        Already have an account?
-                        <a class="text-primary font-bold hover:underline" href="{% url 'all_login' %}">Login</a>
-                    </p>
+                    <div class="space-y-1.5">
+                        <label for="id_reg_password2" class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Confirm</label>
+                        <input id="id_reg_password2" name="password2"
+                            class="w-full px-4 py-3.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm text-stone-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                            placeholder="••••••••" type="password" required autocomplete="new-password"/>
+                    </div>
                 </div>
             </div>
 
-            <div class="mt-10 text-center space-y-4">
-                <div class="flex justify-center gap-6 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
-                    <a href="#" class="hover:text-primary transition-colors">Privacy</a>
-                    <a href="#" class="hover:text-primary transition-colors">Terms</a>
-                    <a href="#" class="hover:text-primary transition-colors">Contact</a>
-                </div>
-                <p class="text-[10px] text-stone-400">© 2026 EasyBuy Inc. All rights reserved.</p>
+            <div class="flex items-start gap-3 py-2">
+                <input class="mt-1 rounded text-primary focus:ring-primary border-stone-300" id="id_terms" name="terms" type="checkbox" required/>
+                <label class="text-xs text-stone-500 dark:text-stone-400 leading-relaxed" for="id_terms">
+                    I agree to the <a class="text-primary font-bold hover:underline" href="#">Terms of Service</a> and <a class="text-primary font-bold hover:underline" href="#">Privacy Policy</a>.
+                </label>
             </div>
-        </div>
-    </main>
 
-</body>
-</html>
+            <button class="w-full bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]" type="submit">
+                Create My Account
+            </button>
+        </form>
+
+        <div class="bg-stone-50 dark:bg-stone-800 p-8 text-center border-t border-stone-100 dark:border-stone-700">
+            <p class="text-sm text-stone-500 dark:text-stone-400">
+                Already have an account?
+                <a class="text-primary font-bold hover:underline" href="{% url 'all_login' %}">Login</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

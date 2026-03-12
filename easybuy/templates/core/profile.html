@@ -43,7 +43,7 @@
                         <span class="text-sm font-bold">Addresses</span>
                     </a>
 
-                    <a href="#" class="nav-link-inactive flex items-center gap-3 px-5 py-4 rounded-2xl transition-all">
+                    <a href="{% url 'user_orders' %}" class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all {% if request.resolver_match.url_name == 'user_orders' %}nav-link-active{% else %}nav-link-inactive{% endif %}">
                         <span class="material-symbols-outlined text-[20px]">receipt_long</span>
                         <span class="text-sm font-bold">My Orders</span>
                     </a>

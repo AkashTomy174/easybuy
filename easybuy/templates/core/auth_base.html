@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>{% block title %}EasyBuy{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}EasyBuy — Your trusted destination for premium products.{% endblock %}"/>
+
+    <!-- Combined Google Fonts (single request) -->
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+    <!-- Tailwind CSS — same token set as core_base.html -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4a7c43",
+                        "primary-dark": "#2d5a27",
+                        "primary-light": "#6b9e5f",
+                        "accent-terracotta": "#ff7f50",
+                        "accent-coral": "#ff6b6b",
+                        "accent-gold": "#f59e0b",
+                        "background-dark": "#1a1c19",
+                        "surface-dark": "#232622",
+                    },
+                    fontFamily: { "display": ["Inter", "sans-serif"] },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "0.75rem",
+                        "xl": "1rem",
+                        "2xl": "1.5rem",
+                        "3xl": "2rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    <style type="text/tailwindcss">
+        :root { --cream-bg: #fdfaf6; }
+        .content-bg { background: linear-gradient(180deg, #f8f6f3 0%, #fdfaf6 100%); }
+        .dark .content-bg { background: linear-gradient(180deg, #1a1c19 0%, #232622 100%); }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="font-display bg-[var(--cream-bg)] dark:bg-background-dark text-slate-800 dark:text-slate-100 antialiased min-h-screen flex flex-col selection:bg-primary selection:text-white">
+
+    <header class="h-20 flex items-center justify-between px-4 lg:px-12 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 sticky top-0 z-50 shadow-sm">
+        <a href="{% url 'home' %}" class="flex items-center gap-3 group">
+            <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
+                <span class="material-symbols-outlined">shopping_bag</span>
+            </div>
+            <span class="text-xl font-black tracking-tight text-stone-900 dark:text-white group-hover:text-primary transition-colors">EasyBuy</span>
+        </a>
+        <div class="flex items-center gap-4 sm:gap-6">
+            {% block header_right %}
+            <a class="text-sm font-medium text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Support</a>
+            <a class="text-primary font-bold text-sm border-2 border-primary/20 px-5 py-2 rounded-2xl hover:bg-primary hover:text-white transition-all" href="{% url 'all_login' %}">Login</a>
+            {% endblock %}
+        </div>
+    </header>
+
+    <main class="flex-1 content-bg flex items-center justify-center py-12 px-4 sm:px-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="border-t border-stone-200 dark:border-stone-800 bg-white dark:bg-surface-dark py-6">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col items-center gap-3">
+            <div class="flex justify-center gap-6 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
+                <a href="#" class="hover:text-primary transition-colors">Privacy</a>
+                <a href="#" class="hover:text-primary transition-colors">Terms</a>
+                <a href="#" class="hover:text-primary transition-colors">Contact</a>
+            </div>
+            <p class="text-[10px] text-stone-400">© 2026 EasyBuy Inc. All rights reserved.</p>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

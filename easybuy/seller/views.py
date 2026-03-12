@@ -280,7 +280,8 @@ def add_product(request):
 def add_stock(request):
     if request.method == "POST":
         try:
-            item_id = request.POST.get("item_id")
+
+            item_id = request.POST.get("variant_id")
             stock_to_add = int(request.POST.get("stock_amount", 0))
             reason = request.POST.get("reason", "Manual stock addition")
 

@@ -2,11 +2,10 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from easybuy.core.decorators import role_required
-from .models import ProductVariant, Cart, CartItem
-from easybuy.core.models import SubCategory, Category, Address
 from easybuy.seller.models import Product, ProductVariant
 from .models import Cart, CartItem, Order, OrderItem
-from django.http import JsonResponse
+from easybuy.core.models import SubCategory, Category, Address
+from .models import Review
 import json
 from django.http import Http404
 from django.db.models import Q
@@ -16,6 +15,32 @@ from django.utils import timezone
 import random
 import string
 
+def reviews(request,id):
+    user=request.user
+    variant = ProductVariant.objects.select_related("product") \
+                                .prefetch_related("images") \
+                                .get(id=id)
+    reviews = Review.objects.select_related("user").filter(product=variant.product)
+    context={"reviews":reviews,"variant":variant,"user":user}
+
+def add_reviews(request,id):
+    user=request.user
+    variant=ProductVariant.objects.select_related("product") \
+                                .prefetch_related("images") \
+                                .get(id=id)
+    rating=re  
+        
+    
+    
+    
+
+    
+    # class Review(models.Model):
+    # user = models.ForeignKey(User, on_delete=models.CASCADE)
+    # product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    # rating = models.IntegerField()
+    # comment = models.TextField()
+    # created_at = models.DateTimeField(auto_now_add=True)
 
 def new_arrival(request):
     products = Product.objects.filter(
@@ -92,6 +117,8 @@ def product_detail(request, slug=None, id=None):
             Product.objects.filter(
                 slug=slug,
                 is_active=True,
+                approval_status="APPROVED",
+                seller__status="APPROVED",
             )
             .prefetch_related("variants__images")
             .first()
@@ -101,6 +128,8 @@ def product_detail(request, slug=None, id=None):
             Product.objects.filter(
                 id=id,
                 is_active=True,
+                approval_status="APPROVED",
+                seller__status="APPROVED",
             )
             .prefetch_related("variants__images")
             .first()
@@ -112,7 +141,23 @@ def product_detail(request, slug=None, id=None):
         return render(
             request, "user/product_details.html", {"error": "Product not found"}
         )
-    return render(request, "user/product_details.html", {"product": product})
+
+    related_products = (
+        Product.objects.prefetch_related("variants__images")
+        .filter(
+            subcategory=product.subcategory,
+            is_active=True,
+            approval_status="APPROVED",
+            seller__status="APPROVED",
+        )
+        .exclude(slug=product.slug)[:4]
+    )
+
+    return render(
+        request,
+        "user/product_details.html",
+        {"product": product, "related_products": related_products},
+    )
 
 
 @login_required
@@ -255,25 +300,9 @@ def remove_from_cart(request, item_id):
     )
 
 
-@login_required
-@role_required(allowed_roles=["CUSTOMER"])
-def single_product(request, slug):
-    product = (
-        Product.objects.prefetch_related("variants__images")
-        .filter(
-            slug=slug,
-            is_active=True,
-        )
-        .first()
-    )
-    if not product:
-        raise Http404("Product not found")
-    return render(request, "user/single_view.html", {"product": product})
-
-
 def filtering(request):
     products = (
-        Product.objects.filter(is_active=True)
+        Product.objects.filter(is_active=True,)
         .select_related("subcategory__category")
         .prefetch_related("variants__images")
     )
@@ -554,3 +583,6 @@ def buy_now(request, variant_id):
         )
 
     return render(request, "user/checkout.html", context)
+
+
+    

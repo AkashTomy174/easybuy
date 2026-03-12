@@ -1,0 +1,41 @@
+<div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+    <div class="flex items-center gap-3 mb-6">
+        <span class="material-symbols-outlined text-2xl text-primary">location_on</span>
+        <h2 class="text-xl font-black text-stone-900 dark:text-white">Delivery Address</h2>
+    </div>
+
+    {% if addresses %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        {% for addr in addresses %}
+        <div class="address-card cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all {% if addr.is_default %}selected{% endif %}"
+             onclick="selectAddress('{{ addr.id }}', this)" data-address-id="{{ addr.id }}">
+            <div class="flex items-start gap-3">
+                <span class="material-symbols-outlined text-stone-400 mt-1">{% if addr.address_type == 'Home' %}home{% else %}work{% endif %}</span>
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <h4 class="font-bold text-stone-900 dark:text-white">{{ addr.full_name }}</h4>
+                        {% if addr.is_default %}
+                        <span class="text-[10px] font-black uppercase bg-primary text-white px-2 py-0.5 rounded">Default</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-sm text-stone-500 dark:text-stone-400">{{ addr.house_info }}, {{ addr.locality }}</p>
+                    <p class="text-sm text-stone-500 dark:text-stone-400">{{ addr.city }}, {{ addr.state }} - {{ addr.pincode }}</p>
+                    <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Phone: {{ addr.phone_number }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-8 bg-stone-50 dark:bg-stone-800 rounded-xl mb-4">
+        <span class="material-symbols-outlined text-stone-300 text-4xl mb-2">location_off</span>
+        <p class="text-stone-500 dark:text-stone-400 mb-4">No saved addresses</p>
+        <a href="{% url 'manage_addresses' %}" class="text-primary font-bold hover:underline">Add Address</a>
+    </div>
+    {% endif %}
+
+    <a href="{% url 'manage_addresses' %}?next={{ next_url }}" class="inline-flex items-center gap-2 text-primary font-bold hover:underline">
+        <span class="material-symbols-outlined text-sm">add</span>
+        Add New Address
+    </a>
+</div>

@@ -19,7 +19,6 @@ from datetime import timedelta
 
 
 def generate_otp():
-    """Generate a 6-digit OTP"""
     return "".join(random.choices(string.digits, k=6))
 
 
@@ -162,30 +161,36 @@ def all_products(request):
 
 
 def home_view(request):
-    categories = Category.objects.filter(is_active=True)
-    variants = (
-        ProductVariant.objects.filter(product__is_active=True)
-        .select_related("product", "product__seller")
-        .order_by("-id")[:8]
-    )
-    variant_ids = [v.id for v in variants]
-    primary_images = {
-        img.variant_id: img
-        for img in ProductImage.objects.filter(
-            variant_id__in=variant_ids, is_primary=True
+    if request.user.is_authenticated:
+        if request.user.role =="ADMIN":
+            return redirect("admin_dashboard")
+        elif request.user.role =="SELLER":
+            return redirect("seller_dashboard")
+    else:
+        categories = Category.objects.filter(is_active=True)
+        variants = (
+            ProductVariant.objects.filter(product__is_active=True)
+            .select_related("product", "product__seller")
+            .order_by("-id")[:8]
         )
-    }
-    product_data = []
-    for variant in variants:
-        product_data.append(
-            {"variant": variant, "image": primary_images.get(variant.id)}
+        variant_ids = [v.id for v in variants]
+        primary_images = {
+            img.variant_id: img
+            for img in ProductImage.objects.filter(
+                variant_id__in=variant_ids, is_primary=True
+            )
+        }
+        product_data = []
+        for variant in variants:
+            product_data.append(
+                {"variant": variant, "image": primary_images.get(variant.id)}
+            )
+        print(f"Product count: {len(product_data)}")
+        return render(
+            request,
+            "core/home.html",
+            {"categories": categories, "product_data": product_data},
         )
-    print(f"Product count: {len(product_data)}")
-    return render(
-        request,
-        "core/home.html",
-        {"categories": categories, "product_data": product_data},
-    )
 
 
 def register_view(request):
@@ -438,25 +443,33 @@ def all_login(request):
             if role == "CUSTOMER":
                 return redirect("home")
             elif role == "ADMIN":
-                user = request.user
-                sellers = User.objects.filter(role="SELLER").count()
-                users = User.objects.filter(role="CUSTOMER").count()
-                return render(
-                    request,
-                    "admin/admin_dashboard.html",
-                    {"sellers": sellers, "users": users},
-                )
+                return redirect("admin_dashboard")
             elif role == "SELLER":
-                user = request.user
-                data1 = SellerProfile.objects.get(user=user)
-                return render(
-                    request, "seller/dashboard.html", {"data1": data1, "user": user}
-                )
+                return redirect("seller_dashboard")
         else:
             return render(
                 request, "core/login.html", {"error": "Invalid username or password"}
             )
     return render(request, "core/login.html")
+@login_required
+@role_required(allowed_roles=["ADMIN"])
+def admin_dashboard(request):
+    user = request.user
+    sellers = User.objects.filter(role="SELLER").count()
+    users = User.objects.filter(role="CUSTOMER").count()
+    return render(
+        request,
+        "admin/admin_dashboard.html",
+        {"sellers": sellers, "users": users},
+    )
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def seller_dashboard(request):
+    user = request.user
+    data1 = SellerProfile.objects.get(user=user)
+    return render(
+        request, "seller/dashboard.html", {"data1": data1, "user": user}
+    )
 
 
 # def add_sub_category(request):

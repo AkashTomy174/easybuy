@@ -29,7 +29,7 @@
                             <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Total</span>
                             <p class="text-lg font-black text-primary">₹{{ order.total_amount|floatformat:2 }}</p>
                         </div>
-                        {% if order.order_status in "CONFIRMED PENDING" %}
+                    {% if order.order_status == 'CONFIRMED' or order.order_status == 'PENDING' %}
                         <button onclick="cancelOrder({{ order.id }})" class="px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 font-bold text-xs rounded-xl transition-colors">
                             Cancel Order
                         </button>
@@ -158,16 +158,7 @@ function cancelOrder(orderId) {
     });
 }
 
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        document.cookie.split(';').forEach(cookie => {
-            const [k,v] = cookie.trim().split('=');
-            if (k === name) cookieValue = decodeURIComponent(v);
-        });
-    }
-    return cookieValue;
-}
+// getCookie is defined in core_base.html
 </script>
 {% endblock %}
 
