@@ -1,15 +1,13 @@
-from easybuy.core.models import Category, User
-from easybuy.seller.models import SellerProfile
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils.text import slugify
 from django.core.paginator import Paginator
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import Category
-from easybuy.core.decorators import role_required
 from django.contrib.auth.decorators import login_required
-from easybuy.seller.models import Product
+from easybuy.core.decorators import role_required
+from easybuy.core.models import Category, User
+from easybuy.seller.models import SellerProfile, Product
 
 @login_required
 @role_required(allowed_roles=["ADMIN"])

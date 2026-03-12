@@ -1,9 +1,14 @@
 from django.urls import path
 from . import views
-from easybuy.seller.models import Product
-from easybuy.core.views import all_products
+from easybuy.user.views import all_products
 
 urlpatterns = [
+    path("products/", all_products, name="all_products"),
+    path("profile/", views.profile_settings, name="profile_settings"),
+    path("profile/addresses/", views.manage_addresses, name="manage_addresses"),
+    path("profile/addresses/add/", views.user_address, name="user_address"),
+    path("profile/addresses/delete/<int:id>/", views.delete_address, name="delete_address"),
+    path("profile/addresses/edit/<int:id>/", views.edit_address, name="edit_address"),
     path("new_arrivals/", views.new_arrival, name="new_arrivals_user"),
     path("products/<int:id>/", views.product_detail, name="product_detail_by_id"),
     path(

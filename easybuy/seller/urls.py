@@ -3,6 +3,7 @@ from . import views
 from easybuy.core.views import logout_view
 
 urlpatterns = [
+    path("dashboard/", views.seller_dashboard, name="seller_dashboard"),
     path("register/", views.seller_regi, name="seller_register"),
     path(
         "registration/success/",

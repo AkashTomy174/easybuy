@@ -1,19 +1,14 @@
-# trunk-ignore-all(isort)
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 from django.db import transaction
 from django.db.models import F
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from easybuy.core.decorators import role_required
 from .models import SellerProfile, Product, ProductVariant, ProductImage, InventoryLog
-from .models import ProductVariant as Productitem
-from easybuy.core.models import Category, SubCategory
-from .models import Product, ProductImage, InventoryLog
-from django.db import transaction
+from easybuy.core.models import SubCategory
 from easybuy.user.models import Order, OrderItem
-from django.shortcuts import get_object_or_404
 
 User = get_user_model()
 
@@ -242,7 +237,7 @@ def add_product(request):
                     else 0
                 ),
             )
-            item = Productitem.objects.create(
+            item = ProductVariant.objects.create(
                 product=product,
                 sku_code=request.POST.get("sku"),
                 mrp=request.POST.get("mrp"),
@@ -287,7 +282,7 @@ def add_stock(request):
 
             if stock_to_add <= 0:
                 return JsonResponse({"success": False, "error": "Invalid stock amount"})
-            item = Productitem.objects.select_related("product").get(
+            item = ProductVariant.objects.select_related("product").get(
                 id=item_id, product__seller=request.user.seller_profile
             )
 
@@ -307,7 +302,7 @@ def add_stock(request):
                     "message": f"Successfully added {stock_to_add} units",
                 }
             )
-        except Productitem.DoesNotExist:
+        except ProductVariant.DoesNotExist:
             return JsonResponse({"success": False, "error": "item not found"})
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)})
@@ -324,7 +319,7 @@ def deactivate(request, id):
         )
 
     try:
-        item = Productitem.objects.select_related("product").get(
+        item = ProductVariant.objects.select_related("product").get(
             id=id, product__seller=request.user.seller_profile
         )
         product = item.product
@@ -340,7 +335,7 @@ def deactivate(request, id):
             }
         )
 
-    except Productitem.DoesNotExist:
+    except ProductVariant.DoesNotExist:
         return JsonResponse({"success": False, "error": "item not found"}, status=404)
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)

@@ -1,9 +1,10 @@
 from django.urls import path
 from . import views
-from easybuy.core.views import all_categories, logout_view
-
+from easybuy.user.views import all_categories
+from easybuy.core.views import logout_view
 
 urlpatterns = [
+    path("dashboard/", views.admin_dashboard, name="admin_dashboard"),
     path("home/seller_veri/", views.seller_veri, name="seller_veri"),
     path("home/approve_seller/<int:id>/", views.approve_seller, name="approve_seller"),
     path("home/reject_seller/<int:id>/", views.reject_seller, name="reject_seller"),
