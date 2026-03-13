@@ -2,10 +2,12 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.conf import settings
 from easybuy.core.decorators import role_required
 from easybuy.seller.models import Product, ProductVariant, ProductImage
-from .models import Cart, CartItem, Order, OrderItem, Review, Wishlist, WishlistItem
+from .models import Cart, CartItem, Order, OrderItem, Review, Wishlist, WishlistItem, ReviewImage, ReviewVideo, ReviewHelpful
 from easybuy.core.models import SubCategory, Category, Address
+from easybuy.core.whatsapp_utils import whatsapp_notifier
 import json
 from django.http import Http404
 from django.db.models import Q, Avg
@@ -86,6 +88,8 @@ def all_products(request):
     max_price = request.GET.get("max")
     iprod = request.GET.get("q")
     sort = request.GET.get("sort", "newest")
+    min_rating = request.GET.get("rating")
+    availability = request.GET.get("availability")
 
     variants = ProductVariant.objects.filter(
         product__is_active=True,
@@ -131,7 +135,30 @@ def all_products(request):
     if max_price:
         max_price = float(max_price)
         variants = variants.filter(selling_price__lte=max_price)
+    
+    # Rating filter
+    if min_rating:
+        try:
+            min_rating = int(min_rating)
+            # Get products with average rating >= min_rating
+            product_ids = Product.objects.filter(
+                is_active=True,
+                approval_status="APPROVED",
+                seller__status="APPROVED"
+            ).annotate(avg_rating=Avg('reviews__rating')).filter(
+                avg_rating__gte=min_rating
+            ).values_list('id', flat=True)
+            variants = variants.filter(product_id__in=product_ids)
+        except (ValueError, TypeError):
+            pass
+    
+    # Availability filter
+    if availability == "in_stock":
+        variants = variants.filter(stock_quantity__gt=0)
+    elif availability == "out_of_stock":
+        variants = variants.filter(stock_quantity=0)
 
+    # Sorting
     if sort == "price_low":
         variants = variants.order_by("selling_price")
     elif sort == "price_high":
@@ -140,6 +167,16 @@ def all_products(request):
         variants = variants.order_by("product__name")
     elif sort == "name_desc":
         variants = variants.order_by("-product__name")
+    elif sort == "best_rated":
+        # Annotate with average rating and sort
+        variants = variants.annotate(
+            avg_rating=Avg('product__reviews__rating')
+        ).order_by('-avg_rating', '-id')
+    elif sort == "most_popular":
+        # Sort by total sales
+        variants = variants.annotate(
+            total_sold=Sum('orderitem__quantity')
+        ).order_by('-total_sold', '-id')
     else:
         variants = variants.order_by("-id")
 
@@ -202,6 +239,8 @@ def all_products(request):
         "selected_max_price": max_price or "",
         "selected_product": iprod or "",
         "selected_sort": sort,
+        "selected_rating": min_rating or "",
+        "selected_availability": availability or "",
     }
     return render(request, "user/all_products.html", context)
 
@@ -240,40 +279,88 @@ def add_reviews(request, variant_id):
         return redirect("product_detail_user", slug=product.slug)
 
     if request.method == "POST":
-
-        rating = request.POST.get("rating")
-        comment = request.POST.get("comment", "").strip()
         try:
-            rating = int(rating)
-        except (ValueError, TypeError):
-            messages.error(request, "Invalid rating.")
+            rating = request.POST.get("rating")
+            comment = request.POST.get("comment", "").strip()
+            
+            try:
+                rating = int(rating)
+            except (ValueError, TypeError):
+                messages.error(request, "Invalid rating.")
+                return redirect("product_detail_user", slug=product.slug)
+
+            if rating < 1 or rating > 5:
+                messages.error(request, "Rating must be between 1 and 5.")
+                return redirect("product_detail_user", slug=product.slug)
+
+            if not comment:
+                messages.error(request, "Comment is required.")
+                return redirect("product_detail_user", slug=product.slug)
+
+            if len(comment) > 1000:
+                messages.error(request, "Comment is too long (max 1000 characters).")
+                return redirect("product_detail_user", slug=product.slug)
+
+            review = Review.objects.create(
+                user=user, product=product, rating=rating, comment=comment
+            )
+
+            # Handle image uploads
+            images = request.FILES.getlist('images')
+            if len(images) > 5:
+                messages.warning(request, "Maximum 5 images allowed. Only first 5 were uploaded.")
+                images = images[:5]
+            
+            for image in images:
+                if image.size > 5 * 1024 * 1024:  # 5MB limit
+                    messages.warning(request, f"Image {image.name} exceeds 5MB and was skipped.")
+                    continue
+                ReviewImage.objects.create(review=review, image=image)
+
+            # Handle video uploads
+            videos = request.FILES.getlist('videos')
+            if len(videos) > 2:
+                messages.warning(request, "Maximum 2 videos allowed. Only first 2 were uploaded.")
+                videos = videos[:2]
+            
+            for video in videos:
+                if video.size > 50 * 1024 * 1024:  # 50MB limit
+                    messages.warning(request, f"Video {video.name} exceeds 50MB and was skipped.")
+                    continue
+                ReviewVideo.objects.create(review=review, video=video)
+
+            messages.success(request, "Thank you for your review!")
             return redirect("product_detail_user", slug=product.slug)
-
-        if rating < 1 or rating > 5:
-            messages.error(request, "Rating must be between 1 and 5.")
+        except Exception as e:
+            messages.error(request, "An error occurred while submitting your review.")
             return redirect("product_detail_user", slug=product.slug)
-
-        if not comment:
-            messages.error(request, "Comment is required.")
-            return redirect("product_detail_user", slug=product.slug)
-
-        Review.objects.create(
-            user=user, product=product, rating=rating, comment=comment
-        )
-
-        messages.success(request, "Thank you for your review!")
-        return redirect("product_detail_user", slug=product.slug)
 
     context = {"product": product, "variant": variant}
 
     return render(request, "user/add_review.html", context)
 
 
-@login_required
-@role_required(allowed_roles=["CUSTOMER"])
 def check_purchase_status(request, variant_id):
     if request.method != "GET":
         return JsonResponse({"message": "Invalid request"}, status=400)
+    
+    # Check if user is authenticated and is a customer
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            "has_purchased": False,
+            "has_reviewed": False,
+            "can_review": False,
+            "message": "Please login to review"
+        })
+    
+    if request.user.role != "CUSTOMER":
+        return JsonResponse({
+            "has_purchased": False,
+            "has_reviewed": False,
+            "can_review": False,
+            "message": "Only customers can review products"
+        })
+    
     variant = get_object_or_404(ProductVariant.objects.select_related("product"), id=variant_id)
     product = variant.product
     user = request.user
@@ -299,24 +386,56 @@ def reviews(request, variant_id):
         id=variant_id,
     )
 
+    sort_by = request.GET.get('sort', 'recent')
+
     reviews_qs = (
         Review.objects.select_related("user")
+        .prefetch_related("images", "videos")
         .filter(product=variant.product)
-        .order_by("-created_at")
+    )
+
+    # Sorting
+    if sort_by == 'helpful':
+        reviews_qs = reviews_qs.order_by("-helpful_count", "-created_at")
+    elif sort_by == 'rating_high':
+        reviews_qs = reviews_qs.order_by("-rating", "-created_at")
+    elif sort_by == 'rating_low':
+        reviews_qs = reviews_qs.order_by("rating", "-created_at")
+    else:  # recent
+        reviews_qs = reviews_qs.order_by("-created_at")
+
+    # Optimize verified purchase check
+    review_user_ids = list(reviews_qs.values_list('user_id', flat=True))
+    verified_users = set(
+        OrderItem.objects.filter(
+            order__user_id__in=review_user_ids,
+            variant__product=variant.product,
+            order__order_status="DELIVERED"
+        ).values_list('order__user_id', flat=True).distinct()
+    )
+
+    # Check if current user voted helpful
+    user_helpful_votes = set(
+        ReviewHelpful.objects.filter(
+            user=user,
+            review__in=reviews_qs
+        ).values_list('review_id', flat=True)
     )
 
     for review in reviews_qs:
-        review.is_verified_purchase = OrderItem.objects.filter(
-            order__user=review.user,
-            variant__product=variant.product,
-            order__order_status="DELIVERED"
-        ).exists()
+        review.is_verified_purchase = review.user_id in verified_users
+        review.user_voted_helpful = review.id in user_helpful_votes
+
+    paginator = Paginator(reviews_qs, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
 
     context = {
-        "reviews": reviews_qs,
+        "page_obj": page_obj,
         "variant": variant,
         "product": variant.product,
         "user": user,
+        "sort_by": sort_by,
     }
 
     return render(request, "user/reviews.html", context)
@@ -329,29 +448,38 @@ def edit_review(request, review_id):
     product = review.product
 
     if request.method == "POST":
-        rating = request.POST.get("rating")
-        comment = request.POST.get("comment", "").strip()
-
         try:
-            rating = int(rating)
-        except (ValueError, TypeError):
-            messages.error(request, "Invalid rating.")
+            rating = request.POST.get("rating")
+            comment = request.POST.get("comment", "").strip()
+
+            try:
+                rating = int(rating)
+            except (ValueError, TypeError):
+                messages.error(request, "Invalid rating.")
+                return redirect("product_detail_user", slug=product.slug)
+
+            if rating < 1 or rating > 5:
+                messages.error(request, "Rating must be between 1 and 5.")
+                return redirect("product_detail_user", slug=product.slug)
+
+            if not comment:
+                messages.error(request, "Comment is required.")
+                return redirect("product_detail_user", slug=product.slug)
+
+            if len(comment) > 1000:
+                messages.error(request, "Comment is too long (max 1000 characters).")
+                return redirect("product_detail_user", slug=product.slug)
+
+            review.rating = rating
+            review.comment = comment
+            review.save()
+
+            messages.success(request, "Review updated successfully!")
             return redirect("product_detail_user", slug=product.slug)
-
-        if rating < 1 or rating > 5:
-            messages.error(request, "Rating must be between 1 and 5.")
+        except Exception as e:
+            messages.error(request, "An error occurred while updating your review.")
             return redirect("product_detail_user", slug=product.slug)
-
-        if not comment:
-            messages.error(request, "Comment is required.")
-            return redirect("product_detail_user", slug=product.slug)
-
-        review.rating = rating
-        review.comment = comment
-        review.save()
-
-        messages.success(request, "Review updated successfully!")
-        return redirect("product_detail_user", slug=product.slug)
+            
     variant = product.variants.first()
     context = {"product": product, "variant": variant, "review": review}
     return render(request, "user/edit_review.html", context)
@@ -588,16 +716,35 @@ def product_detail(request, slug=None, id=None):
         .exclude(slug=product.slug)[:4]
     )
 
-    reviews = Review.objects.filter(product=product).order_by("-created_at")[:5]
-    avg_rating = reviews.aggregate(Avg("rating"))["rating__avg"] or 0
+    reviews = Review.objects.select_related('user').prefetch_related('images', 'videos').filter(product=product).order_by("-created_at")[:5]
+    all_reviews = Review.objects.filter(product=product)
+    avg_rating = all_reviews.aggregate(Avg("rating"))["rating__avg"] or 0
+    total_reviews = all_reviews.count()
+    
+    # Calculate rating breakdown
+    rating_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+    for review in all_reviews:
+        rating_counts[review.rating] = rating_counts.get(review.rating, 0) + 1
+    
+    # Calculate percentages
+    rating_breakdown = []
+    for rating in [5, 4, 3, 2, 1]:
+        count = rating_counts.get(rating, 0)
+        percentage = (count / total_reviews * 100) if total_reviews > 0 else 0
+        rating_breakdown.append({
+            'rating': rating,
+            'count': count,
+            'percentage': round(percentage, 1)
+        })
+    
     existing_review = None
 
     wishlist_variant_ids = set()
+    user_helpful_votes = set()
     if request.user.is_authenticated:
         existing_review = Review.objects.filter(
             user=request.user, product=product
         ).first()
-
 
         variant_ids = [v.id for v in product.variants.all()]
         wishlist_items = WishlistItem.objects.filter(
@@ -606,18 +753,35 @@ def product_detail(request, slug=None, id=None):
         ).values_list('variant_id', flat=True)
         wishlist_variant_ids = set(wishlist_items)
 
-        for review in reviews:
-            review.is_verified_purchase = OrderItem.objects.filter(
-                order__user=review.user,
+        # Optimize verified purchase check
+        review_user_ids = [r.user_id for r in reviews]
+        verified_users = set(
+            OrderItem.objects.filter(
+                order__user_id__in=review_user_ids,
                 variant__product=product,
                 order__order_status="DELIVERED"
-            ).exists()
+            ).values_list('order__user_id', flat=True).distinct()
+        )
+        
+        # Check helpful votes
+        user_helpful_votes = set(
+            ReviewHelpful.objects.filter(
+                user=request.user,
+                review__in=reviews
+            ).values_list('review_id', flat=True)
+        )
+        
+        for review in reviews:
+            review.is_verified_purchase = review.user_id in verified_users
+            review.user_voted_helpful = review.id in user_helpful_votes
 
     context = {
         "product": product,
         "related_products": related_products,
         "reviews": reviews,
         "avg_rating": round(float(avg_rating), 1),
+        "total_reviews": total_reviews,
+        "rating_breakdown": rating_breakdown,
         "existing_review": existing_review,
         "wishlist_variant_ids": list(wishlist_variant_ids),
     }
@@ -952,6 +1116,10 @@ def checkout(request):
             cart.items.all().delete()
             cart.total_amount = 0
             cart.save()
+        
+        # Send WhatsApp notification for order confirmation
+        if getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False):
+            whatsapp_notifier.send_order_confirmation(order)
 
         return render(
             request,
@@ -1071,6 +1239,10 @@ def buy_now(request, variant_id):
 
             variant.stock_quantity -= 1
             variant.save()
+        
+        # Send WhatsApp notification for order confirmation
+        if getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False):
+            whatsapp_notifier.send_order_confirmation(order)
 
         return render(
             request,
@@ -1470,3 +1642,82 @@ def get_subcategories_ajax(request):
         "subcategories": list(subcategories),
         "count": len(subcategories)
     })
+
+
+def search_autocomplete(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "Invalid request method"}, status=400)
+
+    query = request.GET.get("q", "").strip()
+
+    if len(query) < 2:
+        return JsonResponse({"suggestions": []})
+
+    products = Product.objects.filter(
+        Q(name__icontains=query) | Q(brand__icontains=query),
+        is_active=True,
+        approval_status="APPROVED",
+        seller__status="APPROVED"
+    ).values('name', 'slug', 'brand').distinct()[:5]
+
+    categories = Category.objects.filter(
+        name__icontains=query,
+        is_active=True
+    ).values('name', 'slug')[:3]
+
+    brands = Product.objects.filter(
+        brand__icontains=query,
+        is_active=True,
+        approval_status="APPROVED",
+        seller__status="APPROVED"
+    ).values_list('brand', flat=True).distinct()[:3]
+
+    suggestions = {
+        "products": list(products),
+        "categories": list(categories),
+        "brands": list(brands),
+        "query": query
+    }
+
+    return JsonResponse(suggestions)
+
+
+# ============================================
+# REVIEW ENHANCEMENT VIEWS
+# ============================================
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def toggle_review_helpful(request, review_id):
+    """Toggle helpful vote on a review"""
+    if request.method != "POST":
+        return JsonResponse({"message": "Invalid request"}, status=400)
+    
+    review = get_object_or_404(Review, id=review_id)
+    user = request.user
+    
+    # Check if user already voted
+    helpful_vote = ReviewHelpful.objects.filter(review=review, user=user).first()
+    
+    if helpful_vote:
+        # Remove vote
+        helpful_vote.delete()
+        review.helpful_count = max(0, review.helpful_count - 1)
+        review.save()
+        return JsonResponse({
+            "success": True,
+            "action": "removed",
+            "helpful_count": review.helpful_count,
+            "message": "Vote removed"
+        })
+    else:
+        # Add vote
+        ReviewHelpful.objects.create(review=review, user=user)
+        review.helpful_count += 1
+        review.save()
+        return JsonResponse({
+            "success": True,
+            "action": "added",
+            "helpful_count": review.helpful_count,
+            "message": "Marked as helpful"
+        })

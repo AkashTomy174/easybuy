@@ -91,7 +91,7 @@
                     {% if avg_rating %}
                     <div class="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 px-4 py-2 rounded-full border border-amber-200 dark:border-amber-800">
                         <span class="material-symbols-outlined text-yellow-400 text-lg">star</span>
-                        <span class="font-black text-stone-900 dark:text-white">{{ avg_rating }}.0</span>
+                        <span class="font-black text-stone-900 dark:text-white">{{ avg_rating }}</span>
                     </div>
                     {% endif %}
                 </div>
@@ -188,25 +188,25 @@
                         <!-- Overall Rating -->
                         <div class="flex items-center gap-6">
                             <div class="text-center">
-                                <div class="text-5xl font-black text-stone-900 dark:text-white mb-2">{{ avg_rating }}.0</div>
+                                <div class="text-5xl font-black text-stone-900 dark:text-white mb-2">{{ avg_rating }}</div>
                                 <div class="flex gap-1 mb-2">
                                     {% for i in "12345"|make_list %}
                                         <span class="material-symbols-outlined text-2xl {% if forloop.counter <= avg_rating %}text-yellow-400{% else %}text-stone-300{% endif %}">star</span>
                                     {% endfor %}
                                 </div>
-                                <p class="text-sm text-stone-500 dark:text-stone-400">Based on {{ reviews|length }} review{{ reviews|length|pluralize }}</p>
+                                <p class="text-sm text-stone-500 dark:text-stone-400">Based on {{ total_reviews }} review{{ total_reviews|pluralize }}</p>
                             </div>
                         </div>
                         
                         <!-- Rating Breakdown -->
                         <div class="space-y-2">
-                            {% for rating in "54321"|make_list %}
+                            {% for breakdown in rating_breakdown %}
                             <div class="flex items-center gap-3">
-                                <span class="text-sm font-bold text-stone-700 dark:text-stone-300 w-8">{{ rating }} <span class="material-symbols-outlined text-xs align-middle">star</span></span>
+                                <span class="text-sm font-bold text-stone-700 dark:text-stone-300 w-8">{{ breakdown.rating }} <span class="material-symbols-outlined text-xs align-middle">star</span></span>
                                 <div class="flex-1 h-2 bg-stone-200 dark:bg-stone-700 rounded-full overflow-hidden">
-                                    <div class="h-full bg-yellow-400" style="width: 0%"></div>
+                                    <div class="h-full bg-yellow-400" style="width: {{ breakdown.percentage }}%"></div>
                                 </div>
-                                <span class="text-sm text-stone-500 dark:text-stone-400 w-8">0</span>
+                                <span class="text-sm text-stone-500 dark:text-stone-400 w-8">{{ breakdown.count }}</span>
                             </div>
                             {% endfor %}
                         </div>
@@ -266,7 +266,7 @@
                                     {% for i in "12345"|make_list %}
                                         <span class="material-symbols-outlined text-sm {% if forloop.counter <= review.rating %}text-yellow-400{% else %}text-stone-300{% endif %}">star</span>
                                     {% endfor %}
-                                    <span class="ml-1 text-sm font-bold text-stone-900 dark:text-white">{{ review.rating }}.0</span>
+                                    <span class="ml-1 text-sm font-bold text-stone-900 dark:text-white">{{ review.rating }}</span>
                                 </div>
                             </div>
                             
@@ -274,6 +274,55 @@
                             <div class="mb-3">
                                 <p class="text-stone-700 dark:text-stone-300 leading-relaxed">{{ review.comment }}</p>
                             </div>
+                            
+                            <!-- Review Images -->
+                            {% if review.images.all %}
+                            <div class="grid grid-cols-4 gap-2 mb-3">
+                                {% for img in review.images.all %}
+                                <button onclick="openImageModal('{{ img.image.url }}')
+" class="aspect-square rounded-xl overflow-hidden border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all">
+                                    <img src="{{ img.image.url }}" alt="Review image" class="w-full h-full object-cover">
+                                </button>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Review Videos -->
+                            {% if review.videos.all %}
+                            <div class="grid grid-cols-2 gap-2 mb-3">
+                                {% for video in review.videos.all %}
+                                <button onclick="openVideoModal('{{ video.video.url }}')
+" class="aspect-video rounded-xl overflow-hidden border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all bg-stone-100 dark:bg-stone-800 flex items-center justify-center group">
+                                    <span class="material-symbols-outlined text-4xl text-stone-400 group-hover:text-primary transition-colors">play_circle</span>
+                                </button>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Helpful Button -->
+                            {% if user.is_authenticated and review.user != user %}
+                            <div class="flex items-center gap-4 mb-3 pb-3 border-b border-stone-200 dark:border-stone-700">
+                                <button onclick="toggleHelpful({{ review.id }}, this)" 
+                                        class="helpful-btn flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all {% if review.user_voted_helpful %}bg-primary border-primary text-white{% else %}border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 hover:border-primary hover:text-primary{% endif %}" 
+                                        data-review-id="{{ review.id }}">
+                                    <span class="material-symbols-outlined text-lg">thumb_up</span>
+                                    <span class="font-bold text-sm">Helpful</span>
+                                </button>
+                                <span class="text-sm text-stone-500 dark:text-stone-400" id="helpful-count-{{ review.id }}">
+                                    {% if review.helpful_count > 0 %}
+                                        {{ review.helpful_count }} {% if review.helpful_count == 1 %}person{% else %}people{% endif %} found this helpful
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% elif not user.is_authenticated %}
+                            <div class="flex items-center gap-4 mb-3 pb-3 border-b border-stone-200 dark:border-stone-700">
+                                <span class="text-sm text-stone-500 dark:text-stone-400" id="helpful-count-{{ review.id }}">
+                                    {% if review.helpful_count > 0 %}
+                                        {{ review.helpful_count }} {% if review.helpful_count == 1 %}person{% else %}people{% endif %} found this helpful
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% endif %}
                             
                             <!-- Edit/Delete Buttons (if user's own review) -->
                             {% if user.is_authenticated and review.user == user %}
@@ -311,10 +360,10 @@
                     </div>
                     
                     <!-- View All Button -->
-                    {% if reviews and product.variants.first %}
+                    {% if total_reviews > 5 and product.variants.first %}
                     <div class="text-center mt-4">
                         <a href="{% url 'reviews' product.variants.first.id %}" class="inline-flex items-center gap-2 text-primary hover:text-primary-dark font-bold transition-colors">
-                            View all {{ reviews|length }} reviews
+                            View all {{ total_reviews }} reviews
                             <span class="material-symbols-outlined">arrow_forward</span>
                         </a>
                     </div>
@@ -724,6 +773,85 @@ function deleteReview(reviewId) {
         console.error('Error:', error);
         showToast('An error occurred', 'error');
     });
+}
+
+// Toggle helpful vote
+function toggleHelpful(reviewId, button) {
+    fetch(`/user/reviews/helpful/${reviewId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update button state
+            if (data.action === 'added') {
+                button.classList.add('bg-primary', 'border-primary', 'text-white');
+                button.classList.remove('border-stone-300', 'dark:border-stone-600', 'text-stone-600', 'dark:text-stone-400');
+            } else {
+                button.classList.remove('bg-primary', 'border-primary', 'text-white');
+                button.classList.add('border-stone-300', 'dark:border-stone-600', 'text-stone-600', 'dark:text-stone-400');
+            }
+            
+            // Update count
+            const countEl = document.getElementById(`helpful-count-${reviewId}`);
+            if (countEl) {
+                if (data.helpful_count > 0) {
+                    countEl.textContent = `${data.helpful_count} ${data.helpful_count === 1 ? 'person' : 'people'} found this helpful`;
+                } else {
+                    countEl.textContent = '';
+                }
+            }
+            
+            showToast(data.message, 'success');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('An error occurred', 'error');
+    });
+}
+
+// Image modal
+function openImageModal(imageUrl) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4';
+    modal.onclick = () => modal.remove();
+    
+    modal.innerHTML = `
+        <div class="relative max-w-4xl max-h-[90vh]">
+            <button onclick="event.stopPropagation(); this.closest('.fixed').remove()" class="absolute -top-12 right-0 text-white hover:text-primary transition-colors">
+                <span class="material-symbols-outlined text-4xl">close</span>
+            </button>
+            <img src="${imageUrl}" alt="Review image" class="max-w-full max-h-[90vh] rounded-2xl" onclick="event.stopPropagation()">
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Video modal
+function openVideoModal(videoUrl) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4';
+    modal.onclick = () => modal.remove();
+    
+    modal.innerHTML = `
+        <div class="relative max-w-4xl w-full">
+            <button onclick="event.stopPropagation(); this.closest('.fixed').remove()" class="absolute -top-12 right-0 text-white hover:text-primary transition-colors">
+                <span class="material-symbols-outlined text-4xl">close</span>
+            </button>
+            <video controls autoplay class="w-full rounded-2xl" onclick="event.stopPropagation()">
+                <source src="${videoUrl}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
 }
 </script>
 {% endblock %}

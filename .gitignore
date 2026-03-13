@@ -1,17 +1,16 @@
-# Default ignored files
-/shelf/
-/workspace.xml
+# Environment variables (IMPORTANT - Contains Twilio credentials)
+.env
 
-# Byte-compiled / optimized / DLL files
+# Python
+*.pyc
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
+env/
+venv/
+ENV/
 build/
 develop-eggs/
 dist/
@@ -28,56 +27,28 @@ wheels/
 .installed.cfg
 *.egg
 
-# PyInstaller (if you use it)
-*.manifest
-*.spec
-
-# Logs and SQLite database
+# Django
 *.log
 db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
+/static
 
-# Django stuff
-local_settings.py
-
-# Unit test / coverage
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.pytest_cache/
-.hypothesis/
-
-# dotenv environment variables
-.env
-*.env
-
-# Virtual environments
-.venv/
-venv/
-ENV/
-env/
-myenv/
-
-# VS Code / editor configs
+# IDE
 .vscode/
 .idea/
-*.sublime-project
-*.sublime-workspace
-
-# Python caches
-.ipynb_checkpoints
-
-# OS files
+*.swp
+*.swo
+*~
 .DS_Store
-Thumbs.db
 
-# Media and static files (optional; include if you store these outside Git)
-media/
-staticfiles/
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
 
-# MyPy cache
-.mypy_cache/
+# Backup files
+*.bak
+*.tmp

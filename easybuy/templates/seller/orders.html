@@ -124,16 +124,21 @@
                         <span class="text-sm font-black text-stone-900 dark:text-white">${{ item.subtotal|floatformat:2 }}</span>
                     </td>
                     <td class="px-6 py-5">
-                        <form action="{% url 'status' item.id %}" method="POST" class="inline">
+                        <form action="{% url 'status' item.id %}" method="POST" class="inline" id="status-form-{{ item.id }}">
                             {% csrf_token %}
-                            <select name="status" onchange="this.form.submit()" 
-                                class="text-[10px] font-black uppercase tracking-wider bg-transparent border-0 cursor-pointer focus:ring-0 
-                                {% if item.order.order_status == 'PENDING' %}text-orange-600{% elif item.order.order_status == 'SHIPPED' %}text-blue-600{% elif item.order.order_status == 'DELIVERED' %}text-emerald-600{% elif item.order.order_status == 'CANCELLED' %}text-red-600{% else %}text-stone-600{% endif %}">
-                                <option value="PENDING" {% if item.order.order_status == 'PENDING' %}selected{% endif %}>Pending</option>
-                                <option value="SHIPPED" {% if item.order.order_status == 'SHIPPED' %}selected{% endif %}>Shipped</option>
-                                <option value="DELIVERED" {% if item.order.order_status == 'DELIVERED' %}selected{% endif %}>Delivered</option>
-                                <option value="CANCELLED" {% if item.order.order_status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
-                            </select>
+                            <div class="flex items-center gap-2">
+                                <select name="status" id="status-select-{{ item.id }}"
+                                    class="text-[10px] font-black uppercase tracking-wider bg-transparent border-0 cursor-pointer focus:ring-0 
+                                    {% if item.order.order_status == 'PENDING' %}text-orange-600{% elif item.order.order_status == 'SHIPPED' %}text-blue-600{% elif item.order.order_status == 'DELIVERED' %}text-emerald-600{% elif item.order.order_status == 'CANCELLED' %}text-red-600{% else %}text-stone-600{% endif %}">
+                                    <option value="PENDING" {% if item.order.order_status == 'PENDING' %}selected{% endif %}>Pending</option>
+                                    <option value="SHIPPED" {% if item.order.order_status == 'SHIPPED' %}selected{% endif %}>Shipped</option>
+                                    <option value="DELIVERED" {% if item.order.order_status == 'DELIVERED' %}selected{% endif %}>Delivered</option>
+                                    <option value="CANCELLED" {% if item.order.order_status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                                </select>
+                                <button type="submit" class="px-2 py-1 bg-primary text-white text-xs rounded hover:bg-primary/80 transition-colors">
+                                    Update
+                                </button>
+                            </div>
                         </form>
                     </td>
                     <td class="px-6 py-5">

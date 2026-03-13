@@ -48,6 +48,7 @@ urlpatterns = [
     path("reviews/<int:variant_id>/", views.reviews, name="reviews"),
     path("reviews/edit/<int:review_id>/", views.edit_review, name="edit_review"),
     path("reviews/delete/<int:review_id>/", views.delete_review, name="delete_review"),
+    path("reviews/helpful/<int:review_id>/", views.toggle_review_helpful, name="toggle_review_helpful"),
     path("buy_now/<int:variant_id>/", views.buy_now, name="buy_now"),
     # Wishlist URLs
     path("wishlist/", views.wishlist_view, name="wishlist"),
@@ -60,4 +61,5 @@ urlpatterns = [
     path("wishlist/move-to-cart/<int:item_id>/", views.move_to_cart, name="move_to_cart"),
     path("api/brands/", views.get_brands_ajax, name="get_brands_ajax"),
     path("api/subcategories/", views.get_subcategories_ajax, name="get_subcategories_ajax"),
+    path("api/search-autocomplete/", views.search_autocomplete, name="search_autocomplete"),
 ]

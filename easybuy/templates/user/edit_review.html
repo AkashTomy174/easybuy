@@ -42,7 +42,7 @@
         <div class="flex gap-3 justify-center mb-4" id="star-rating">
           {% for star in "12345" %}
             <label class="cursor-pointer transition-all hover:scale-125" for="rating_{{ star }}">
-              <input type="radio" name="rating" id="rating_{{ star }}" value="{{ star }}" class="sr-only" {% if review.rating == star|add:"0" %}checked{% endif %} required>
+              <input type="radio" name="rating" id="rating_{{ star }}" value="{{ star }}" class="sr-only" {% if review.rating == forloop.counter %}checked{% endif %} required>
               <span class="material-symbols-outlined text-5xl star-icon" data-rating="{{ star }}">star</span>
             </label>
           {% endfor %}

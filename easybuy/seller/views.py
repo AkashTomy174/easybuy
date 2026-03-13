@@ -8,10 +8,12 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.utils import timezone
+from django.conf import settings
 from easybuy.core.decorators import role_required
 from .models import SellerProfile, Product, ProductVariant, ProductImage, InventoryLog
 from easybuy.core.models import SubCategory
 from easybuy.user.models import Order, OrderItem, Review
+from easybuy.core.whatsapp_utils import whatsapp_notifier
 
 User = get_user_model()
 
@@ -115,31 +117,96 @@ def seller_product_list(request):
 @login_required
 @role_required(allowed_roles=["SELLER"])
 def seller_dashboard(request):
+    from django.db.models import Sum, Count, Avg, Q
+    from datetime import datetime, timedelta
+    import json
+    
     seller = request.user.seller_profile
-    products = Product.objects.filter(seller=seller).prefetch_related(
-        "variants", "variants__images"
-    )
-    order_items = OrderItem.objects.filter(
-        seller=seller,
-        order__order_status__in=['SHIPPED', 'DELIVERED']
-    ).select_related("order", "variant", "variant__product")
-    total_orders = order_items.count()
-    total_revenue = sum(
-        float(item.price_at_purchase * item.quantity) for item in order_items
-    )
+    now = timezone.now()
+    
+    # Get all order items for this seller
+    all_order_items = OrderItem.objects.filter(seller=seller).select_related("order", "variant__product")
+    
+    # Key Metrics
+    total_orders = all_order_items.count()
+    total_revenue = sum(float(item.price_at_purchase * item.quantity) for item in all_order_items)
+    pending_orders = all_order_items.filter(order__order_status="PENDING").count()
+    
+    # Products stats
+    total_products = Product.objects.filter(seller=seller).count()
+    active_products = Product.objects.filter(seller=seller, is_active=True).count()
+    
+    # Average order value
     average_order_value = total_revenue / total_orders if total_orders > 0 else 0
-    return render(
-        request,
-        "seller/dashboard.html",
-        {
-            "seller": seller,
-            "products": products,
-            "total_orders": total_orders,
-            "total_revenue": total_revenue,
-            "average_order_value": average_order_value,
-            "active_menu": "dashboard",
-        },
+    
+    # Revenue by status
+    delivered_revenue = sum(float(item.price_at_purchase * item.quantity) 
+                           for item in all_order_items.filter(order__order_status="DELIVERED"))
+    pending_revenue = sum(float(item.price_at_purchase * item.quantity) 
+                         for item in all_order_items.filter(order__order_status="PENDING"))
+    
+    # Last 7 days revenue data for chart
+    daily_revenue = []
+    daily_labels = []
+    for i in range(6, -1, -1):
+        date = now - timedelta(days=i)
+        day_start = date.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        
+        day_orders = all_order_items.filter(
+            order__ordered_at__gte=day_start,
+            order__ordered_at__lt=day_end
+        )
+        day_revenue = sum(float(item.price_at_purchase * item.quantity) for item in day_orders)
+        
+        daily_revenue.append(day_revenue)
+        daily_labels.append(date.strftime("%b %d"))
+    
+    # Top 5 selling products
+    top_products = (
+        all_order_items
+        .values('variant__product__name')
+        .annotate(total_sold=Sum('quantity'), revenue=Sum(F('price_at_purchase') * F('quantity')))
+        .order_by('-total_sold')[:5]
     )
+    
+    # Order status distribution
+    status_counts = {
+        'PENDING': all_order_items.filter(order__order_status='PENDING').count(),
+        'SHIPPED': all_order_items.filter(order__order_status='SHIPPED').count(),
+        'DELIVERED': all_order_items.filter(order__order_status='DELIVERED').count(),
+        'CANCELLED': all_order_items.filter(order__order_status='CANCELLED').count(),
+    }
+    
+    # Recent orders (last 5)
+    recent_orders = all_order_items.order_by('-order__ordered_at')[:5]
+    
+    # Low stock alerts
+    low_stock_items = ProductVariant.objects.filter(
+        product__seller=seller,
+        stock_quantity__lte=10,
+        stock_quantity__gt=0
+    ).select_related('product')[:5]
+    
+    context = {
+        "seller": seller,
+        "total_orders": total_orders,
+        "total_revenue": total_revenue,
+        "pending_orders": pending_orders,
+        "total_products": total_products,
+        "active_products": active_products,
+        "average_order_value": average_order_value,
+        "delivered_revenue": delivered_revenue,
+        "pending_revenue": pending_revenue,
+        "daily_revenue_data": json.dumps(daily_revenue),
+        "daily_labels_data": json.dumps(daily_labels),
+        "top_products": top_products,
+        "status_counts": status_counts,
+        "recent_orders": recent_orders,
+        "low_stock_items": low_stock_items,
+        "active_menu": "dashboard",
+    }
+    return render(request, "seller/dashboard.html", context)
 
 
 @login_required
@@ -428,11 +495,38 @@ def seller_order(request):
 @login_required
 @role_required(allowed_roles=["SELLER"])
 def status(request, id):
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Also write to a file for debugging
+    with open('status_change_log.txt', 'a') as f:
+        f.write(f"\n{'='*50}\n")
+        f.write(f"Status change request received\n")
+        f.write(f"Time: {timezone.now()}\n")
+        f.write(f"User: {request.user.username}\n")
+        f.write(f"OrderItem ID: {id}\n")
+    
     seller = request.user.seller_profile
     order_item = get_object_or_404(OrderItem, seller=seller, id=id)
 
     new_status = request.POST.get("status")
+    
+    with open('status_change_log.txt', 'a') as f:
+        f.write(f"New Status: {new_status}\n")
+        f.write(f"Order: {order_item.order.order_number}\n")
+        f.write(f"Old Status: {order_item.order.order_status}\n")
+        f.write(f"Phone: {order_item.order.shipping_phone}\n")
+    
     if new_status:
+        old_status = order_item.order.order_status
+        
+        print(f"\n=== ORDER STATUS CHANGE ===")
+        print(f"Order: {order_item.order.order_number}")
+        print(f"Old Status: {old_status}")
+        print(f"New Status: {new_status}")
+        print(f"Phone: {order_item.order.shipping_phone}")
+        print(f"WhatsApp Enabled: {getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False)}")
+        
         # Update the main Order status
         order_item.order.order_status = new_status
         order_item.order.save()
@@ -440,6 +534,54 @@ def status(request, id):
         # Also update the OrderItem status to keep them in sync
         order_item.status = new_status
         order_item.save()
+        
+        with open('status_change_log.txt', 'a') as f:
+            f.write(f"Status updated in database\n")
+            f.write(f"WhatsApp Enabled: {getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False)}\n")
+        
+        # Send WhatsApp notification based on status
+        if getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False):
+            print(f"Attempting to send WhatsApp notification...")
+            with open('status_change_log.txt', 'a') as f:
+                f.write(f"Attempting WhatsApp notification...\n")
+            try:
+                if new_status == "SHIPPED":
+                    print("Sending SHIPPED notification...")
+                    result = whatsapp_notifier.send_order_shipped(order_item.order)
+                    print(f"SHIPPED notification result: {result}")
+                    with open('status_change_log.txt', 'a') as f:
+                        f.write(f"SHIPPED notification sent: {result}\n")
+                elif new_status == "DELIVERED":
+                    print("Sending DELIVERED notification...")
+                    result1 = whatsapp_notifier.send_order_delivered(order_item.order)
+                    print(f"DELIVERED notification result: {result1}")
+                    with open('status_change_log.txt', 'a') as f:
+                        f.write(f"DELIVERED notification sent: {result1}\n")
+                    # Send feedback request
+                    print("Sending FEEDBACK notification...")
+                    result2 = whatsapp_notifier.send_feedback_request(order_item.order)
+                    print(f"FEEDBACK notification result: {result2}")
+                    with open('status_change_log.txt', 'a') as f:
+                        f.write(f"FEEDBACK notification sent: {result2}\n")
+                elif new_status == "CANCELLED":
+                    print("Sending CANCELLED notification...")
+                    result = whatsapp_notifier.send_order_cancelled(order_item.order)
+                    print(f"CANCELLED notification result: {result}")
+                    with open('status_change_log.txt', 'a') as f:
+                        f.write(f"CANCELLED notification sent: {result}\n")
+                print("WhatsApp notification process completed")
+            except Exception as e:
+                print(f"ERROR sending WhatsApp: {str(e)}")
+                with open('status_change_log.txt', 'a') as f:
+                    f.write(f"ERROR: {str(e)}\n")
+                import traceback
+                traceback.print_exc()
+        else:
+            print("WhatsApp notifications are DISABLED")
+            with open('status_change_log.txt', 'a') as f:
+                f.write(f"WhatsApp notifications DISABLED\n")
+        
+        print(f"=== END STATUS CHANGE ===\n")
         
         messages.success(request, f"Order status updated to {new_status}")
 
@@ -495,3 +637,43 @@ def reply_review(request, review_id):
         return redirect("seller_reviews")
     
     return redirect("seller_reviews")
+
+
+# ============================================
+# SELLER REVIEW REPLY
+# ============================================
+
+from easybuy.user.models import Review
+from django.utils import timezone
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def reply_to_review(request, review_id):
+    """Allow seller to reply to a review"""
+    if request.method != "POST":
+        return JsonResponse({"message": "Invalid request"}, status=400)
+    
+    review = get_object_or_404(Review.objects.select_related('product__seller'), id=review_id)
+    
+    # Check if the review is for seller's product
+    if review.product.seller.user != request.user:
+        return JsonResponse({"success": False, "message": "Unauthorized"}, status=403)
+    
+    reply = request.POST.get("reply", "").strip()
+    
+    if not reply:
+        return JsonResponse({"success": False, "message": "Reply cannot be empty"})
+    
+    if len(reply) > 500:
+        return JsonResponse({"success": False, "message": "Reply too long (max 500 characters)"})
+    
+    review.seller_reply = reply
+    review.replied_at = timezone.now()
+    review.save()
+    
+    return JsonResponse({
+        "success": True,
+        "message": "Reply posted successfully",
+        "reply": reply,
+        "replied_at": review.replied_at.strftime("%B %d, %Y")
+    })

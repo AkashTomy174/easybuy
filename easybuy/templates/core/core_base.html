@@ -173,6 +173,14 @@
         .count-pulse {
             animation: countPulse 0.4s ease-out;
         }
+        
+        /* Autocomplete Styles */
+        .autocomplete-item.active {
+            background-color: rgba(74, 124, 67, 0.1);
+        }
+        .dark .autocomplete-item.active {
+            background-color: rgba(74, 124, 67, 0.2);
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -206,9 +214,20 @@
 
                 <!-- Center: Search Bar -->
                 <div class="flex-1 max-w-2xl mx-6 hidden lg:block">
-                    <form action="{% url 'all_products' %}" method="get" class="relative group">
+                    <form action="{% url 'all_products' %}" method="get" class="relative group" id="search-form">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-primary transition-colors text-xl">search</span>
-                        <input name="q" class="h-11 w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 pl-12 pr-4 text-sm font-medium text-stone-900 dark:text-white placeholder:text-stone-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search products, brands..." type="text"/>
+                        <input 
+                            id="search-input"
+                            name="q" 
+                            class="h-11 w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 pl-12 pr-4 text-sm font-medium text-stone-900 dark:text-white placeholder:text-stone-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" 
+                            placeholder="Search products, brands..." 
+                            type="text"
+                            autocomplete="off"/>
+                        
+                        <!-- Autocomplete Dropdown -->
+                        <div id="autocomplete-dropdown" class="hidden absolute top-full left-0 right-0 mt-2 bg-white dark:bg-stone-800 rounded-xl shadow-2xl border border-stone-200 dark:border-stone-700 max-h-96 overflow-y-auto z-50">
+                            <!-- Results will be inserted here -->
+                        </div>
                     </form>
                 </div>
 
@@ -752,7 +771,202 @@ document.addEventListener('DOMContentLoaded', function() {
             mobileMenu.classList.toggle('hidden');
         });
     }
+    
+    // Initialize Search Autocomplete
+    initSearchAutocomplete();
 });
+
+// Search Autocomplete Functionality
+function initSearchAutocomplete() {
+    const searchInput = document.getElementById('search-input');
+    const dropdown = document.getElementById('autocomplete-dropdown');
+    
+    if (!searchInput || !dropdown) return;
+    
+    let debounceTimer;
+    let currentQuery = '';
+    
+    // Handle input changes
+    searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+        
+        // Clear previous timer
+        clearTimeout(debounceTimer);
+        
+        // Hide dropdown if query is too short
+        if (query.length < 2) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+        
+        // Debounce API calls (wait 300ms after user stops typing)
+        debounceTimer = setTimeout(() => {
+            fetchAutocomplete(query);
+        }, 300);
+    });
+    
+    // Handle keyboard navigation
+    searchInput.addEventListener('keydown', function(e) {
+        const items = dropdown.querySelectorAll('.autocomplete-item');
+        const activeItem = dropdown.querySelector('.autocomplete-item.active');
+        let currentIndex = Array.from(items).indexOf(activeItem);
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (currentIndex < items.length - 1) {
+                if (activeItem) activeItem.classList.remove('active');
+                items[currentIndex + 1].classList.add('active');
+                items[currentIndex + 1].scrollIntoView({ block: 'nearest' });
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (currentIndex > 0) {
+                if (activeItem) activeItem.classList.remove('active');
+                items[currentIndex - 1].classList.add('active');
+                items[currentIndex - 1].scrollIntoView({ block: 'nearest' });
+            }
+        } else if (e.key === 'Enter' && activeItem) {
+            e.preventDefault();
+            activeItem.click();
+        } else if (e.key === 'Escape') {
+            dropdown.classList.add('hidden');
+        }
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+}
+
+function fetchAutocomplete(query) {
+    const dropdown = document.getElementById('autocomplete-dropdown');
+    if (!dropdown) return;
+    
+    // Show loading state
+    dropdown.innerHTML = `
+        <div class="p-4 text-center text-stone-500">
+            <span class="material-symbols-outlined animate-spin inline-block">sync</span>
+            <span class="ml-2">Searching...</span>
+        </div>
+    `;
+    dropdown.classList.remove('hidden');
+    
+    fetch(`/user/api/search-autocomplete/?q=${encodeURIComponent(query)}`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        displayAutocompleteResults(data);
+    })
+    .catch(err => {
+        console.error('Autocomplete error:', err);
+        dropdown.classList.add('hidden');
+    });
+}
+
+function displayAutocompleteResults(data) {
+    const dropdown = document.getElementById('autocomplete-dropdown');
+    if (!dropdown) return;
+    
+    const hasProducts = data.products && data.products.length > 0;
+    const hasCategories = data.categories && data.categories.length > 0;
+    const hasBrands = data.brands && data.brands.length > 0;
+    
+    if (!hasProducts && !hasCategories && !hasBrands) {
+        dropdown.innerHTML = `
+            <div class="p-6 text-center">
+                <span class="material-symbols-outlined text-4xl text-stone-300 dark:text-stone-600 block mb-2">search_off</span>
+                <p class="text-stone-500 dark:text-stone-400 text-sm">No results found for "${data.query}"</p>
+            </div>
+        `;
+        dropdown.classList.remove('hidden');
+        return;
+    }
+    
+    let html = '<div class="py-2">';
+    
+    // Products Section
+    if (hasProducts) {
+        html += `
+            <div class="px-3 py-2">
+                <div class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Products</div>
+            </div>
+        `;
+        data.products.forEach(product => {
+            html += `
+                <a href="/user/products/${product.slug}/" class="autocomplete-item flex items-center gap-3 px-4 py-3 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-primary text-xl">shopping_bag</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium text-stone-900 dark:text-white truncate">${product.name}</div>
+                        ${product.brand ? `<div class="text-xs text-stone-500 dark:text-stone-400">${product.brand}</div>` : ''}
+                    </div>
+                    <span class="material-symbols-outlined text-stone-400 text-sm">arrow_forward</span>
+                </a>
+            `;
+        });
+    }
+    
+    // Categories Section
+    if (hasCategories) {
+        html += `
+            <div class="px-3 py-2 mt-2 border-t border-stone-200 dark:border-stone-700">
+                <div class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Categories</div>
+            </div>
+        `;
+        data.categories.forEach(category => {
+            html += `
+                <a href="/user/category/${category.slug}/" class="autocomplete-item flex items-center gap-3 px-4 py-3 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-accent-terracotta text-xl">category</span>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-stone-900 dark:text-white">${category.name}</div>
+                    </div>
+                    <span class="material-symbols-outlined text-stone-400 text-sm">arrow_forward</span>
+                </a>
+            `;
+        });
+    }
+    
+    // Brands Section
+    if (hasBrands) {
+        html += `
+            <div class="px-3 py-2 mt-2 border-t border-stone-200 dark:border-stone-700">
+                <div class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Brands</div>
+            </div>
+        `;
+        data.brands.forEach(brand => {
+            html += `
+                <a href="/user/products/?q=${encodeURIComponent(brand)}" class="autocomplete-item flex items-center gap-3 px-4 py-3 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-accent-gold text-xl">label</span>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-stone-900 dark:text-white">${brand}</div>
+                    </div>
+                    <span class="material-symbols-outlined text-stone-400 text-sm">arrow_forward</span>
+                </a>
+            `;
+        });
+    }
+    
+    // View All Results Link
+    html += `
+        <div class="border-t border-stone-200 dark:border-stone-700 mt-2">
+            <a href="/user/products/?q=${encodeURIComponent(data.query)}" class="flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/5 transition-colors">
+                <span>View all results for "${data.query}"</span>
+                <span class="material-symbols-outlined text-lg">arrow_forward</span>
+            </a>
+        </div>
+    `;
+    
+    html += '</div>';
+    
+    dropdown.innerHTML = html;
+    dropdown.classList.remove('hidden');
+}
 </script>
 </body>
 </html>

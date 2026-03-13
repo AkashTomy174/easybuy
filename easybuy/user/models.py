@@ -31,13 +31,59 @@ class WishlistItem(models.Model):
 
 
 class Review(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviews")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="reviews")
     rating = models.IntegerField()
     comment = models.TextField()
     seller_reply = models.TextField(blank=True, null=True)
     replied_at = models.DateTimeField(blank=True, null=True)
+    helpful_count = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['product', '-created_at']),
+            models.Index(fields=['user', 'product']),
+            models.Index(fields=['product', '-helpful_count']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(rating__gte=1, rating__lte=5),
+                name='rating_range'
+            )
+        ]
+
+
+class ReviewImage(models.Model):
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name="images")
+    image = models.ImageField(upload_to="reviews/images/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['uploaded_at']
+
+
+class ReviewVideo(models.Model):
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name="videos")
+    video = models.FileField(upload_to="reviews/videos/")
+    thumbnail = models.ImageField(upload_to="reviews/thumbnails/", blank=True, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['uploaded_at']
+
+
+class ReviewHelpful(models.Model):
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name="helpful_votes")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="review_votes")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['review', 'user']
+        indexes = [
+            models.Index(fields=['review', 'user']),
+        ]
 
 
 class Order(models.Model):

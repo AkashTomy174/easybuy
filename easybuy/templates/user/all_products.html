@@ -93,6 +93,28 @@
                         </div>
                     </div>
 
+                    <!-- Rating Filter -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Minimum Rating</label>
+                        <select name="rating" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
+                            <option value="">All Ratings</option>
+                            <option value="4" {% if selected_rating == '4' %}selected{% endif %}>⭐ 4+ Stars</option>
+                            <option value="3" {% if selected_rating == '3' %}selected{% endif %}>⭐ 3+ Stars</option>
+                            <option value="2" {% if selected_rating == '2' %}selected{% endif %}>⭐ 2+ Stars</option>
+                            <option value="1" {% if selected_rating == '1' %}selected{% endif %}>⭐ 1+ Stars</option>
+                        </select>
+                    </div>
+
+                    <!-- Availability Filter -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Availability</label>
+                        <select name="availability" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
+                            <option value="">All Products</option>
+                            <option value="in_stock" {% if selected_availability == 'in_stock' %}selected{% endif %}>In Stock</option>
+                            <option value="out_of_stock" {% if selected_availability == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
+                        </select>
+                    </div>
+
                     <!-- Price Range -->
                     <div class="mb-6">
                         <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Price Range</label>
@@ -237,6 +259,8 @@
                         <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Sort By</label>
                         <select name="sort" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
                             <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest First</option>
+                            <option value="most_popular" {% if selected_sort == 'most_popular' %}selected{% endif %}>Most Popular</option>
+                            <option value="best_rated" {% if selected_sort == 'best_rated' %}selected{% endif %}>Best Rated</option>
                             <option value="price_low" {% if selected_sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
                             <option value="price_high" {% if selected_sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
                             <option value="name_asc" {% if selected_sort == 'name_asc' %}selected{% endif %}>Name: A to Z</option>
@@ -266,13 +290,29 @@
                 </div>
                 
                 <!-- Active Filters -->
-                {% if selected_category or selected_subcategory or selected_brands or selected_min_price or selected_max_price or selected_product %}
+                {% if selected_category or selected_subcategory or selected_brands or selected_min_price or selected_max_price or selected_product or selected_rating or selected_availability %}
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="text-sm text-stone-500">Active filters:</span>
                     {% if selected_category %}
                     <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
                         {{ selected_category }}
-<a href="?{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for b in selected_brands %}brand={{ b }}&{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}q={{ selected_product }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}" class="ml-1">
+<a href="?{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for b in selected_brands %}brand={{ b }}&{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}q={{ selected_product }}&{% endif %}{% if selected_rating %}rating={{ selected_rating }}&{% endif %}{% if selected_availability %}availability={{ selected_availability }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}" class="ml-1">
+                            <span class="material-symbols-outlined text-[14px]">close</span>
+                        </a>
+                    </span>
+                    {% endif %}
+                    {% if selected_rating %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                        {{ selected_rating }}+ Stars
+<a href="?{% if selected_category %}category={{ selected_category }}&{% endif %}{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for b in selected_brands %}brand={{ b }}&{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}q={{ selected_product }}&{% endif %}{% if selected_availability %}availability={{ selected_availability }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}" class="ml-1">
+                            <span class="material-symbols-outlined text-[14px]">close</span>
+                        </a>
+                    </span>
+                    {% endif %}
+                    {% if selected_availability %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                        {% if selected_availability == 'in_stock' %}In Stock{% else %}Out of Stock{% endif %}
+<a href="?{% if selected_category %}category={{ selected_category }}&{% endif %}{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for b in selected_brands %}brand={{ b }}&{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}q={{ selected_product }}&{% endif %}{% if selected_rating %}rating={{ selected_rating }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}" class="ml-1">
                             <span class="material-symbols-outlined text-[14px]">close</span>
                         </a>
                     </span>
@@ -281,7 +321,7 @@
                     {% for b in selected_brands %}
                     <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
                         {{ b }}
-                        <a href="?{% if selected_category %}category={{ selected_category }}&{% endif %}{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for br in selected_brands %}{% if br != b %}brand={{ br }}&{% endif %}{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}q={{ selected_product }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}" class="ml-1">
+                        <a href="?{% if selected_category %}category={{ selected_category }}&{% endif %}{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for br in selected_brands %}{% if br != b %}brand={{ br }}&{% endif %}{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}q={{ selected_product }}&{% endif %}{% if selected_rating %}rating={{ selected_rating }}&{% endif %}{% if selected_availability %}availability={{ selected_availability }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}" class="ml-1">
                             <span class="material-symbols-outlined text-[14px]">close</span>
                         </a>
                     </span>
@@ -364,7 +404,7 @@
                 <div class="flex items-center gap-2 p-2 bg-white dark:bg-surface-dark rounded-[2rem] border border-stone-200 dark:border-stone-700 shadow-sm">
                     
                     {% if page_obj.has_previous %}
-<a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.subcategory %}subcategory={{ request.GET.subcategory }}&{% endif %}{% for b in request.GET.brand %}brand={{ b }}&{% endfor %}{% if request.GET.min %}min={{ request.GET.min }}&{% endif %}{% if request.GET.max %}max={{ request.GET.max }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ page_obj.previous_page_number }}" class="h-10 w-10 flex items-center justify-center rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+<a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.subcategory %}subcategory={{ request.GET.subcategory }}&{% endif %}{% for b in request.GET.brand %}brand={{ b }}&{% endfor %}{% if request.GET.min %}min={{ request.GET.min }}&{% endif %}{% if request.GET.max %}max={{ request.GET.max }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.rating %}rating={{ request.GET.rating }}&{% endif %}{% if request.GET.availability %}availability={{ request.GET.availability }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ page_obj.previous_page_number }}" class="h-10 w-10 flex items-center justify-center rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
                         <span class="material-symbols-outlined">chevron_left</span>
                     </a>
                     {% endif %}
@@ -375,14 +415,14 @@
                                 {{ num }}
                             </span>
                         {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-<a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.subcategory %}subcategory={{ request.GET.subcategory }}&{% endif %}{% for b in request.GET.brand %}brand={{ b }}&{% endfor %}{% if request.GET.min %}min={{ request.GET.min }}&{% endif %}{% if request.GET.max %}max={{ request.GET.max }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ num }}" class="h-10 w-10 flex items-center justify-center rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 font-bold text-stone-400">
+<a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.subcategory %}subcategory={{ request.GET.subcategory }}&{% endif %}{% for b in request.GET.brand %}brand={{ b }}&{% endfor %}{% if request.GET.min %}min={{ request.GET.min }}&{% endif %}{% if request.GET.max %}max={{ request.GET.max }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.rating %}rating={{ request.GET.rating }}&{% endif %}{% if request.GET.availability %}availability={{ request.GET.availability }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ num }}" class="h-10 w-10 flex items-center justify-center rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 font-bold text-stone-400">
                                 {{ num }}
                             </a>
                         {% endif %}
                     {% endfor %}
 
                     {% if page_obj.has_next %}
-<a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.subcategory %}subcategory={{ request.GET.subcategory }}&{% endif %}{% for b in request.GET.brand %}brand={{ b }}&{% endfor %}{% if request.GET.min %}min={{ request.GET.min }}&{% endif %}{% if request.GET.max %}max={{ request.GET.max }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ page_obj.next_page_number }}" class="h-10 w-10 flex items-center justify-center rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+<a href="?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.subcategory %}subcategory={{ request.GET.subcategory }}&{% endif %}{% for b in request.GET.brand %}brand={{ b }}&{% endfor %}{% if request.GET.min %}min={{ request.GET.min }}&{% endif %}{% if request.GET.max %}max={{ request.GET.max }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.rating %}rating={{ request.GET.rating }}&{% endif %}{% if request.GET.availability %}availability={{ request.GET.availability }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ page_obj.next_page_number }}" class="h-10 w-10 flex items-center justify-center rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
                         <span class="material-symbols-outlined">chevron_right</span>
                     </a>
                     {% endif %}

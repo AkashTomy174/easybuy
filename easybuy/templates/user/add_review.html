@@ -33,7 +33,7 @@
 
   <!-- Review Form -->
   <div class="bg-white dark:bg-surface-dark rounded-3xl border border-stone-200 dark:border-stone-700 p-8 shadow-xl">
-    <form method="post" class="space-y-8">
+    <form method="post" enctype="multipart/form-data" class="space-y-8">
       {% csrf_token %}
       
       <!-- Rating Section -->
@@ -58,6 +58,34 @@
           <p class="text-xs text-stone-500">Be honest and helpful</p>
           <p class="text-xs text-stone-500" id="char-count">0 / 1000</p>
         </div>
+      </div>
+
+      <!-- Image Upload -->
+      <div>
+        <label class="block text-sm font-black text-stone-900 dark:text-white mb-4 uppercase tracking-widest">Add Photos (Optional)</label>
+        <div class="border-2 border-dashed border-stone-300 dark:border-stone-600 rounded-2xl p-6 text-center hover:border-primary transition-colors">
+          <input type="file" name="images" id="images" accept="image/*" multiple class="hidden" onchange="previewImages(event)">
+          <label for="images" class="cursor-pointer">
+            <span class="material-symbols-outlined text-5xl text-stone-400 mb-2">add_photo_alternate</span>
+            <p class="text-sm font-bold text-stone-600 dark:text-stone-400">Click to upload images</p>
+            <p class="text-xs text-stone-500 mt-1">Max 5 images, 5MB each</p>
+          </label>
+        </div>
+        <div id="image-preview" class="grid grid-cols-5 gap-3 mt-4"></div>
+      </div>
+
+      <!-- Video Upload -->
+      <div>
+        <label class="block text-sm font-black text-stone-900 dark:text-white mb-4 uppercase tracking-widest">Add Videos (Optional)</label>
+        <div class="border-2 border-dashed border-stone-300 dark:border-stone-600 rounded-2xl p-6 text-center hover:border-primary transition-colors">
+          <input type="file" name="videos" id="videos" accept="video/*" multiple class="hidden" onchange="previewVideos(event)">
+          <label for="videos" class="cursor-pointer">
+            <span class="material-symbols-outlined text-5xl text-stone-400 mb-2">videocam</span>
+            <p class="text-sm font-bold text-stone-600 dark:text-stone-400">Click to upload videos</p>
+            <p class="text-xs text-stone-500 mt-1">Max 2 videos, 50MB each</p>
+          </label>
+        </div>
+        <div id="video-preview" class="grid grid-cols-2 gap-3 mt-4"></div>
       </div>
 
       <!-- Submit Buttons -->
@@ -170,5 +198,98 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+// Image preview
+function previewImages(event) {
+  const files = event.target.files;
+  const preview = document.getElementById('image-preview');
+  preview.innerHTML = '';
+  
+  if (files.length > 5) {
+    alert('Maximum 5 images allowed');
+    event.target.value = '';
+    return;
+  }
+  
+  Array.from(files).forEach((file, index) => {
+    if (file.size > 5 * 1024 * 1024) {
+      alert(`Image ${file.name} exceeds 5MB`);
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const div = document.createElement('div');
+      div.className = 'relative group';
+      div.innerHTML = `
+        <img src="${e.target.result}" class="w-full h-24 object-cover rounded-xl border-2 border-stone-200 dark:border-stone-700">
+        <button type="button" onclick="removeImage(${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      `;
+      preview.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Video preview
+function previewVideos(event) {
+  const files = event.target.files;
+  const preview = document.getElementById('video-preview');
+  preview.innerHTML = '';
+  
+  if (files.length > 2) {
+    alert('Maximum 2 videos allowed');
+    event.target.value = '';
+    return;
+  }
+  
+  Array.from(files).forEach((file, index) => {
+    if (file.size > 50 * 1024 * 1024) {
+      alert(`Video ${file.name} exceeds 50MB`);
+      return;
+    }
+    
+    const div = document.createElement('div');
+    div.className = 'relative group';
+    div.innerHTML = `
+      <div class="w-full h-32 bg-stone-200 dark:bg-stone-700 rounded-xl border-2 border-stone-300 dark:border-stone-600 flex items-center justify-center">
+        <span class="material-symbols-outlined text-4xl text-stone-500">videocam</span>
+      </div>
+      <p class="text-xs text-stone-600 dark:text-stone-400 mt-1 truncate">${file.name}</p>
+      <button type="button" onclick="removeVideo(${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    `;
+    preview.appendChild(div);
+  });
+}
+
+function removeImage(index) {
+  const input = document.getElementById('images');
+  const dt = new DataTransfer();
+  const files = input.files;
+  
+  for (let i = 0; i < files.length; i++) {
+    if (i !== index) dt.items.add(files[i]);
+  }
+  
+  input.files = dt.files;
+  previewImages({ target: input });
+}
+
+function removeVideo(index) {
+  const input = document.getElementById('videos');
+  const dt = new DataTransfer();
+  const files = input.files;
+  
+  for (let i = 0; i < files.length; i++) {
+    if (i !== index) dt.items.add(files[i]);
+  }
+  
+  input.files = dt.files;
+  previewVideos({ target: input });
+}
 </script>
 {% endblock %}

@@ -9,10 +9,11 @@
     </div>
 
     {% if messages %}
-    <div class="mb-6">
+    <div class="mb-6 space-y-3">
         {% for message in messages %}
-        <div class="bg-{% if message.tags == 'success' %}emerald{% elif message.tags == 'error' %}red{% else %}blue{% endif %}-50 dark:bg-{% if message.tags == 'success' %}emerald{% elif message.tags == 'error' %}red{% else %}blue{% endif %}-500/10 border border-{% if message.tags == 'success' %}emerald{% elif message.tags == 'error' %}red{% else %}blue{% endif %}-200 dark:border-{% if message.tags == 'success' %}emerald{% elif message.tags == 'error' %}red{% else %}blue{% endif %}-500/20 text-{% if message.tags == 'success' %}emerald{% elif message.tags == 'error' %}red{% else %}blue{% endif %}-800 dark:text-{% if message.tags == 'success' %}emerald{% elif message.tags == 'error' %}red{% else %}blue{% endif %}-400 px-4 py-3 rounded-2xl font-bold">
-            {{ message }}
+        <div class="px-4 py-3 rounded-2xl font-bold flex items-center gap-3 {% if message.tags == 'success' %}bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-800 dark:text-emerald-400{% elif message.tags == 'error' %}bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-800 dark:text-red-400{% else %}bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-800 dark:text-blue-400{% endif %}">
+            <span class="material-symbols-outlined">{% if message.tags == 'success' %}check_circle{% elif message.tags == 'error' %}error{% else %}info{% endif %}</span>
+            <span>{{ message }}</span>
         </div>
         {% endfor %}
     </div>
