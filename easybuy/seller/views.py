@@ -3,12 +3,16 @@ from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.utils.text import slugify
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Sum, Count, Avg, Q
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.utils import timezone
 from django.conf import settings
+from datetime import datetime, timedelta
+import json
+import logging
+import traceback
 from easybuy.core.decorators import role_required
 from .models import SellerProfile, Product, ProductVariant, ProductImage, InventoryLog
 from easybuy.core.models import SubCategory
@@ -117,35 +121,25 @@ def seller_product_list(request):
 @login_required
 @role_required(allowed_roles=["SELLER"])
 def seller_dashboard(request):
-    from django.db.models import Sum, Count, Avg, Q
-    from datetime import datetime, timedelta
-    import json
-    
     seller = request.user.seller_profile
     now = timezone.now()
     
-    # Get all order items for this seller
     all_order_items = OrderItem.objects.filter(seller=seller).select_related("order", "variant__product")
     
-    # Key Metrics
     total_orders = all_order_items.count()
     total_revenue = sum(float(item.price_at_purchase * item.quantity) for item in all_order_items)
     pending_orders = all_order_items.filter(order__order_status="PENDING").count()
     
-    # Products stats
     total_products = Product.objects.filter(seller=seller).count()
     active_products = Product.objects.filter(seller=seller, is_active=True).count()
     
-    # Average order value
     average_order_value = total_revenue / total_orders if total_orders > 0 else 0
     
-    # Revenue by status
     delivered_revenue = sum(float(item.price_at_purchase * item.quantity) 
                            for item in all_order_items.filter(order__order_status="DELIVERED"))
     pending_revenue = sum(float(item.price_at_purchase * item.quantity) 
                          for item in all_order_items.filter(order__order_status="PENDING"))
     
-    # Last 7 days revenue data for chart
     daily_revenue = []
     daily_labels = []
     for i in range(6, -1, -1):
@@ -162,7 +156,6 @@ def seller_dashboard(request):
         daily_revenue.append(day_revenue)
         daily_labels.append(date.strftime("%b %d"))
     
-    # Top 5 selling products
     top_products = (
         all_order_items
         .values('variant__product__name')
@@ -170,7 +163,6 @@ def seller_dashboard(request):
         .order_by('-total_sold')[:5]
     )
     
-    # Order status distribution
     status_counts = {
         'PENDING': all_order_items.filter(order__order_status='PENDING').count(),
         'SHIPPED': all_order_items.filter(order__order_status='SHIPPED').count(),
@@ -178,10 +170,8 @@ def seller_dashboard(request):
         'CANCELLED': all_order_items.filter(order__order_status='CANCELLED').count(),
     }
     
-    # Recent orders (last 5)
     recent_orders = all_order_items.order_by('-order__ordered_at')[:5]
     
-    # Low stock alerts
     low_stock_items = ProductVariant.objects.filter(
         product__seller=seller,
         stock_quantity__lte=10,
@@ -261,50 +251,6 @@ def seller_inventory(request):
     return render(request, "seller/inventory.html", context)
 
 
-# class Product(models.Model):
-#     seller = models.ForeignKey(SellerProfile, on_delete=models.CASCADE, related_name="products")
-#     subcategory = models.ForeignKey(SubCategory, on_delete=models.CASCADE, related_name="products")
-#     name = models.CharField(max_length=255)
-#     slug = models.SlugField()
-#     description = models.TextField()
-#     brand = models.CharField(max_length=100)
-#     model_number = models.CharField(max_length=100)
-#     is_cancellable = models.BooleanField(default=True)
-#     is_returnable = models.BooleanField(default=True)
-#     return_days = models.IntegerField(default=7)
-#     approval_status = models.CharField(max_length=20, default='PENDING')
-#     is_active = models.BooleanField(default=True)
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     def __str__(self):
-#         return self.name
-
-
-# class Productitem(models.Model):
-#     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="items")
-#     sku_code = models.CharField(max_length=100, unique=True)
-#     mrp = models.DecimalField(max_digits=10, decimal_places=2)
-#     selling_price = models.DecimalField(max_digits=10, decimal_places=2)
-#     cost_price = models.DecimalField(max_digits=10, decimal_places=2)
-#     stock_quantity = models.IntegerField()
-#     weight = request.POST.get('sku')
-#     length = request.POST.get('sku')
-#     width = request.POST.get('sku')
-#     height = request.POST.get('sku')
-#     tax_percentage = models.FloatField()
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     def __str__(self):
-#         return f"{self.product.name} - {self.sku_code}"
-
-
-# class ProductImage(models.Model):
-#     item = models.ForeignKey(Productitem, on_delete=models.CASCADE, related_name="images")
-#     image = models.ImageField(upload_to='products/items/',null=True, blank=True)
-#     alt_text = models.CharField(max_length=255, blank=True)
-#     is_primary = models.BooleanField(default=False)
-#     def __str__(self):
-#         return f"{self.item.sku_code} Image"
-
-
 @login_required
 @role_required(allowed_roles="SELLER")
 def add_product(request):
@@ -366,7 +312,6 @@ def add_product(request):
 def add_stock(request):
     if request.method == "POST":
         try:
-
             item_id = request.POST.get("variant_id")
             stock_to_add = int(request.POST.get("stock_amount", 0))
             reason = request.POST.get("reason", "Manual stock addition")
@@ -431,25 +376,6 @@ def deactivate(request, id):
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
 
-    # class Order(models.Model):
-
-
-#     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
-#     order_number = models.CharField(max_length=100, unique=True)
-#     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
-#     payment_status = models.CharField(max_length=20)
-#     order_status = models.CharField(max_length=20)
-#     shipping_name = models.CharField(max_length=100, null=True, blank=True)
-#     shipping_phone = models.CharField(max_length=15, null=True, blank=True)
-#     shipping_address = models.TextField(null=True, blank=True)
-#     ordered_at = models.DateTimeField(auto_now_add=True)
-# class OrderItem(models.Model):
-#     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
-#     item = models.ForeignKey(Productitem, on_delete=models.CASCADE)
-#     seller = models.ForeignKey(SellerProfile, on_delete=models.CASCADE)
-#     quantity = models.IntegerField()
-#     price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
-
 
 @login_required
 @role_required(allowed_roles=["SELLER"])
@@ -495,10 +421,8 @@ def seller_order(request):
 @login_required
 @role_required(allowed_roles=["SELLER"])
 def status(request, id):
-    import logging
     logger = logging.getLogger(__name__)
     
-    # Also write to a file for debugging
     with open('status_change_log.txt', 'a') as f:
         f.write(f"\n{'='*50}\n")
         f.write(f"Status change request received\n")
@@ -527,11 +451,9 @@ def status(request, id):
         print(f"Phone: {order_item.order.shipping_phone}")
         print(f"WhatsApp Enabled: {getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False)}")
         
-        # Update the main Order status
         order_item.order.order_status = new_status
         order_item.order.save()
         
-        # Also update the OrderItem status to keep them in sync
         order_item.status = new_status
         order_item.save()
         
@@ -539,7 +461,6 @@ def status(request, id):
             f.write(f"Status updated in database\n")
             f.write(f"WhatsApp Enabled: {getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False)}\n")
         
-        # Send WhatsApp notification based on status
         if getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False):
             print(f"Attempting to send WhatsApp notification...")
             with open('status_change_log.txt', 'a') as f:
@@ -557,7 +478,6 @@ def status(request, id):
                     print(f"DELIVERED notification result: {result1}")
                     with open('status_change_log.txt', 'a') as f:
                         f.write(f"DELIVERED notification sent: {result1}\n")
-                    # Send feedback request
                     print("Sending FEEDBACK notification...")
                     result2 = whatsapp_notifier.send_feedback_request(order_item.order)
                     print(f"FEEDBACK notification result: {result2}")
@@ -574,7 +494,6 @@ def status(request, id):
                 print(f"ERROR sending WhatsApp: {str(e)}")
                 with open('status_change_log.txt', 'a') as f:
                     f.write(f"ERROR: {str(e)}\n")
-                import traceback
                 traceback.print_exc()
         else:
             print("WhatsApp notifications are DISABLED")
@@ -639,23 +558,14 @@ def reply_review(request, review_id):
     return redirect("seller_reviews")
 
 
-# ============================================
-# SELLER REVIEW REPLY
-# ============================================
-
-from easybuy.user.models import Review
-from django.utils import timezone
-
 @login_required
 @role_required(allowed_roles=["SELLER"])
 def reply_to_review(request, review_id):
-    """Allow seller to reply to a review"""
     if request.method != "POST":
         return JsonResponse({"message": "Invalid request"}, status=400)
     
     review = get_object_or_404(Review.objects.select_related('product__seller'), id=review_id)
     
-    # Check if the review is for seller's product
     if review.product.seller.user != request.user:
         return JsonResponse({"success": False, "message": "Unauthorized"}, status=403)
     

@@ -1,6 +1,3 @@
-"""
-WhatsApp Notification Utility using Twilio
-"""
 from twilio.rest import Client
 from django.conf import settings
 import logging
@@ -9,7 +6,6 @@ logger = logging.getLogger(__name__)
 
 
 class WhatsAppNotifier:
-    """Handle WhatsApp notifications via Twilio"""
     
     def __init__(self):
         self.account_sid = getattr(settings, 'TWILIO_ACCOUNT_SID', None)
@@ -23,19 +19,15 @@ class WhatsAppNotifier:
             logger.warning("Twilio credentials not configured")
     
     def _format_phone(self, phone):
-        """Format phone number to E.164 format"""
         phone = str(phone).strip()
-        # Remove any non-digit characters
         phone = ''.join(filter(str.isdigit, phone))
         
-        # Add country code if not present (assuming India +91)
         if not phone.startswith('91') and len(phone) == 10:
             phone = '91' + phone
         
         return f'whatsapp:+{phone}'
     
     def send_message(self, to_phone, message):
-        """Send WhatsApp message"""
         if not self.client:
             logger.error("Twilio client not initialized")
             return False
@@ -56,7 +48,6 @@ class WhatsAppNotifier:
             return False
     
     def send_order_confirmation(self, order):
-        """Send order confirmation message"""
         message = f"""
 *EasyBuy - Order Confirmation*
 
@@ -84,7 +75,6 @@ Your trusted shopping partner
         return self.send_message(order.shipping_phone, message)
     
     def send_order_shipped(self, order):
-        """Send order shipped notification"""
         message = f"""
 *EasyBuy - Order Shipped*
 
@@ -106,7 +96,6 @@ Track: http://easybuy.com/user/orders/
         return self.send_message(order.shipping_phone, message)
     
     def send_order_delivered(self, order):
-        """Send order delivered notification"""
         message = f"""
 *EasyBuy - Order Delivered*
 
@@ -129,7 +118,6 @@ Thank you for choosing us!
         return self.send_message(order.shipping_phone, message)
     
     def send_feedback_request(self, order):
-        """Send feedback request after delivery"""
         message = f"""
 *EasyBuy - We'd Love Your Feedback!*
 
@@ -152,7 +140,6 @@ Your feedback helps us serve you better! 🙏
         return self.send_message(order.shipping_phone, message)
     
     def send_order_cancelled(self, order):
-        """Send order cancellation notification"""
         message = f"""
 *EasyBuy - Order Cancelled*
 
@@ -174,5 +161,4 @@ We hope to serve you again soon! 🙏
         return self.send_message(order.shipping_phone, message)
 
 
-# Singleton instance
 whatsapp_notifier = WhatsAppNotifier()

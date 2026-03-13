@@ -1,26 +1,21 @@
 from django.shortcuts import render, redirect
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
-from .models import Category, User, Otp
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from django.core.mail import send_mail
 from datetime import timedelta
 import random
 import string
-from django.core.mail import send_mail
+from .models import Category, User, Otp
 
-
-# ============================================
-# UTILITY FUNCTIONS
-# ============================================
 
 def generate_otp():
     return "".join(random.choices(string.digits, k=6))
 
 
 def send_otp_email(email, otp):
-    """Send OTP to user's email"""
     subject = "Verify Your EasyBuy Account"
     message = f"""
     Welcome to EasyBuy!
@@ -44,10 +39,6 @@ def send_otp_email(email, otp):
         return False
 
 
-# ============================================
-# AUTHENTICATION VIEWS
-# ============================================
-
 def all_login(request):
     if request.method == "POST":
         username = request.POST.get("username")
@@ -67,7 +58,6 @@ def all_login(request):
                 request, "core/login.html", {"error": "Invalid username or password"}
             )
     return render(request, "core/login.html")
-
 
 
 def register_view(request):
@@ -187,7 +177,6 @@ def verify_otp(request):
 
         user.save()
 
-
         if "pending_registration" in request.session:
             del request.session["pending_registration"]
 
@@ -201,7 +190,6 @@ def verify_otp(request):
         messages.error(request, "Invalid OTP. Please try again.")
 
     return render(request, "core/verify_otp.html", {"email": email})
-
 
 
 @login_required
