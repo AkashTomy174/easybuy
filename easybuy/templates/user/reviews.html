@@ -40,12 +40,33 @@
               <span class="text-sm font-bold text-stone-600 dark:text-stone-400">{{ review.rating }}.0 out of 5 stars</span>
               <span class="text-stone-300 dark:text-stone-600">•</span>
               <span class="text-sm text-stone-500 dark:text-stone-400">{{ review.created_at|date:"F d, Y" }}</span>
+              {% if review.is_verified_purchase %}
+              <span class="text-stone-300 dark:text-stone-600">•</span>
+              <span class="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-3 py-1 rounded-full text-xs font-bold">
+                <span class="material-symbols-outlined text-sm">verified</span>
+                Verified Purchase
+              </span>
+              {% endif %}
             </div>
             
             <!-- Review Comment -->
             <div class="mb-6 pb-6 border-b border-stone-100 dark:border-stone-700">
               <p class="text-base leading-relaxed text-stone-700 dark:text-stone-300">{{ review.comment }}</p>
             </div>
+
+            <!-- Edit/Delete Buttons (if user's own review) -->
+            {% if user.is_authenticated and review.user == user %}
+            <div class="flex items-center gap-3 mb-6 pb-6 border-b border-stone-100 dark:border-stone-700">
+              <a href="{% url 'edit_review' review.id %}" class="px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-2xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105">
+                <span class="material-symbols-outlined text-lg">edit</span>
+                Edit Review
+              </a>
+              <button onclick="deleteReview({{ review.id }})" class="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105">
+                <span class="material-symbols-outlined text-lg">delete</span>
+                Delete Review
+              </button>
+            </div>
+            {% endif %}
 
             <!-- Seller Reply -->
             {% if review.seller_reply %}
@@ -108,4 +129,49 @@
     </div>
   {% endif %}
 </div>
+<script>
+function deleteReview(reviewId) {
+  if (!confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
+    return;
+  }
+
+  fetch(`/user/reviews/delete/${reviewId}/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCookie('csrftoken'),
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showToast('Review deleted successfully', 'success');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showToast('Failed to delete review', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showToast('An error occurred', 'error');
+  });
+}
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+</script>
 {% endblock %}

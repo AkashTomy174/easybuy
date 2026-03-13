@@ -63,7 +63,7 @@
                 <h2 class="text-3xl font-black text-stone-900 dark:text-white">New Arrivals</h2>
                 <p class="mt-2 text-stone-500">The latest products just landed</p>
             </div>
-            <a href="{% url 'new_arrivals' %}">
+            <a href="{% url 'new_arrivals_user' %}">
                 <button class="rounded-2xl border border-stone-300 bg-gradient-to-r from-white to-stone-50 px-6 py-2.5 text-sm font-bold shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 dark:border-stone-600 dark:from-stone-800 dark:to-stone-700 dark:hover:shadow-primary/20">View All</button>
             </a>
         </div>
@@ -91,9 +91,9 @@
                     {% endif %}
                     
                     <button onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ item.variant.id }}, this); return false;" 
-                            class="wishlist-btn absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all duration-300 hover:bg-white hover:text-accent-terracotta hover:scale-110 dark:bg-black/50"
+                            class="wishlist-btn absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 {% if item.in_wishlist %}text-red-500{% else %}text-stone-400 hover:text-accent-terracotta{% endif %} backdrop-blur-sm transition-all duration-300 hover:bg-white hover:scale-110 dark:bg-black/50"
                             data-variant-id="{{ item.variant.id }}">
-                        <span class="material-symbols-outlined text-[20px]">favorite_border</span>
+                        <span class="material-symbols-outlined text-[20px]">{% if item.in_wishlist %}favorite{% else %}favorite_border{% endif %}</span>
                     </button>
                 </div>
 

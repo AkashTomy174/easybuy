@@ -1,0 +1,179 @@
+{% extends 'core/core_base.html' %}
+{% block title %}Edit Review - {{ product.name }} | EasyBuy{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl px-4 py-16 lg:px-0">
+  <!-- Header -->
+  <div class="mb-12">
+    <a href="{% url 'product_detail_user' product.slug %}" class="inline-flex items-center gap-2 text-stone-600 dark:text-stone-400 hover:text-primary transition-colors mb-6 font-medium">
+      <span class="material-symbols-outlined text-xl">arrow_back</span>
+      Back to Product
+    </a>
+    <h1 class="text-5xl font-black text-stone-900 dark:text-white mb-3">Edit Your Review</h1>
+    <p class="text-lg text-stone-600 dark:text-stone-400">Update your feedback</p>
+  </div>
+
+  <!-- Product Card -->
+  <div class="mb-10 p-6 bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 rounded-3xl border border-stone-200 dark:border-stone-600">
+    <div class="flex items-center gap-5">
+      {% if variant.images.first %}
+        <img src="{{ variant.images.first.image.url }}" alt="{{ product.name }}" class="w-24 h-24 rounded-2xl object-cover flex-shrink-0 shadow-md">
+      {% else %}
+        <div class="w-24 h-24 bg-gradient-to-br from-stone-300 to-stone-400 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
+          <span class="material-symbols-outlined text-4xl text-white">image</span>
+        </div>
+      {% endif %}
+      <div>
+        <span class="text-xs font-black uppercase tracking-wider text-accent-terracotta mb-1 block">{{ product.brand }}</span>
+        <h2 class="font-black text-2xl text-stone-900 dark:text-white mb-1">{{ product.name }}</h2>
+        <p class="text-sm text-stone-600 dark:text-stone-400">{{ variant.name|default:"Standard Variant" }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Review Form -->
+  <div class="bg-white dark:bg-surface-dark rounded-3xl border border-stone-200 dark:border-stone-700 p-8 shadow-xl">
+    <form method="post" class="space-y-8">
+      {% csrf_token %}
+      
+      <!-- Rating Section -->
+      <div class="text-center pb-8 border-b border-stone-200 dark:border-stone-700">
+        <label class="block text-sm font-black text-stone-900 dark:text-white mb-6 uppercase tracking-widest">Rate This Product</label>
+        <div class="flex gap-3 justify-center mb-4" id="star-rating">
+          {% for star in "12345" %}
+            <label class="cursor-pointer transition-all hover:scale-125" for="rating_{{ star }}">
+              <input type="radio" name="rating" id="rating_{{ star }}" value="{{ star }}" class="sr-only" {% if review.rating == star|add:"0" %}checked{% endif %} required>
+              <span class="material-symbols-outlined text-5xl star-icon" data-rating="{{ star }}">star</span>
+            </label>
+          {% endfor %}
+        </div>
+        <p class="text-lg font-bold" id="rating-text">Click a star to rate</p>
+      </div>
+
+      <!-- Review Text -->
+      <div>
+        <label for="comment" class="block text-sm font-black text-stone-900 dark:text-white mb-4 uppercase tracking-widest">Your Review</label>
+        <textarea id="comment" name="comment" rows="8" class="w-full px-5 py-4 border-2 border-stone-200 dark:border-stone-700 rounded-2xl bg-white dark:bg-stone-800 text-stone-900 dark:text-white focus:ring-4 focus:ring-primary/20 focus:border-primary resize-none font-medium placeholder-stone-400 text-base" placeholder="Tell us what you think about this product..." required maxlength="1000">{{ review.comment }}</textarea>
+        <div class="flex items-center justify-between mt-2">
+          <p class="text-xs text-stone-500">Be honest and helpful</p>
+          <p class="text-xs text-stone-500" id="char-count">{{ review.comment|length }} / 1000</p>
+        </div>
+      </div>
+
+      <!-- Submit Buttons -->
+      <div class="flex flex-col sm:flex-row gap-4 pt-6">
+        <button type="submit" class="flex-1 bg-gradient-to-r from-primary to-primary-dark hover:shadow-2xl hover:shadow-primary/30 text-white font-black py-5 px-8 rounded-2xl text-lg transition-all flex items-center justify-center gap-3 hover:scale-105">
+          <span class="material-symbols-outlined text-2xl">check_circle</span>
+          Update Review
+        </button>
+        <a href="{% url 'product_detail_user' product.slug %}" class="flex-1 bg-stone-100 hover:bg-stone-200 dark:bg-stone-700 dark:hover:bg-stone-600 text-stone-900 dark:text-white font-bold py-5 px-8 rounded-2xl text-lg transition-all text-center flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined">close</span>
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.star-icon {
+  color: #d4d4d8; /* stone-300 */
+  transition: all 0.2s ease;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.star-icon.filled {
+  color: #fbbf24; /* yellow-400 */
+  filter: drop-shadow(0 4px 8px rgba(251, 191, 36, 0.4));
+}
+
+.star-icon.hovered {
+  color: #fcd34d; /* yellow-300 */
+  filter: drop-shadow(0 4px 8px rgba(252, 211, 77, 0.5));
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const starContainer = document.getElementById('star-rating');
+  const stars = starContainer.querySelectorAll('.star-icon');
+  const ratingText = document.getElementById('rating-text');
+  const commentField = document.getElementById('comment');
+  const charCount = document.getElementById('char-count');
+  const ratingLabels = ['Poor - Not satisfied', 'Fair - Below expectations', 'Good - Meets expectations', 'Very Good - Exceeds expectations', 'Excellent - Outstanding!'];
+  let selectedRating = {{ review.rating }};
+
+  // Initialize with existing rating
+  updateStars(selectedRating);
+  ratingText.textContent = ratingLabels[selectedRating - 1];
+  ratingText.classList.add('text-primary', 'font-black');
+
+  // Character counter
+  commentField.addEventListener('input', function() {
+    charCount.textContent = this.value.length + ' / 1000';
+    if (this.value.length > 900) {
+      charCount.classList.add('text-orange-500', 'font-bold');
+    } else {
+      charCount.classList.remove('text-orange-500', 'font-bold');
+    }
+  });
+
+  // Handle star click
+  stars.forEach((star, index) => {
+    const label = star.parentElement;
+    const input = label.querySelector('input');
+    
+    label.addEventListener('click', function() {
+      selectedRating = parseInt(star.dataset.rating);
+      updateStars(selectedRating);
+      ratingText.textContent = ratingLabels[selectedRating - 1];
+      ratingText.classList.add('text-primary', 'font-black');
+      ratingText.classList.remove('text-stone-600');
+    });
+
+    // Handle hover
+    label.addEventListener('mouseenter', function() {
+      const hoverRating = parseInt(star.dataset.rating);
+      highlightStars(hoverRating);
+      if (!selectedRating) {
+        ratingText.textContent = ratingLabels[hoverRating - 1];
+        ratingText.classList.add('text-stone-600');
+      }
+    });
+  });
+
+  // Reset to selected rating on mouse leave
+  starContainer.addEventListener('mouseleave', function() {
+    updateStars(selectedRating);
+    if (selectedRating) {
+      ratingText.textContent = ratingLabels[selectedRating - 1];
+    } else {
+      ratingText.textContent = 'Click a star to rate';
+      ratingText.classList.remove('text-stone-600');
+    }
+  });
+
+  function updateStars(rating) {
+    stars.forEach((star, index) => {
+      const starRating = parseInt(star.dataset.rating);
+      star.classList.remove('filled', 'hovered');
+      if (starRating <= rating) {
+        star.classList.add('filled');
+      }
+    });
+  }
+
+  function highlightStars(rating) {
+    stars.forEach((star, index) => {
+      const starRating = parseInt(star.dataset.rating);
+      star.classList.remove('filled', 'hovered');
+      if (starRating <= rating) {
+        star.classList.add('hovered');
+      } else if (starRating <= selectedRating) {
+        star.classList.add('filled');
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

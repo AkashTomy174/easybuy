@@ -187,115 +187,148 @@
     </div>
 
     <!-- Header -->
-    <header class="flex h-20 items-center justify-between border-b border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-surface-dark/95 backdrop-blur-md px-4 lg:px-12 z-50 sticky top-0 shadow-sm">
-        
-        <!-- Logo & Nav -->
-        <div class="flex items-center gap-8">
-            <a href="{% url 'home' %}" class="flex items-center gap-3 group">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-green-700 via-green-600 to-orange-500 text-white shadow-xl shadow-green-700/40 group-hover:scale-105 transition-transform">
-                    <span class="material-symbols-outlined text-2xl">shopping_bag</span>
-                </div>
-                <h1 class="text-xl font-black tracking-tight group-hover:scale-105 transition-transform">
-                    <span class="text-green-700 dark:text-green-400">Easy</span><span class="text-orange-500 dark:text-orange-400">Buy</span>
-                </h1>
-            </a>
-            
-            <nav class="hidden xl:flex items-center gap-1">
-                <a class="px-4 py-2 text-sm font-medium rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'all_products' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'all_products' %}">Shop</a>
-                <a class="px-4 py-2 text-sm font-medium rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'all_categories' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'all_categories' %}">Categories</a>
-                <a class="px-4 py-2 text-sm font-medium rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'new_arrivals' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'new_arrivals' %}">New Arrivals</a>
-                <a class="px-4 py-2 text-sm font-medium rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300" href="#">Deals</a>
-            </nav>
-        </div>
-
-        <!-- Search Bar -->
-        <div class="flex-1 max-w-xl mx-8 hidden md:block">
-            <form action="{% url 'all_products' %}" method="get" class="relative group">
-                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-primary transition-colors">search</span>
-                <input name="q" class="h-12 w-full rounded-2xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 pl-12 pr-4 text-sm font-medium text-stone-900 dark:text-white placeholder:text-stone-400 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-inner" placeholder="Search for products, brands, categories..." type="text"/>
-                <button type="submit" class="hidden">Search</button>
-            </form>
-        </div>
-
-        <!-- User Actions -->
-        <div class="flex items-center gap-2 lg:gap-4">
-            <!-- Wishlist -->
-            <a href="{% url 'wishlist' %}" class="flex items-center gap-2 p-2.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300">
-                <span class="material-symbols-outlined text-[24px]">favorite_border</span>
-                <span class="hidden lg:inline text-sm font-medium">Wishlist</span>
-            </a>
-            
-            <!-- Dark Mode Toggle -->
-            <button id="darkModeToggle" class="flex items-center justify-center p-2.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300" aria-label="Toggle dark mode">
-                <span class="material-symbols-outlined text-[24px] dark:hidden">dark_mode</span>
-                <span class="material-symbols-outlined text-[24px] hidden dark:block">light_mode</span>
-            </button>
-            
-            <!-- Cart -->
-            <a href="{% url 'cart' %}" class="flex items-center gap-2 p-2.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative">
-                <span class="material-symbols-outlined text-[24px]">shopping_cart</span>
-                <span class="hidden lg:inline text-sm font-medium">Cart</span>
-                <span id="header-cart-count" class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent-terracotta text-[10px] font-bold text-white ring-2 ring-white dark:ring-surface-dark">{% if request.user.is_authenticated %}{{ request.user.cart.items.count }}{% else %}0{% endif %}</span>
-            </a>
-            
-            <!-- Divider -->
-            <div class="h-8 w-px bg-stone-200 dark:bg-stone-700 mx-1 hidden sm:block"></div>
-            
-            <!-- User Menu -->
-            {% if request.user.is_authenticated %}
-            <div class="relative group">
-                <button class="flex items-center gap-2 rounded-2xl py-1.5 px-3 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
-                    <div class="h-9 w-9 overflow-hidden rounded-full bg-stone-200 ring-2 ring-white dark:ring-stone-700 flex items-center justify-center">
-                        {% if request.user.profile_image %}
-                            <img src="{{ request.user.profile_image.url }}" class="h-full w-full object-cover">
-                        {% else %}
-                            <span class="material-symbols-outlined text-stone-500">account_circle</span>
-                        {% endif %}
-                    </div>
-                    <span class="hidden lg:block text-sm font-medium text-stone-700 dark:text-stone-200 max-w-[100px] truncate">{{ request.user.username }}</span>
-                    <span class="material-symbols-outlined text-[18px] text-stone-400 hidden lg:block">expand_more</span>
-                </button>
+    <header class="sticky top-0 z-50 bg-white/95 dark:bg-surface-dark/95 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 shadow-sm">
+        <!-- Main Header -->
+        <div class="mx-auto max-w-7xl px-4 lg:px-6">
+            <div class="flex h-16 items-center justify-between">
                 
-                <!-- Dropdown -->
-                <div class="absolute right-0 top-full mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right z-50">
-                    <div class="bg-white dark:bg-surface-dark rounded-2xl shadow-xl border border-stone-200 dark:border-stone-700 py-2">
-                        <div class="px-4 py-3 border-b border-stone-100 dark:border-stone-700">
-                            <p class="text-sm font-bold text-stone-900 dark:text-white">{{ request.user.get_full_name|default:request.user.username }}</p>
-                            <p class="text-xs text-stone-500">{{ request.user.email }}</p>
+                <!-- Left: Logo -->
+                <div class="flex items-center">
+                    <a href="{% url 'home' %}" class="flex items-center gap-2 group">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-700 via-green-600 to-orange-500 text-white shadow-lg group-hover:scale-105 transition-transform">
+                            <span class="material-symbols-outlined text-xl">shopping_bag</span>
                         </div>
-                        <a href="{% url 'profile_settings' %}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
-                            <span class="material-symbols-outlined text-[20px]">person</span>
-                            My Profile
-                        </a>
-                        <a href="{% url 'manage_addresses' %}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
-                            <span class="material-symbols-outlined text-[20px]">location_on</span>
-                            My Addresses
-                        </a>
-                        <a href="{% url 'user_orders' %}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
-                            <span class="material-symbols-outlined text-[20px]">receipt_long</span>
-                            My Orders
-                        </a>
-                        <div class="border-t border-stone-100 dark:border-stone-700 mt-2 pt-2">
-                            <form action="{% url 'logout' %}" method="post" class="m-0">
-                                {% csrf_token %}
-                                <button type="submit" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
-                                    <span class="material-symbols-outlined text-[20px]">logout</span>
-                                    Logout
-                                </button>
-                            </form>
+                        <h1 class="text-lg font-black tracking-tight group-hover:scale-105 transition-transform">
+                            <span class="text-green-700 dark:text-green-400">Easy</span><span class="text-orange-500 dark:text-orange-400">Buy</span>
+                        </h1>
+                    </a>
+                </div>
+
+                <!-- Center: Search Bar -->
+                <div class="flex-1 max-w-2xl mx-6 hidden lg:block">
+                    <form action="{% url 'all_products' %}" method="get" class="relative group">
+                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-primary transition-colors text-xl">search</span>
+                        <input name="q" class="h-11 w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 pl-12 pr-4 text-sm font-medium text-stone-900 dark:text-white placeholder:text-stone-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search products, brands..." type="text"/>
+                    </form>
+                </div>
+
+                <!-- Right: Actions -->
+                <div class="flex items-center gap-1">
+                    
+                    <!-- Desktop Navigation -->
+                    <nav class="hidden xl:flex items-center gap-1 mr-4">
+                        <a class="px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'all_products' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'all_products' %}">Shop</a>
+                        <a class="px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'all_categories' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'all_categories' %}">Categories</a>
+                        <a class="px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'new_arrivals_user' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'new_arrivals_user' %}">New</a>
+                        <a class="px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'best_sellers' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'best_sellers' %}">Trending</a>
+                    </nav>
+                    
+                    <!-- Wishlist -->
+                    <a href="{% url 'wishlist' %}" class="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative">
+                        <span class="material-symbols-outlined text-xl">favorite_border</span>
+                        {% if request.user.is_authenticated %}
+                        <span id="header-wishlist-count" class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">{{ request.user.wishlists.first.items.count|default:0 }}</span>
+                        {% endif %}
+                    </a>
+                    
+                    <!-- Cart -->
+                    <a href="{% url 'cart' %}" class="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative">
+                        <span class="material-symbols-outlined text-xl">shopping_cart</span>
+                        <span id="header-cart-count" class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[10px] font-bold text-white">{% if request.user.is_authenticated %}{{ request.user.cart.items.count }}{% else %}0{% endif %}</span>
+                    </a>
+                    
+                    <!-- Dark Mode Toggle -->
+                    <button id="darkModeToggle" class="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300" aria-label="Toggle dark mode">
+                        <span class="material-symbols-outlined text-xl dark:hidden">dark_mode</span>
+                        <span class="material-symbols-outlined text-xl hidden dark:block">light_mode</span>
+                    </button>
+                    
+                    <!-- Divider -->
+                    <div class="h-6 w-px bg-stone-200 dark:bg-stone-700 mx-2 hidden sm:block"></div>
+                    
+                    <!-- User Menu -->
+                    {% if request.user.is_authenticated %}
+                    <div class="relative group">
+                        <button class="flex items-center gap-2 rounded-lg py-1.5 px-2 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+                            <div class="h-8 w-8 overflow-hidden rounded-full bg-stone-200 ring-1 ring-stone-300 dark:ring-stone-600 flex items-center justify-center">
+                                {% if request.user.profile_image %}
+                                    <img src="{{ request.user.profile_image.url }}" class="h-full w-full object-cover">
+                                {% else %}
+                                    <span class="material-symbols-outlined text-stone-500 text-lg">account_circle</span>
+                                {% endif %}
+                            </div>
+                            <span class="hidden lg:block text-sm font-medium text-stone-700 dark:text-stone-200 max-w-[80px] truncate">{{ request.user.username }}</span>
+                            <span class="material-symbols-outlined text-sm text-stone-400 hidden lg:block">expand_more</span>
+                        </button>
+                        
+                        <!-- Dropdown -->
+                        <div class="absolute right-0 top-full mt-2 w-52 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right z-50">
+                            <div class="bg-white dark:bg-surface-dark rounded-xl shadow-xl border border-stone-200 dark:border-stone-700 py-2">
+                                <div class="px-4 py-3 border-b border-stone-100 dark:border-stone-700">
+                                    <p class="text-sm font-bold text-stone-900 dark:text-white truncate">{{ request.user.get_full_name|default:request.user.username }}</p>
+                                    <p class="text-xs text-stone-500 truncate">{{ request.user.email }}</p>
+                                </div>
+                                <a href="{% url 'profile_settings' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
+                                    <span class="material-symbols-outlined text-lg">person</span>
+                                    Profile
+                                </a>
+                                <a href="{% url 'user_orders' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
+                                    <span class="material-symbols-outlined text-lg">receipt_long</span>
+                                    Orders
+                                </a>
+                                <a href="{% url 'manage_addresses' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
+                                    <span class="material-symbols-outlined text-lg">location_on</span>
+                                    Addresses
+                                </a>
+                                <div class="border-t border-stone-100 dark:border-stone-700 mt-2 pt-2">
+                                    <form action="{% url 'logout' %}" method="post" class="m-0">
+                                        {% csrf_token %}
+                                        <button type="submit" class="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                            <span class="material-symbols-outlined text-lg">logout</span>
+                                            Logout
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                    {% else %}
+                    <a href="{% url 'all_login' %}" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primary-dark transition-colors">
+                        <span class="material-symbols-outlined text-lg">login</span>
+                        <span class="hidden sm:inline">Sign In</span>
+                    </a>
+                    {% endif %}
+                    
+                    <!-- Mobile Menu Button -->
+                    <button id="mobileMenuBtn" class="flex xl:hidden items-center justify-center h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 ml-2">
+                        <span class="material-symbols-outlined text-xl">menu</span>
+                    </button>
                 </div>
             </div>
-            {% else %}
-            <a href="{% url 'all_login' %}" class="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-colors shadow-button">
-                <span class="material-symbols-outlined text-[20px]">login</span>
-                <span class="hidden lg:inline">Sign In</span>
-            </a>
-            <a href="{% url 'register' %}" class="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-2xl border-2 border-stone-200 dark:border-stone-700 font-bold text-sm text-stone-600 dark:text-stone-300 hover:border-primary hover:text-primary transition-colors">
-                Register
-            </a>
-            {% endif %}
+        </div>
+        
+        <!-- Mobile Search Bar -->
+        <div class="lg:hidden border-t border-stone-200 dark:border-stone-700 px-4 py-3">
+            <form action="{% url 'all_products' %}" method="get" class="relative">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg">search</span>
+                <input name="q" class="h-10 w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 pl-10 pr-4 text-sm font-medium text-stone-900 dark:text-white placeholder:text-stone-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search products..." type="text"/>
+            </form>
+        </div>
+        
+        <!-- Mobile Navigation Menu -->
+        <div id="mobileMenu" class="xl:hidden hidden border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark">
+            <nav class="px-4 py-3 space-y-1">
+                <a class="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'all_products' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'all_products' %}">Shop All Products</a>
+                <a class="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'all_categories' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'all_categories' %}">Categories</a>
+                <a class="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'new_arrivals_user' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'new_arrivals_user' %}">New Arrivals</a>
+                <a class="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'best_sellers' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'best_sellers' %}">Best Sellers</a>
+                <a class="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300" href="#">Deals & Offers</a>
+                {% if not request.user.is_authenticated %}
+                <div class="border-t border-stone-200 dark:border-stone-700 pt-3 mt-3">
+                    <a href="{% url 'register' %}" class="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300">Register</a>
+                </div>
+                {% endif %}
+            </nav>
         </div>
     </header>
 
@@ -309,6 +342,10 @@
             <a href="{% url 'all_products' %}" class="flex flex-col items-center gap-1 p-2 {% if request.resolver_match.url_name == 'all_products' %}text-primary{% else %}text-stone-500{% endif %}">
                 <span class="material-symbols-outlined">grid_view</span>
                 <span class="text-[10px] font-medium">Shop</span>
+            </a>
+            <a href="{% url 'best_sellers' %}" class="flex flex-col items-center gap-1 p-2 {% if request.resolver_match.url_name == 'best_sellers' %}text-primary{% else %}text-stone-500{% endif %}">
+                <span class="material-symbols-outlined">trending_up</span>
+                <span class="text-[10px] font-medium">Trending</span>
             </a>
             <a href="#" onclick="document.querySelector('input[name=q]')&&document.querySelector('input[name=q]').focus()" class="flex flex-col items-center gap-1 p-2 text-stone-500">
                 <span class="material-symbols-outlined">search</span>
@@ -390,9 +427,9 @@
                 <div>
                     <h3 class="text-sm font-bold text-stone-900 dark:text-white uppercase tracking-wider mb-4">Shop</h3>
                     <ul class="space-y-3">
-                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">All Products</a></li>
-                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">New Arrivals</a></li>
-                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Best Sellers</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'all_products' %}">All Products</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'new_arrivals_user' %}">New Arrivals</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'best_sellers' %}">Best Sellers</a></li>
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Deals & Offers</a></li>
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Gift Cards</a></li>
                     </ul>
@@ -661,6 +698,7 @@ function toggleWishlist(variantId, buttonElement) {
                 buttonElement.classList.remove('text-red-500');
                 showToast('Removed from wishlist', 'success');
             }
+            updateWishlistCount();
         } else {
             showToast(data.message || 'Error updating wishlist', 'error');
         }
@@ -671,9 +709,50 @@ function toggleWishlist(variantId, buttonElement) {
     });
 }
 
+function updateWishlistCount() {
+    // Update wishlist count in header
+    fetch('/user/wishlist/', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.text())
+    .then(html => {
+        // Extract count from response (simple approach)
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const items = doc.querySelectorAll('.wishlist-item');
+        const count = items.length;
+        
+        const wishlistCountEl = document.getElementById('header-wishlist-count');
+        if (wishlistCountEl) {
+            wishlistCountEl.textContent = count;
+            if (count === 0) {
+                wishlistCountEl.style.display = 'none';
+            } else {
+                wishlistCountEl.style.display = 'flex';
+            }
+        }
+    })
+    .catch(err => console.error('Error updating wishlist count:', err));
+}
+
 function updateCartCount(count) {
     updateHeaderCartCount(count);
 }
+
+// Mobile Menu Toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    
+    if (mobileMenuBtn && mobileMenu) {
+        mobileMenuBtn.addEventListener('click', function() {
+            mobileMenu.classList.toggle('hidden');
+        });
+    }
+});
 </script>
 </body>
 </html>

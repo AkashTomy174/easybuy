@@ -4,8 +4,16 @@
 {% block content %}
 <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
     <div>
-        <h1 class="text-3xl font-black tracking-tight text-stone-900 dark:text-white">Sales Dashboard</h1>
-        <p class="text-stone-500">Performance insights for the last 30 days.</p>
+        <div class="flex items-center gap-3 mb-2">
+            <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-lg">
+                <span class="material-symbols-outlined text-2xl">storefront</span>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black tracking-tight text-stone-900 dark:text-white">{{ request.user.seller_profile.store_name }}</h1>
+                <p class="text-sm text-stone-500">Managed by {{ request.user.get_full_name|default:request.user.username }}</p>
+            </div>
+        </div>
+        <p class="text-stone-500 mt-2">Performance insights for the last 30 days.</p>
     </div>
     <div class="flex items-center gap-3">
         <div class="flex bg-white dark:bg-surface-dark border border-stone-200 dark:border-stone-700 rounded-xl p-1">

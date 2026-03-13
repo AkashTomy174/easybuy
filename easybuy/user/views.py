@@ -37,6 +37,16 @@ def home_view(request):
         .order_by("-id")[:8]
     )
     
+    # Check wishlist status for authenticated users
+    wishlist_variant_ids = set()
+    if request.user.is_authenticated:
+        variant_ids = [v.id for v in variants]
+        wishlist_items = WishlistItem.objects.filter(
+            wishlist__user=request.user,
+            variant_id__in=variant_ids
+        ).values_list('variant_id', flat=True)
+        wishlist_variant_ids = set(wishlist_items)
+
     product_data = []
     for variant in variants:
         primary_image = None
@@ -50,7 +60,11 @@ def home_view(request):
                     primary_image = img
                     break
         product_data.append(
-            {"variant": variant, "image": primary_image}
+            {
+                "variant": variant,
+                "image": primary_image,
+                "in_wishlist": variant.id in wishlist_variant_ids
+            }
         )
     return render(
         request,
@@ -84,10 +98,19 @@ def all_products(request):
         "product__subcategory__category",
     )
 
+    # Base query for brands - start with all approved products
+    brand_query = Product.objects.filter(
+        is_active=True,
+        approval_status="APPROVED",
+        seller__status="APPROVED"
+    )
+
     if icategory:
         variants = variants.filter(product__subcategory__category__slug=icategory)
+        brand_query = brand_query.filter(subcategory__category__slug=icategory)
     if isubCategory:
         variants = variants.filter(product__subcategory__slug=isubCategory)
+        brand_query = brand_query.filter(subcategory__slug=isubCategory)
     if ibrand:
         variants = variants.filter(product__brand__in=ibrand)
     if iprod:
@@ -96,6 +119,11 @@ def all_products(request):
             Q(product__name__icontains=search_query)
             | Q(product__description__icontains=search_query)
             | Q(product__brand__icontains=search_query)
+        )
+        brand_query = brand_query.filter(
+            Q(name__icontains=search_query)
+            | Q(description__icontains=search_query)
+            | Q(brand__icontains=search_query)
         )
     if min_price:
         min_price = float(min_price)
@@ -115,13 +143,15 @@ def all_products(request):
     else:
         variants = variants.order_by("-id")
 
+    # Get brands based on current filters (category/subcategory/search)
     all_brands = (
-        Product.objects.filter(
-            is_active=True, approval_status="APPROVED", seller__status="APPROVED"
-        )
+        brand_query
         .values_list("brand", flat=True)
         .distinct()
+        .exclude(brand__isnull=True)
+        .exclude(brand__exact="")
     )
+
     categories = Category.objects.filter(is_active=True)
     subcategories = SubCategory.objects.filter(is_active=True)
 
@@ -137,10 +167,23 @@ def all_products(request):
         if img.image and img.variant_id not in primary_images:
             primary_images[img.variant_id] = img
 
+    # Check wishlist status for authenticated users
+    wishlist_variant_ids = set()
+    if request.user.is_authenticated:
+        wishlist_items = WishlistItem.objects.filter(
+            wishlist__user=request.user,
+            variant_id__in=variant_ids
+        ).values_list('variant_id', flat=True)
+        wishlist_variant_ids = set(wishlist_items)
+
     product_data = []
     for variant in variant_list:
         product_data.append(
-            {"variant": variant, "image": primary_images.get(variant.id)}
+            {
+                "variant": variant,
+                "image": primary_images.get(variant.id),
+                "in_wishlist": variant.id in wishlist_variant_ids
+            }
         )
 
     paginator = Paginator(product_data, 12)
@@ -172,19 +215,27 @@ def add_reviews(request, variant_id):
     product = variant.product
     user = request.user
 
-    # Check if user has purchased this product
     has_purchased = OrderItem.objects.filter(
         order__user=user, variant__product=product, order__order_status="DELIVERED"
     ).exists()
 
     if not has_purchased:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': 'You can only review products you have purchased and received.'
+            })
         messages.error(
             request, "You can only review products you have purchased and received."
         )
         return redirect("product_detail_user", slug=product.slug)
 
-    # Prevent duplicate reviews
     if Review.objects.filter(user=user, product=product).exists():
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': 'You have already reviewed this product.'
+            })
         messages.error(request, "You have already reviewed this product.")
         return redirect("product_detail_user", slug=product.slug)
 
@@ -192,8 +243,6 @@ def add_reviews(request, variant_id):
 
         rating = request.POST.get("rating")
         comment = request.POST.get("comment", "").strip()
-
-        # Validate rating
         try:
             rating = int(rating)
         except (ValueError, TypeError):
@@ -208,7 +257,6 @@ def add_reviews(request, variant_id):
             messages.error(request, "Comment is required.")
             return redirect("product_detail_user", slug=product.slug)
 
-        # Create review
         Review.objects.create(
             user=user, product=product, rating=rating, comment=comment
         )
@@ -219,6 +267,25 @@ def add_reviews(request, variant_id):
     context = {"product": product, "variant": variant}
 
     return render(request, "user/add_review.html", context)
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def check_purchase_status(request, variant_id):
+    if request.method != "GET":
+        return JsonResponse({"message": "Invalid request"}, status=400)
+    variant = get_object_or_404(ProductVariant.objects.select_related("product"), id=variant_id)
+    product = variant.product
+    user = request.user
+    has_purchased = OrderItem.objects.filter(
+        order__user=user, variant__product=product, order__order_status="DELIVERED"
+    ).exists()
+    has_reviewed = Review.objects.filter(user=user, product=product).exists()
+    return JsonResponse({
+        "has_purchased": has_purchased,
+        "has_reviewed": has_reviewed,
+        "can_review": has_purchased and not has_reviewed
+    })
 
 
 @login_required
@@ -238,6 +305,13 @@ def reviews(request, variant_id):
         .order_by("-created_at")
     )
 
+    for review in reviews_qs:
+        review.is_verified_purchase = OrderItem.objects.filter(
+            order__user=review.user,
+            variant__product=variant.product,
+            order__order_status="DELIVERED"
+        ).exists()
+
     context = {
         "reviews": reviews_qs,
         "variant": variant,
@@ -248,19 +322,101 @@ def reviews(request, variant_id):
     return render(request, "user/reviews.html", context)
 
 
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def edit_review(request, review_id):
+    review = get_object_or_404(Review, id=review_id, user=request.user)
+    product = review.product
+
+    if request.method == "POST":
+        rating = request.POST.get("rating")
+        comment = request.POST.get("comment", "").strip()
+
+        try:
+            rating = int(rating)
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid rating.")
+            return redirect("product_detail_user", slug=product.slug)
+
+        if rating < 1 or rating > 5:
+            messages.error(request, "Rating must be between 1 and 5.")
+            return redirect("product_detail_user", slug=product.slug)
+
+        if not comment:
+            messages.error(request, "Comment is required.")
+            return redirect("product_detail_user", slug=product.slug)
+
+        review.rating = rating
+        review.comment = comment
+        review.save()
+
+        messages.success(request, "Review updated successfully!")
+        return redirect("product_detail_user", slug=product.slug)
+    variant = product.variants.first()
+    context = {"product": product, "variant": variant, "review": review}
+    return render(request, "user/edit_review.html", context)
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def delete_review(request, review_id):
+    if request.method != "POST":
+        return JsonResponse({"message": "Invalid request"}, status=400)
+
+    review = get_object_or_404(Review, id=review_id, user=request.user)
+    product_slug = review.product.slug
+    review.delete()
+
+    messages.success(request, "Review deleted successfully.")
+    return JsonResponse({"success": True, "redirect_url": f"/user/products/{product_slug}/"})
+
+
 def new_arrival(request):
-    products = Product.objects.filter(
-        is_active=True,
-        approval_status="APPROVED",
-        seller__status="APPROVED",
-    ).select_related(
-        "seller"
-    ).prefetch_related(
-        "variants__images"
-    ).order_by(
-        "-created_at"
-    )[:8]
-    return render(request, "user/new_arrivals.html", {"products": products})
+    variants = (
+        ProductVariant.objects.filter(
+            product__is_active=True,
+            product__approval_status="APPROVED",
+            product__seller__status="APPROVED",
+        )
+        .select_related("product", "product__seller")
+        .prefetch_related("images")
+        .order_by("-id")
+    )
+
+    wishlist_variant_ids = set()
+    if request.user.is_authenticated:
+        variant_ids = [v.id for v in variants]
+        wishlist_items = WishlistItem.objects.filter(
+            wishlist__user=request.user,
+            variant_id__in=variant_ids
+        ).values_list('variant_id', flat=True)
+        wishlist_variant_ids = set(wishlist_items)
+
+    product_data = []
+    for variant in variants:
+        primary_image = None
+        for img in variant.images.filter(is_primary=True):
+            if img.image:
+                primary_image = img
+                break
+        if not primary_image:
+            for img in variant.images.all():
+                if img.image:
+                    primary_image = img
+                    break
+        product_data.append(
+            {
+                "variant": variant,
+                "image": primary_image,
+                "in_wishlist": variant.id in wishlist_variant_ids
+            }
+        )
+
+    paginator = Paginator(product_data, 12)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "user/new_arrivals.html", {"page_obj": page_obj})
 
 
 def category_products(request, slug=None, id=None):
@@ -274,19 +430,53 @@ def category_products(request, slug=None, id=None):
         raise Http404("Category not found")
 
     subcategory = SubCategory.objects.filter(category=categories, is_active=True)
-    product = Product.objects.filter(
-        subcategory__category=categories,
-        is_active=True,
-        approval_status="APPROVED",
-        seller__status="APPROVED",
-    ).prefetch_related("variants__images")
+    variants = ProductVariant.objects.filter(
+        product__subcategory__category=categories,
+        product__is_active=True,
+        product__approval_status="APPROVED",
+        product__seller__status="APPROVED",
+    ).select_related("product", "product__seller").prefetch_related("images")
+
+    wishlist_variant_ids = set()
+    if request.user.is_authenticated:
+        variant_ids = [v.id for v in variants]
+        wishlist_items = WishlistItem.objects.filter(
+            wishlist__user=request.user,
+            variant_id__in=variant_ids
+        ).values_list('variant_id', flat=True)
+        wishlist_variant_ids = set(wishlist_items)
+
+    product_data = []
+    for variant in variants:
+        primary_image = None
+        for img in variant.images.filter(is_primary=True):
+            if img.image:
+                primary_image = img
+                break
+        if not primary_image:
+            for img in variant.images.all():
+                if img.image:
+                    primary_image = img
+                    break
+        product_data.append(
+            {
+                "variant": variant,
+                "image": primary_image,
+                "in_wishlist": variant.id in wishlist_variant_ids
+            }
+        )
+
+    paginator = Paginator(product_data, 12)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
     return render(
         request,
         "core/category_products.html",
         {
             "categories": categories,
             "subcategory": subcategory,
-            "product": product,
+            "page_obj": page_obj,
             "active_sub": None,
         },
     )
@@ -304,12 +494,45 @@ def subcategory_products(request, slug=None, id=None):
 
     categories = current_sub.category
     subcategory = SubCategory.objects.filter(category=categories, is_active=True)
-    product = Product.objects.filter(
-        subcategory=current_sub,
-        is_active=True,
-        approval_status="APPROVED",
-        seller__status="APPROVED",
-    ).prefetch_related("variants__images")
+    variants = ProductVariant.objects.filter(
+        product__subcategory=current_sub,
+        product__is_active=True,
+        product__approval_status="APPROVED",
+        product__seller__status="APPROVED",
+    ).select_related("product", "product__seller").prefetch_related("images")
+
+    wishlist_variant_ids = set()
+    if request.user.is_authenticated:
+        variant_ids = [v.id for v in variants]
+        wishlist_items = WishlistItem.objects.filter(
+            wishlist__user=request.user,
+            variant_id__in=variant_ids
+        ).values_list('variant_id', flat=True)
+        wishlist_variant_ids = set(wishlist_items)
+
+    product_data = []
+    for variant in variants:
+        primary_image = None
+        for img in variant.images.filter(is_primary=True):
+            if img.image:
+                primary_image = img
+                break
+        if not primary_image:
+            for img in variant.images.all():
+                if img.image:
+                    primary_image = img
+                    break
+        product_data.append(
+            {
+                "variant": variant,
+                "image": primary_image,
+                "in_wishlist": variant.id in wishlist_variant_ids
+            }
+        )
+
+    paginator = Paginator(product_data, 12)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
 
     return render(
         request,
@@ -317,7 +540,7 @@ def subcategory_products(request, slug=None, id=None):
         {
             "categories": categories,
             "subcategory": subcategory,
-            "product": product,
+            "page_obj": page_obj,
             "active_sub": current_sub.id,
         },
     )
@@ -365,14 +588,30 @@ def product_detail(request, slug=None, id=None):
         .exclude(slug=product.slug)[:4]
     )
 
-    # Reviews context
     reviews = Review.objects.filter(product=product).order_by("-created_at")[:5]
     avg_rating = reviews.aggregate(Avg("rating"))["rating__avg"] or 0
     existing_review = None
+
+    wishlist_variant_ids = set()
     if request.user.is_authenticated:
         existing_review = Review.objects.filter(
             user=request.user, product=product
         ).first()
+
+
+        variant_ids = [v.id for v in product.variants.all()]
+        wishlist_items = WishlistItem.objects.filter(
+            wishlist__user=request.user,
+            variant_id__in=variant_ids
+        ).values_list('variant_id', flat=True)
+        wishlist_variant_ids = set(wishlist_items)
+
+        for review in reviews:
+            review.is_verified_purchase = OrderItem.objects.filter(
+                order__user=review.user,
+                variant__product=product,
+                order__order_status="DELIVERED"
+            ).exists()
 
     context = {
         "product": product,
@@ -380,6 +619,7 @@ def product_detail(request, slug=None, id=None):
         "reviews": reviews,
         "avg_rating": round(float(avg_rating), 1),
         "existing_review": existing_review,
+        "wishlist_variant_ids": list(wishlist_variant_ids),
     }
     return render(
         request,
@@ -542,10 +782,15 @@ def filtering(request):
     max_price = request.GET.get("max")
     iprod = request.GET.get("q") or request.GET.get("product")
     sort = request.GET.get("sort", "newest")
+
+
+    brand_query = Product.objects.filter(is_active=True)
     if icategory:
         products = products.filter(subcategory__category__slug=icategory)
+        brand_query = brand_query.filter(subcategory__category__slug=icategory)
     if isubCategory:
         products = products.filter(subcategory__slug=isubCategory)
+        brand_query = brand_query.filter(subcategory__slug=isubCategory)
 
     if ibrand:
         products = products.filter(brand__in=ibrand)
@@ -557,13 +802,23 @@ def filtering(request):
             | Q(description__icontains=search_query)
             | Q(brand__icontains=search_query)
         )
+        brand_query = brand_query.filter(
+            Q(name__icontains=search_query)
+            | Q(description__icontains=search_query)
+            | Q(brand__icontains=search_query)
+        )
+
     all_brands = (
-        Product.objects.filter(is_active=True)
+        brand_query
         .values_list("brand", flat=True)
         .distinct()
+        .exclude(brand__isnull=True)
+        .exclude(brand__exact="")
     )
+
     categories = Category.objects.filter(is_active=True)
     subcategories = SubCategory.objects.filter(is_active=True)
+
     if min_price:
         min_price = float(min_price)
         products = products.filter(variants__selling_price__gte=min_price).distinct()
@@ -623,7 +878,8 @@ def filtering(request):
 
     return render(request, "user/filter.html", context)
 
-
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
 def checkout(request):
     if not request.user.is_authenticated:
         return redirect("all_login")
@@ -717,7 +973,10 @@ def display_order(request):
         .prefetch_related("variant__images")
         .order_by("-order__ordered_at")
     )
-    return render(request, "user/orders.html", {"order_items": order_items})
+    paginator = Paginator(order_items, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+    return render(request, "user/orders.html", {"page_obj": page_obj})
 
 
 @login_required
@@ -927,15 +1186,12 @@ def toggle_wishlist(request, variant_id):
         return JsonResponse({"message": "Invalid request"}, status=400)
     variant = get_object_or_404(ProductVariant, id=variant_id)
     user = request.user
-    # Get or create default wishlist
     wishlist, _ = Wishlist.objects.get_or_create(
         user=user,
         wishlist_name="My Wishlist"
     )
-    # Check if item already in wishlist
     wishlist_item = WishlistItem.objects.filter(wishlist=wishlist, variant=variant).first()
     if wishlist_item:
-        # Remove from wishlist
         wishlist_item.delete()
         return JsonResponse({
             "success": True,
@@ -944,7 +1200,7 @@ def toggle_wishlist(request, variant_id):
             "in_wishlist": False
         })
     else:
-        # Add to wishlist
+
         WishlistItem.objects.create(wishlist=wishlist, variant=variant)
         return JsonResponse({
             "success": True,
@@ -960,7 +1216,7 @@ def wishlist_view(request):
     user = request.user
     wishlist = Wishlist.objects.filter(user=user, wishlist_name="My Wishlist").first()
     if not wishlist:
-        return render(request, "user/wishlist.html", {"items": []})
+        return render(request, "user/wishlist.html", {"page_obj": None})
     items = (
         WishlistItem.objects
         .filter(wishlist=wishlist)
@@ -968,14 +1224,18 @@ def wishlist_view(request):
         .prefetch_related("variant__images")
         .order_by("-added_at")
     )
-    return render(request, "user/wishlist.html", {"items": items, "wishlist": wishlist})
+
+    paginator = Paginator(items, 12)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+    return render(request, "user/wishlist.html", {"page_obj": page_obj, "wishlist": wishlist})
 
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def remove_from_wishlist(request, item_id):
     if request.method != "POST":
-        return JsonResponse({"message": "Invalid request"}, status=40)
+        return JsonResponse({"message": "Invalid request"}, status=400)
     wishlist_item = get_object_or_404(
         WishlistItem,
         id=item_id,
@@ -990,6 +1250,73 @@ def remove_from_wishlist(request, item_id):
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
+def manage_wishlists(request):
+    user = request.user
+    wishlists = Wishlist.objects.filter(user=user).prefetch_related('items__variant__images').order_by('-created_at')
+    return render(request, "user/manage_wishlists.html", {"wishlists": wishlists})
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def create_wishlist(request):
+    if request.method != "POST":
+        return JsonResponse({"message": "Invalid request"}, status=400)
+
+    wishlist_name = request.POST.get("wishlist_name", "").strip()
+    if not wishlist_name:
+        return JsonResponse({"success": False, "message": "Wishlist name is required"})
+
+    if len(wishlist_name) > 100:
+        return JsonResponse({"success": False, "message": "Wishlist name too long"})
+
+
+    if Wishlist.objects.filter(user=request.user, wishlist_name=wishlist_name).exists():
+        return JsonResponse({"success": False, "message": "Wishlist with this name already exists"})
+
+    Wishlist.objects.create(user=request.user, wishlist_name=wishlist_name)
+    return JsonResponse({"success": True, "message": "Wishlist created successfully"})
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def edit_wishlist(request, wishlist_id):
+    if request.method != "POST":
+        return JsonResponse({"message": "Invalid request"}, status=400)
+
+    wishlist = get_object_or_404(Wishlist, id=wishlist_id, user=request.user)
+    wishlist_name = request.POST.get("wishlist_name", "").strip()
+
+    if not wishlist_name:
+        return JsonResponse({"success": False, "message": "Wishlist name is required"})
+
+    if len(wishlist_name) > 100:
+        return JsonResponse({"success": False, "message": "Wishlist name too long"})
+
+    if Wishlist.objects.filter(user=request.user, wishlist_name=wishlist_name).exclude(id=wishlist_id).exists():
+        return JsonResponse({"success": False, "message": "Wishlist with this name already exists"})
+
+    wishlist.wishlist_name = wishlist_name
+    wishlist.save()
+    return JsonResponse({"success": True, "message": "Wishlist updated successfully"})
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def delete_wishlist(request, wishlist_id):
+    if request.method != "POST":
+        return JsonResponse({"message": "Invalid request"}, status=400)
+
+    wishlist = get_object_or_404(Wishlist, id=wishlist_id, user=request.user)
+
+    if wishlist.wishlist_name == "My Wishlist":
+        return JsonResponse({"success": False, "message": "Cannot delete default wishlist"})
+
+    wishlist.delete()
+    return JsonResponse({"success": True, "message": "Wishlist deleted successfully"})
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
 def move_to_cart(request, item_id):
     if request.method != "POST":
         return JsonResponse({"message": "Invalid request"}, status=400)
@@ -998,33 +1325,40 @@ def move_to_cart(request, item_id):
         id=item_id,
         wishlist__user=request.user
     )
+
     variant = wishlist_item.variant
+
     if variant.stock_quantity <= 0:
-        return JsonResponse({"message": "Out of stock"}, status=400)
-    user = request.user
-    cart, _ = Cart.objects.get_or_create(user=user)
-    cartitem, created = CartItem.objects.get_or_create(
+        return JsonResponse({"success": False, "message": "Product is out of stock"})
+
+
+    cart, _ = Cart.objects.get_or_create(user=request.user)
+
+
+    cart_item, created = CartItem.objects.get_or_create(
         cart=cart,
         variant=variant,
         defaults={"quantity": 1, "price_at_time": variant.selling_price}
     )
+
     if not created:
-        if cartitem.quantity + 1 <= variant.stock_quantity:
-            cartitem.quantity += 1
-            cartitem.save()
+        if cart_item.quantity + 1 <= variant.stock_quantity:
+            cart_item.quantity += 1
+            cart_item.save()
         else:
-            return JsonResponse(
-                {"message": f"Only {variant.stock_quantity} items available"},
-                status=400
-            )
+            return JsonResponse({
+                "success": False,
+                "message": f"Only {variant.stock_quantity} items available"
+            })
     total = sum(item.quantity * item.price_at_time for item in cart.items.all())
     cart.total_amount = total
     cart.save()
+
     wishlist_item.delete()
+
     return JsonResponse({
         "success": True,
-        "message": "Moved to cart successfully",
-        "cart_count": cart.items.count()
+        "message": "Item moved to cart successfully"
     })
 def best_seller(request):
     best_selling_variants = (
@@ -1038,8 +1372,18 @@ def best_seller(request):
         .filter(total_sold__gt=0)
         .select_related('product', 'product__seller')
         .prefetch_related('images')
-        .order_by('-total_sold')[:12]
+        .order_by('-total_sold')
     )
+
+    wishlist_variant_ids = set()
+    if request.user.is_authenticated:
+        variant_ids = [v.id for v in best_selling_variants]
+        wishlist_items = WishlistItem.objects.filter(
+            wishlist__user=request.user,
+            variant_id__in=variant_ids
+        ).values_list('variant_id', flat=True)
+        wishlist_variant_ids = set(wishlist_items)
+
     product_data = []
     for variant in best_selling_variants:
         primary_image = None
@@ -1055,6 +1399,74 @@ def best_seller(request):
         product_data.append({
             "variant": variant,
             "image": primary_image,
-            "total_sold": variant.total_sold
+            "total_sold": variant.total_sold,
+            "in_wishlist": variant.id in wishlist_variant_ids
         })
-    return render(request, "user/best_sellers.html", {"product_data": product_data})
+
+    paginator = Paginator(product_data, 12)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+    return render(request, "user/best_sellers.html", {"page_obj": page_obj})
+
+
+def get_brands_ajax(request):
+    """AJAX endpoint to get brands based on category/subcategory/search filters"""
+    if request.method != "GET":
+        return JsonResponse({"error": "Invalid request method"}, status=400)
+    category = request.GET.get("category")
+    subcategory = request.GET.get("subcategory")
+    search = request.GET.get("search")
+
+    brand_query = Product.objects.filter(
+        is_active=True,
+        approval_status="APPROVED",
+        seller__status="APPROVED"
+    )
+
+    if category:
+        brand_query = brand_query.filter(subcategory__category__slug=category)
+    if subcategory:
+        brand_query = brand_query.filter(subcategory__slug=subcategory)
+    if search:
+        search_query = search.strip()
+        brand_query = brand_query.filter(
+            Q(name__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(brand__icontains=search_query)
+        )
+
+    brands = (
+        brand_query
+        .values_list("brand", flat=True)
+        .distinct()
+        .exclude(brand__isnull=True)
+        .exclude(brand__exact="")
+        .order_by("brand")
+    )
+
+    return JsonResponse({
+        "brands": list(brands),
+        "count": len(brands)
+    })
+
+
+def get_subcategories_ajax(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "Invalid request method"}, status=400)
+    category = request.GET.get("category")
+    if category:
+
+        subcategories = SubCategory.objects.filter(
+            category__slug=category,
+            is_active=True
+        ).values('slug', 'name').order_by('name')
+    else:
+
+        subcategories = SubCategory.objects.filter(
+            is_active=True
+        ).values('slug', 'name').order_by('name')
+
+    return JsonResponse({
+        "subcategories": list(subcategories),
+        "count": len(subcategories)
+    })

@@ -187,26 +187,24 @@
         <!-- Products Grid -->
         <section class="flex-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {% for p in product %}
+                {% for item in page_obj %}
+                {% with item.variant as variant %}
+                {% with variant.product as p %}
                 <a href="{% url 'product_detail_user' p.slug %}" class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary/30">
                     
                     <div class="relative aspect-square overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4">
-                        {% with p.variants.first as v %}
-                            {% if v %}
-                                {% for img in v.images.all %}
-                                    {% if img.is_primary and img.image %}
-                                        <img src="{{ img.image.url }}" alt="{{ p.name }}" class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
-                                    {% endif %}
-                                {% endfor %}
-                            {% else %}
-                                <div class="flex h-full w-full items-center justify-center">
-                                    <span class="material-symbols-outlined text-5xl text-stone-300">image_not_supported</span>
-                                </div>
-                            {% endif %}
-                        {% endwith %}
+                        {% if item.image and item.image.image %}
+                            <img src="{{ item.image.image.url }}" alt="{{ p.name }}" class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
+                        {% else %}
+                            <div class="flex h-full w-full items-center justify-center">
+                                <span class="material-symbols-outlined text-5xl text-stone-300">image_not_supported</span>
+                            </div>
+                        {% endif %}
 
-                        <button onclick="event.stopPropagation()" class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm">
-                            <span class="material-symbols-outlined text-[20px]">favorite_border</span>
+                        <button onclick="event.stopPropagation(); toggleWishlist({{ variant.id }}, this)" class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-red-500 transition-colors shadow-sm">
+                            <span class="material-symbols-outlined text-[20px]">
+                                {% if item.in_wishlist %}favorite{% else %}favorite_border{% endif %}
+                            </span>
                         </button>
                     </div>
 
@@ -217,27 +215,27 @@
                         </h3>
                         
                         <div class="mt-auto flex items-center justify-between pt-4 border-t border-stone-100 dark:border-stone-700">
-                            {% with p.variants.first as v %}
-                                <div class="flex flex-col">
-                                    {% if v %}
-                                        <span class="text-2xl font-black text-stone-900 dark:text-white tracking-tighter">₹{{ v.selling_price }}</span>
-                                        {% if v.mrp > v.selling_price %}
-                                            <span class="text-xs font-medium text-stone-400 line-through">₹{{ v.mrp }}</span>
-                                        {% endif %}
-                                    {% else %}
-                                        <span class="text-sm font-bold text-stone-400 italic uppercase">Coming Soon</span>
-                                    {% endif %}
-                                </div>
-{% if v %}
-                                <button data-addtocart-btn data-variant-id="{{ v.id }}" data-product-image="{% for img in v.images.all %}{% if img.is_primary and img.image %}{{ img.image.url }}{% endif %}{% endfor %}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;"
-                                        class="h-12 w-12 rounded-full bg-accent-terracotta text-white flex items-center justify-center hover:bg-stone-800 transition-colors shadow-sm">
-                                    <span class="material-symbols-outlined">add_shopping_cart</span>
-                                </button>
+                            <div class="flex flex-col">
+                                <span class="text-2xl font-black text-stone-900 dark:text-white tracking-tighter">₹{{ variant.selling_price }}</span>
+                                {% if variant.mrp > variant.selling_price %}
+                                    <span class="text-xs font-medium text-stone-400 line-through">₹{{ variant.mrp }}</span>
                                 {% endif %}
-                            {% endwith %}
+                            </div>
+                            {% if variant.stock_quantity > 0 %}
+                            <button data-addtocart-btn data-variant-id="{{ variant.id }}" data-product-image="{% if item.image and item.image.image %}{{ item.image.image.url }}{% endif %}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;"
+                                    class="h-12 w-12 rounded-full bg-accent-terracotta text-white flex items-center justify-center hover:bg-stone-800 transition-colors shadow-sm">
+                                <span class="material-symbols-outlined">add_shopping_cart</span>
+                            </button>
+                            {% else %}
+                            <button disabled class="h-12 w-12 rounded-full bg-stone-300 text-stone-500 flex items-center justify-center cursor-not-allowed">
+                                <span class="material-symbols-outlined">remove_shopping_cart</span>
+                            </button>
+                            {% endif %}
                         </div>
                     </div>
                 </a>
+                {% endwith %}
+                {% endwith %}
                 {% empty %}
                 <div class="col-span-full py-32 text-center bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-3xl border border-stone-200 dark:border-stone-700">
                     <div class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-stone-100 dark:bg-stone-800 text-stone-300 mb-6">
@@ -248,6 +246,35 @@
                 </div>
                 {% endfor %}
             </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="flex justify-center mt-12">
+                <nav class="flex items-center space-x-2">
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1" class="px-3 py-2 text-sm font-medium text-stone-500 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 hover:text-stone-700 dark:bg-stone-800 dark:border-stone-600 dark:text-stone-400 dark:hover:bg-stone-700 dark:hover:text-white">
+                            First
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 text-sm font-medium text-stone-500 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 hover:text-stone-700 dark:bg-stone-800 dark:border-stone-600 dark:text-stone-400 dark:hover:bg-stone-700 dark:hover:text-white">
+                            Previous
+                        </a>
+                    {% endif %}
+                    
+                    <span class="px-3 py-2 text-sm font-medium text-stone-700 bg-stone-50 border border-stone-300 rounded-lg dark:bg-stone-700 dark:border-stone-600 dark:text-white">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                    
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 text-sm font-medium text-stone-500 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 hover:text-stone-700 dark:bg-stone-800 dark:border-stone-600 dark:text-stone-400 dark:hover:bg-stone-700 dark:hover:text-white">
+                            Next
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 text-sm font-medium text-stone-500 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 hover:text-stone-700 dark:bg-stone-800 dark:border-stone-600 dark:text-stone-400 dark:hover:bg-stone-700 dark:hover:text-white">
+                            Last
+                        </a>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
         </section>
     </div>
 </section>

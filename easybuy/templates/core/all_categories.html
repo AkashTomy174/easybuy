@@ -21,7 +21,7 @@
 <section class="mx-auto max-w-7xl px-4 py-16 sm:px-12">
     <div class="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
         {% for category in categories %}
-        <a href="{% url 'category_products' category.id %}" class="group flex flex-col items-center gap-4 text-center cursor-pointer">
+        <a href="{% url 'category_products' category.slug %}" class="group flex flex-col items-center gap-4 text-center cursor-pointer">
             <div class="group-hover:scale-105 transition-transform duration-300 relative flex aspect-square w-full items-center justify-center rounded-3xl overflow-hidden bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 shadow-md ring-1 ring-stone-100 dark:ring-stone-700">
                 {% if category.image_url %}
                     <img alt="{{ category.name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="{{ category.image_url.url }}"/>

@@ -167,6 +167,10 @@ def seller_inventory(request):
                     out_of_stock_count += 1
                 elif item.stock_quantity <= 10:
                     low_stock_count += 1
+
+        paginator = Paginator(products, 10)
+        page_number = request.GET.get("page")
+        page_obj = paginator.get_page(page_number)
     else:
         products = []
         all_items = []
@@ -174,11 +178,12 @@ def seller_inventory(request):
         total_stock = 0
         low_stock_count = 0
         out_of_stock_count = 0
+        page_obj = None
     context = {
         "seller": seller,
-        "products": products,
+        "page_obj": page_obj,
         "all_items": all_items,
-        "total_products": len(products),
+        "total_products": len(products) if seller else 0,
         "total_variants": len(all_items),
         "total_stock": total_stock,
         "total_inventory_value": total_inventory_value,
@@ -371,8 +376,6 @@ def deactivate(request, id):
 #     shipping_phone = models.CharField(max_length=15, null=True, blank=True)
 #     shipping_address = models.TextField(null=True, blank=True)
 #     ordered_at = models.DateTimeField(auto_now_add=True)
-
-
 # class OrderItem(models.Model):
 #     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
 #     item = models.ForeignKey(Productitem, on_delete=models.CASCADE)
@@ -394,16 +397,14 @@ def seller_order(request):
     
     if status_filter:
         base_query = base_query.filter(order__order_status=status_filter)
-    
-    # Pagination
-    paginator = Paginator(base_query, 8)  # 8 per page
+   
+    paginator = Paginator(base_query, 8)
     order_items = paginator.get_page(page)
     
     all_query = OrderItem.objects.filter(seller=seller).select_related("order", "variant", "variant__product")
     total_orders = all_query.count()
     total_revenue = sum(item.price_at_purchase * item.quantity for item in all_query)
     
-    # Stats always from all orders
     pending_orders = OrderItem.objects.filter(seller=seller, order__order_status="PENDING").count()
     shipped_orders = OrderItem.objects.filter(seller=seller, order__order_status="SHIPPED").count()
     delivered_orders = OrderItem.objects.filter(seller=seller, order__order_status="DELIVERED").count()

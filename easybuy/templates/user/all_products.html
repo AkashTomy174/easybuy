@@ -40,7 +40,7 @@
             <div class="bg-white dark:bg-surface-dark rounded-3xl shadow-card p-6 {% if request.GET %}{% else %}sticky top-24{% endif %}">
                 <form method="GET" id="filterForm">
                     <!-- Search -->
-                    <!-- <div class="mb-6">
+                    <div class="mb-6">
                         <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Search Products</label>
                         <div class="relative">
                             <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">search</span>
@@ -48,7 +48,7 @@
                                 class="w-full h-11 pl-10 pr-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                                 placeholder="Product name...">
                         </div>
-                    </div> -->
+                    </div>
 
                     <!-- Category -->
                     <div class="mb-6">
@@ -309,9 +309,9 @@
                         {% endif %}
                         
                         <button onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ item.variant.id }}, this); return false;" 
-                                class="wishlist-btn absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm"
+                                class="wishlist-btn absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center {% if item.in_wishlist %}text-red-500{% else %}text-stone-400 hover:text-accent-terracotta{% endif %} transition-colors shadow-sm"
                                 data-variant-id="{{ item.variant.id }}">
-                            <span class="material-symbols-outlined text-[20px]">favorite_border</span>
+                            <span class="material-symbols-outlined text-[20px]">{% if item.in_wishlist %}favorite{% else %}favorite_border{% endif %}</span>
                         </button>
                     </a>
 
@@ -396,6 +396,170 @@
     </div>
 </div>
 
+<script>
+// Real-time filtering functions
+function updateSubcategories() {
+    const categorySelect = document.querySelector('select[name="category"]');
+    const subcategorySelect = document.querySelector('select[name="subcategory"]');
+    
+    if (!categorySelect || !subcategorySelect) return;
+    
+    const category = categorySelect.value;
+    const currentSubcategory = subcategorySelect.value;
+    
+    // Show loading state
+    subcategorySelect.innerHTML = '<option value="">Loading...</option>';
+    subcategorySelect.disabled = true;
+    
+    // Build URL
+    let url = '/user/api/subcategories/';
+    if (category) {
+        url += '?category=' + encodeURIComponent(category);
+    }
+    
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Reset options
+        subcategorySelect.innerHTML = '<option value="">All Subcategories</option>';
+        
+        if (data.subcategories && data.subcategories.length > 0) {
+            data.subcategories.forEach(sub => {
+                const option = document.createElement('option');
+                option.value = sub.slug;
+                option.textContent = sub.name;
+                // Restore selection if it still exists
+                if (sub.slug === currentSubcategory) {
+                    option.selected = true;
+                }
+                subcategorySelect.appendChild(option);
+            });
+        }
+        
+        subcategorySelect.disabled = false;
+    })
+    .catch(error => {
+        console.error('Error fetching subcategories:', error);
+        subcategorySelect.innerHTML = '<option value="">All Subcategories</option>';
+        subcategorySelect.disabled = false;
+        if (typeof showToast === 'function') {
+            showToast('Error loading subcategories', 'error');
+        }
+    });
+}
 
+function updateBrands() {
+    const categorySelect = document.querySelector('select[name="category"]');
+    const subcategorySelect = document.querySelector('select[name="subcategory"]');
+    const searchInput = document.querySelector('input[name="q"]');
+    const brandContainer = document.querySelector('.space-y-2.max-h-48');
+    
+    if (!brandContainer) return;
+    
+    const category = categorySelect ? categorySelect.value : '';
+    const subcategory = subcategorySelect ? subcategorySelect.value : '';
+    const search = searchInput ? searchInput.value : '';
+    
+    // Store currently selected brands
+    const selectedBrands = Array.from(document.querySelectorAll('input[name="brand"]:checked')).map(cb => cb.value);
+    
+    // Show loading state
+    brandContainer.innerHTML = '<div class="flex items-center justify-center py-4"><span class="material-symbols-outlined animate-spin text-primary">sync</span><span class="ml-2 text-sm text-stone-500">Loading brands...</span></div>';
+    
+    // Build URL with parameters
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    if (subcategory) params.append('subcategory', subcategory);
+    if (search) params.append('search', search);
+    
+    fetch('/user/api/brands/?' + params.toString(), {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.brands && data.brands.length > 0) {
+            brandContainer.innerHTML = data.brands.map(brand => `
+                <label class="flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" name="brand" value="${brand}" 
+                        ${selectedBrands.includes(brand) ? 'checked' : ''}
+                        class="w-5 h-5 rounded-lg border-2 border-stone-300 dark:border-stone-600 text-primary focus:ring-primary/20 accent-primary">
+                    <span class="text-sm font-medium text-stone-600 dark:text-stone-300 group-hover:text-primary transition-colors">${brand}</span>
+                </label>
+            `).join('');
+        } else {
+            brandContainer.innerHTML = '<p class="text-sm text-stone-400 italic">No brands available</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching brands:', error);
+        brandContainer.innerHTML = '<p class="text-sm text-stone-400 italic">Error loading brands</p>';
+        if (typeof showToast === 'function') {
+            showToast('Error loading brands', 'error');
+        }
+    });
+}
+
+// Initialize event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const categorySelect = document.querySelector('select[name="category"]');
+    const subcategorySelect = document.querySelector('select[name="subcategory"]');
+    const searchInput = document.querySelector('input[name="q"]');
+    
+    // Category change handler
+    if (categorySelect) {
+        categorySelect.addEventListener('change', function() {
+            console.log('Category changed to:', this.value);
+            // Update subcategories first
+            updateSubcategories();
+            // Then update brands after a short delay
+            setTimeout(() => {
+                updateBrands();
+            }, 200);
+        });
+    }
+    
+    // Subcategory change handler
+    if (subcategorySelect) {
+        subcategorySelect.addEventListener('change', function() {
+            console.log('Subcategory changed to:', this.value);
+            updateBrands();
+        });
+    }
+    
+    // Search input handler with debounce
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            console.log('Search input:', this.value);
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                updateBrands();
+            }, 500);
+        });
+    }
+    
+    console.log('Real-time filtering initialized');
+});
+</script>
 
 {% endblock %}

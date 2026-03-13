@@ -19,7 +19,7 @@
             <a href="{% url 'home' %}" class="text-stone-500 hover:text-primary transition-colors">Home</a>
             <span class="material-symbols-outlined text-stone-400 text-sm">chevron_right</span>
             {% if product.subcategory %}
-            <a href="{% url 'category_products_user' product.subcategory.slug %}" class="text-stone-500 hover:text-primary transition-colors">{{ product.subcategory.name }}</a>
+            <a href="{% url 'subcategory_products_user' product.subcategory.slug %}" class="text-stone-500 hover:text-primary transition-colors">{{ product.subcategory.name }}</a>
             <span class="material-symbols-outlined text-stone-400 text-sm">chevron_right</span>
             {% endif %}
             <span class="text-stone-900 dark:text-white font-semibold">{{ product.name|truncatewords:5 }}</span>
@@ -221,6 +221,13 @@
                             Write a Review
                         </button>
                     </div>
+                    {% elif not user.is_authenticated %}
+                    <div class="border-t border-stone-200 dark:border-stone-700 pt-4">
+                        <button onclick="showToast('Please login to write a review', 'error')" class="w-full sm:w-auto bg-stone-400 text-white font-bold py-3 px-6 rounded-2xl transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">rate_review</span>
+                            Write a Review
+                        </button>
+                    </div>
                     {% elif existing_review %}
                     <div class="border-t border-stone-200 dark:border-stone-700 pt-4">
                         <div class="flex items-center gap-3 text-green-600 dark:text-green-400">
@@ -244,7 +251,15 @@
                                     </div>
                                     <div>
                                         <h4 class="font-bold text-stone-900 dark:text-white">{{ review.user.first_name }} {{ review.user.last_name }}</h4>
-                                        <p class="text-sm text-stone-500 dark:text-stone-400">{{ review.created_at|date:"F d, Y" }}</p>
+                                        <div class="flex items-center gap-2">
+                                            <p class="text-sm text-stone-500 dark:text-stone-400">{{ review.created_at|date:"F d, Y" }}</p>
+                                            {% if review.is_verified_purchase %}
+                                            <span class="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-1 rounded-full text-xs font-bold">
+                                                <span class="material-symbols-outlined text-xs">verified</span>
+                                                Verified Purchase
+                                            </span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-1 bg-stone-100 dark:bg-stone-700 px-3 py-1.5 rounded-full">
@@ -259,6 +274,20 @@
                             <div class="mb-3">
                                 <p class="text-stone-700 dark:text-stone-300 leading-relaxed">{{ review.comment }}</p>
                             </div>
+                            
+                            <!-- Edit/Delete Buttons (if user's own review) -->
+                            {% if user.is_authenticated and review.user == user %}
+                            <div class="flex items-center gap-2 mb-3 pb-3 border-b border-stone-200 dark:border-stone-700">
+                                <a href="{% url 'edit_review' review.id %}" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl text-sm font-bold transition-all flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">edit</span>
+                                    Edit
+                                </a>
+                                <button onclick="deleteReview({{ review.id }})" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">delete</span>
+                                    Delete
+                                </button>
+                            </div>
+                            {% endif %}
                             
                             <!-- Seller Reply -->
                             {% if review.seller_reply %}
@@ -301,6 +330,11 @@
                             <span class="material-symbols-outlined">rate_review</span>
                             Write the First Review
                         </button>
+                        {% elif not user.is_authenticated %}
+                        <button onclick="showToast('Please login to write a review', 'error')" class="bg-stone-400 text-white font-bold py-3 px-6 rounded-xl transition-all inline-flex items-center gap-2">
+                            <span class="material-symbols-outlined">rate_review</span>
+                            Write the First Review
+                        </button>
                         {% endif %}
                     </div>
                 {% endif %}
@@ -317,7 +351,7 @@
                 You May Also Like
             </h2>
             {% if product.subcategory %}
-            <a href="{% url 'category_products_user' product.subcategory.slug %}" class="text-primary font-bold hover:underline flex items-center gap-2 group">
+            <a href="{% url 'subcategory_products_user' product.subcategory.slug %}" class="text-primary font-bold hover:underline flex items-center gap-2 group">
                 View All
                 <span class="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
             </a>
@@ -582,13 +616,46 @@ function writeReview() {
         showToast('Please select a variant first', 'error');
         return;
     }
-    try {
-        const baseUrl = "{% url 'add_review' 0 %}".replace('/0/', '/' + selectedVariantId + '/');
-        window.location.href = baseUrl;
-    } catch (e) {
-        console.error('Error navigating to review page:', e);
-        showToast('Error opening review page', 'error');
-    }
+    
+    // Check if user is authenticated
+    {% if not user.is_authenticated %}
+        showToast('Please login to write a review', 'error');
+        return;
+    {% endif %}
+    
+    // Check purchase status via AJAX
+    fetch(`/user/reviews/check-purchase/${selectedVariantId}/`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.has_purchased) {
+            showToast('You can only review products you have purchased and received', 'error');
+            return;
+        }
+        if (data.has_reviewed) {
+            showToast('You have already reviewed this product', 'error');
+            return;
+        }
+        if (data.can_review) {
+            // Proceed to review page
+            try {
+                const baseUrl = "{% url 'add_review' 0 %}".replace('/0/', '/' + selectedVariantId + '/');
+                window.location.href = baseUrl;
+            } catch (e) {
+                console.error('Error navigating to review page:', e);
+                showToast('Error opening review page', 'error');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error checking purchase status:', error);
+        showToast('Error checking purchase status', 'error');
+    });
 }
 
 function toggleWishlistDetail() {
@@ -601,6 +668,62 @@ function toggleWishlistDetail() {
     const icon = btn.querySelector('.material-symbols-outlined');
     
     toggleWishlist(selectedVariantId, btn);
+}
+
+// Initialize wishlist status on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const wishlistBtn = document.getElementById('wishlist-btn');
+    const icon = wishlistBtn.querySelector('.material-symbols-outlined');
+    const wishlistVariantIds = {{ wishlist_variant_ids|safe }};
+    
+    // Update wishlist button when variant is selected
+    function updateWishlistButton(variantId) {
+        if (wishlistVariantIds.includes(variantId)) {
+            icon.textContent = 'favorite';
+            icon.classList.add('text-red-500');
+            wishlistBtn.classList.add('text-red-500');
+        } else {
+            icon.textContent = 'favorite_border';
+            icon.classList.remove('text-red-500');
+            wishlistBtn.classList.remove('text-red-500');
+        }
+    }
+    
+    // Override the selectVariant function to update wishlist button
+    const originalSelectVariant = window.selectVariant;
+    window.selectVariant = function(id, price, mrp, stock) {
+        originalSelectVariant(id, price, mrp, stock);
+        updateWishlistButton(parseInt(id));
+    };
+});
+
+function deleteReview(reviewId) {
+    if (!confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
+        return;
+    }
+    
+    fetch(`/user/reviews/delete/${reviewId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Review deleted successfully', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showToast('Failed to delete review', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('An error occurred', 'error');
+    });
 }
 </script>
 {% endblock %}

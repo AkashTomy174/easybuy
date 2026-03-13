@@ -75,7 +75,7 @@
                 </tr>
             </thead>
             <tbody class="divide-y divide-stone-100 dark:divide-stone-700">
-                {% for product in products %}
+                {% for product in page_obj %}
                     {% for variant in product.variants.all %}
                     <tr class="group hover:bg-stone-50/50 dark:hover:bg-stone-800/30 transition-colors">
                         <td class="px-6 py-5">
@@ -151,6 +151,35 @@
             </tbody>
         </table>
     </div>
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex justify-center p-6 border-t border-stone-100 dark:border-stone-700">
+        <nav class="flex items-center space-x-2">
+            {% if page_obj.has_previous %}
+                <a href="?page=1" class="px-3 py-2 text-sm font-medium text-stone-500 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 hover:text-stone-700 dark:bg-stone-800 dark:border-stone-600 dark:text-stone-400 dark:hover:bg-stone-700 dark:hover:text-white">
+                    First
+                </a>
+                <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 text-sm font-medium text-stone-500 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 hover:text-stone-700 dark:bg-stone-800 dark:border-stone-600 dark:text-stone-400 dark:hover:bg-stone-700 dark:hover:text-white">
+                    Previous
+                </a>
+            {% endif %}
+            
+            <span class="px-3 py-2 text-sm font-medium text-stone-700 bg-stone-50 border border-stone-300 rounded-lg dark:bg-stone-700 dark:border-stone-600 dark:text-white">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 text-sm font-medium text-stone-500 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 hover:text-stone-700 dark:bg-stone-800 dark:border-stone-600 dark:text-stone-400 dark:hover:bg-stone-700 dark:hover:text-white">
+                    Next
+                </a>
+                <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 text-sm font-medium text-stone-500 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 hover:text-stone-700 dark:bg-stone-800 dark:border-stone-600 dark:text-stone-400 dark:hover:bg-stone-700 dark:hover:text-white">
+                    Last
+                </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Add Stock Modal -->
