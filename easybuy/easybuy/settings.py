@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     "easybuy.user",
     "easybuy.easybuy_admin",
     "easybuy.seller",
-    "django_seed",
 ]
 
 MIDDLEWARE = [

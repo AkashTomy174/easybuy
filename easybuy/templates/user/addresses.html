@@ -7,7 +7,7 @@
     {% if messages %}
     <div class="mb-8 space-y-2">
         {% for message in messages %}
-        <div class="p-4 rounded-2xl bg-white dark:bg-surface-dark border border-stone-200 dark:border-stone-700 shadow-sm flex items-center gap-3 text-primary">
+        <div class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 shadow-sm flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
             <span class="material-symbols-outlined">check_circle</span>
             <p class="text-sm font-bold">{{ message }}</p>
         </div>
@@ -25,16 +25,16 @@
                 </div>
                 <nav class="space-y-2">
                     <a href="{% url 'profile_settings' %}" 
-                       class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all {% if request.resolver_match.url_name == 'profile_settings' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800{% endif %}">
+                       class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800">
                         <span class="material-symbols-outlined text-[20px]">person</span>
                         <span class="text-sm font-bold">Personal Info</span>
                     </a>
                     <a href="{% url 'manage_addresses' %}" 
-                       class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all {% if request.resolver_match.url_name == 'manage_addresses' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800{% endif %}">
+                       class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all bg-primary text-white shadow-lg shadow-primary/20">
                         <span class="material-symbols-outlined text-[20px]">location_on</span>
                         <span class="text-sm font-bold">Addresses</span>
                     </a>
-                    <a href="#" class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800">
+                    <a href="{% url 'user_orders' %}" class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800">
                         <span class="material-symbols-outlined text-[20px]">receipt_long</span>
                         <span class="text-sm font-bold">My Orders</span>
                     </a>
@@ -50,7 +50,7 @@
                     <h2 class="text-3xl font-black text-stone-900 dark:text-white">Your Addresses</h2>
                     <p class="text-stone-400 text-sm font-medium mt-1">Manage your delivery locations</p>
                 </div>
-                <button onclick="document.getElementById('addAddressSection').classList.toggle('hidden')" class="bg-primary text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-primary-dark transition-all">
+                <button onclick="document.getElementById('addAddressSection').classList.toggle('hidden')" class="bg-primary text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">
                     Add New <span class="material-symbols-outlined text-sm">add</span>
                 </button>
             </div>
@@ -60,22 +60,22 @@
                 <h3 class="text-xl font-black mb-6 dark:text-white">Add a New Address</h3>
                 <form method="POST" action="{% url 'user_address' %}" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {% csrf_token %}
-                    <input type="text" name="fullname" required placeholder="Full Name" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                    <input type="text" name="phone" required placeholder="Phone Number" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                    <input type="text" name="house_info" required placeholder="House / Building No." class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                    <input type="text" name="locality" required placeholder="Locality / Street" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                    <input type="text" name="city" required placeholder="City" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                    <input type="text" name="state" required placeholder="State" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                    <input type="text" name="pincode" required placeholder="Pincode" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                    <select name="address_type" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                        <option value="Home">Home</option>
-                        <option value="Work">Work</option>
+                    <input type="text" name="fullname" required placeholder="Full Name" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                    <input type="text" name="phone" required placeholder="Phone Number" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                    <input type="text" name="house_info" required placeholder="House / Building No." class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                    <input type="text" name="locality" required placeholder="Locality / Street" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                    <input type="text" name="city" required placeholder="City" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                    <input type="text" name="state" required placeholder="State" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                    <input type="text" name="pincode" required placeholder="Pincode" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                    <select name="address_type" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option value="HOME">Home</option>
+                        <option value="WORK">Work</option>
                     </select>
                     <div class="col-span-full flex items-center gap-2 px-1">
                         <input type="checkbox" name="is_default" class="rounded text-primary focus:ring-primary">
                         <label class="text-xs font-bold text-stone-500">Set as primary address</label>
                     </div>
-                    <button type="submit" class="col-span-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-primary-dark transition-all">Save New Address</button>
+                    <button type="submit" class="col-span-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">Save New Address</button>
                 </form>
             </section>
 
@@ -90,14 +90,17 @@
 
                     <div class="flex items-center gap-4 mb-6">
                         <div class="w-12 h-12 bg-stone-100 dark:bg-stone-800 rounded-2xl flex items-center justify-center text-stone-400">
-                            <span class="material-symbols-outlined">{% if addr.address_type == 'Home' %}home{% else %}work{% endif %}</span>
+                            <span class="material-symbols-outlined">{% if addr.address_type == 'HOME' %}home{% else %}work{% endif %}</span>
                         </div>
                         <h4 class="font-black text-stone-900 dark:text-white text-lg">{{ addr.full_name }}</h4>
                     </div>
                     
-                    <p class="text-sm text-stone-500 font-medium leading-relaxed mb-8">
+                    <p class="text-sm text-stone-500 font-medium leading-relaxed mb-2">
                         {{ addr.house_info }}, {{ addr.locality }}<br/>
                         {{ addr.city }}, {{ addr.state }} - {{ addr.pincode }}
+                    </p>
+                    <p class="text-sm text-stone-400 font-medium mb-8">
+                        <span class="material-symbols-outlined text-xs align-middle">call</span> {{ addr.phone_number }}
                     </p>
 
                     <div class="flex gap-4 border-t border-stone-100 dark:border-stone-700 pt-6">
@@ -110,26 +113,26 @@
                         <div class="bg-white dark:bg-surface-dark rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl">
                             <div class="bg-primary p-6 text-white flex justify-between items-center">
                                 <h4 class="font-black uppercase tracking-widest text-sm">Edit Address</h4>
-                                <button onclick="toggleEdit('{{ addr.id }}')" class="material-symbols-outlined">close</button>
+                                <button onclick="toggleEdit('{{ addr.id }}')" class="material-symbols-outlined hover:opacity-70 transition-opacity">close</button>
                             </div>
                             <form method="POST" action="{% url 'edit_address' addr.id %}" class="p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {% csrf_token %}
-                                <input type="text" name="fullname" value="{{ addr.full_name }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                                <input type="text" name="phone" value="{{ addr.phone_number }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                                <input type="text" name="house_info" value="{{ addr.house_info }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                                <input type="text" name="locality" value="{{ addr.locality }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                                <input type="text" name="city" value="{{ addr.city }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                                <input type="text" name="state" value="{{ addr.state }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                                <input type="text" name="pincode" value="{{ addr.pincode }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                                <select name="address_type" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white">
-                                    <option value="Home" {% if addr.address_type == 'Home' %}selected{% endif %}>Home</option>
-                                    <option value="Work" {% if addr.address_type == 'Work' %}selected{% endif %}>Work</option>
+                                <input type="text" name="fullname" value="{{ addr.full_name }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                                <input type="text" name="phone" value="{{ addr.phone_number }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                                <input type="text" name="house_info" value="{{ addr.house_info }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                                <input type="text" name="locality" value="{{ addr.locality }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                                <input type="text" name="city" value="{{ addr.city }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                                <input type="text" name="state" value="{{ addr.state }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                                <input type="text" name="pincode" value="{{ addr.pincode }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                                <select name="address_type" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                                    <option value="HOME" {% if addr.address_type == 'HOME' %}selected{% endif %}>Home</option>
+                                    <option value="WORK" {% if addr.address_type == 'WORK' %}selected{% endif %}>Work</option>
                                 </select>
                                 <div class="col-span-full flex items-center gap-2 py-2">
                                     <input type="checkbox" name="is_default" {% if addr.is_default %}checked{% endif %} class="rounded text-primary">
                                     <label class="text-xs font-bold text-stone-500">Default Address</label>
                                 </div>
-                                <button type="submit" class="col-span-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-primary-dark transition-all">Update Address</button>
+                                <button type="submit" class="col-span-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">Update Address</button>
                             </form>
                         </div>
                     </div>

@@ -192,10 +192,12 @@
         <!-- Logo & Nav -->
         <div class="flex items-center gap-8">
             <a href="{% url 'home' %}" class="flex items-center gap-3 group">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-green-700 via-green-600 to-orange-500 text-white shadow-xl shadow-green-700/40 group-hover:scale-105 transition-transform">
                     <span class="material-symbols-outlined text-2xl">shopping_bag</span>
                 </div>
-                <h1 class="text-xl font-black tracking-tight text-stone-900 dark:text-white group-hover:text-primary transition-colors">EasyBuy</h1>
+                <h1 class="text-xl font-black tracking-tight group-hover:scale-105 transition-transform">
+                    <span class="text-green-700 dark:text-green-400">Easy</span><span class="text-orange-500 dark:text-orange-400">Buy</span>
+                </h1>
             </a>
             
             <nav class="hidden xl:flex items-center gap-1">
@@ -218,7 +220,7 @@
         <!-- User Actions -->
         <div class="flex items-center gap-2 lg:gap-4">
             <!-- Wishlist -->
-            <a href="#" class="flex items-center gap-2 p-2.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300">
+            <a href="{% url 'wishlist' %}" class="flex items-center gap-2 p-2.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300">
                 <span class="material-symbols-outlined text-[24px]">favorite_border</span>
                 <span class="hidden lg:inline text-sm font-medium">Wishlist</span>
             </a>
@@ -363,10 +365,12 @@
                 <!-- Company Info -->
                 <div class="col-span-2 lg:col-span-1">
                     <div class="flex items-center gap-3 mb-6">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-white">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-green-700 via-green-600 to-orange-500 text-white shadow-xl shadow-green-700/40">
                             <span class="material-symbols-outlined text-2xl">shopping_bag</span>
                         </div>
-                        <h1 class="text-xl font-black text-stone-900 dark:text-white">EasyBuy</h1>
+                        <h1 class="text-xl font-black">
+                            <span class="text-green-700 dark:text-green-400">Easy</span><span class="text-orange-500 dark:text-orange-400">Buy</span>
+                        </h1>
                     </div>
                     <p class="text-sm text-stone-500 dark:text-stone-400 mb-6">Your trusted destination for premium electronics and quality products.</p>
                     <div class="flex items-center gap-3">
@@ -412,8 +416,8 @@
                     <ul class="space-y-3">
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">My Account</a></li>
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'user_orders' %}">My Orders</a></li>
-                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Wishlist</a></li>
-                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Addresses</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'wishlist' %}">Wishlist</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'manage_addresses' %}">Addresses</a></li>
                     </ul>
                 </div>
                 
@@ -627,6 +631,48 @@ function getCookie(name) {
         });
     }
     return cookieValue;
+}
+
+// Wishlist Toggle Function
+function toggleWishlist(variantId, buttonElement) {
+    if (!variantId) return;
+    
+    const icon = buttonElement.querySelector('.material-symbols-outlined');
+    const isInWishlist = icon.textContent.trim() === 'favorite';
+    
+    fetch(`/user/wishlist/toggle/${variantId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            if (data.in_wishlist) {
+                icon.textContent = 'favorite';
+                icon.classList.add('text-red-500');
+                buttonElement.classList.add('text-red-500');
+                showToast('Added to wishlist!', 'success');
+            } else {
+                icon.textContent = 'favorite_border';
+                icon.classList.remove('text-red-500');
+                buttonElement.classList.remove('text-red-500');
+                showToast('Removed from wishlist', 'success');
+            }
+        } else {
+            showToast(data.message || 'Error updating wishlist', 'error');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        showToast('Please login to add to wishlist', 'error');
+    });
+}
+
+function updateCartCount(count) {
+    updateHeaderCartCount(count);
 }
 </script>
 </body>

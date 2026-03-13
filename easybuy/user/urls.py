@@ -42,5 +42,12 @@ urlpatterns = [
     path("checkout/", views.checkout, name="checkout"),
     path("orders/", views.display_order, name="user_orders"),
     path("orders/cancel/<int:order_id>/", views.order_cancel, name="order_cancel"),
+    path("reviews/add/<int:variant_id>/", views.add_reviews, name="add_review"),
+    path("reviews/<int:variant_id>/", views.reviews, name="reviews"),
     path("buy_now/<int:variant_id>/", views.buy_now, name="buy_now"),
+    # Wishlist URLs
+    path("wishlist/", views.wishlist_view, name="wishlist"),
+    path("wishlist/toggle/<int:variant_id>/", views.toggle_wishlist, name="toggle_wishlist"),
+    path("wishlist/remove/<int:item_id>/", views.remove_from_wishlist, name="remove_from_wishlist"),
+    path("wishlist/move-to-cart/<int:item_id>/", views.move_to_cart, name="move_to_cart"),
 ]

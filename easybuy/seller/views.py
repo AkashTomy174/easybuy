@@ -1,14 +1,17 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import get_user_model
+from django.contrib import messages
 from django.utils.text import slugify
 from django.db import transaction
 from django.db.models import F
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.utils import timezone
 from easybuy.core.decorators import role_required
 from .models import SellerProfile, Product, ProductVariant, ProductImage, InventoryLog
 from easybuy.core.models import SubCategory
-from easybuy.user.models import Order, OrderItem
+from easybuy.user.models import Order, OrderItem, Review
 
 User = get_user_model()
 
@@ -116,10 +119,26 @@ def seller_dashboard(request):
     products = Product.objects.filter(seller=seller).prefetch_related(
         "variants", "variants__images"
     )
+    order_items = OrderItem.objects.filter(
+        seller=seller,
+        order__order_status__in=['SHIPPED', 'DELIVERED']
+    ).select_related("order", "variant", "variant__product")
+    total_orders = order_items.count()
+    total_revenue = sum(
+        float(item.price_at_purchase * item.quantity) for item in order_items
+    )
+    average_order_value = total_revenue / total_orders if total_orders > 0 else 0
     return render(
         request,
         "seller/dashboard.html",
-        {"seller": seller, "products": products, "active_menu": "dashboard"},
+        {
+            "seller": seller,
+            "products": products,
+            "total_orders": total_orders,
+            "total_revenue": total_revenue,
+            "average_order_value": average_order_value,
+            "active_menu": "dashboard",
+        },
     )
 
 
@@ -366,19 +385,29 @@ def deactivate(request, id):
 @role_required(allowed_roles=["SELLER"])
 def seller_order(request):
     seller = request.user.seller_profile
-    order_items = (
-        OrderItem.objects.filter(seller=seller)
-        .select_related("order", "variant", "variant__product")
-        .annotate(subtotal=F("price_at_purchase") * F("quantity"))
-        .order_by("-order__ordered_at")
+    status_filter = request.GET.get('status')
+    page = request.GET.get('page', 1)
+    
+    base_query = OrderItem.objects.filter(seller=seller).select_related("order", "variant", "variant__product").annotate(
+        subtotal=F("price_at_purchase") * F("quantity")
     )
-    total_orders = order_items.count()
-    total_revenue = sum(
-        float(item.price_at_purchase * item.quantity) for item in order_items
-    )
-    pending_orders = order_items.filter(order__order_status="PENDING").count()
-    shipped_orders = order_items.filter(order__order_status="SHIPPED").count()
-    cancelled_orders = order_items.filter(order__order_status="CANCELLED").count()
+    
+    if status_filter:
+        base_query = base_query.filter(order__order_status=status_filter)
+    
+    # Pagination
+    paginator = Paginator(base_query, 8)  # 8 per page
+    order_items = paginator.get_page(page)
+    
+    all_query = OrderItem.objects.filter(seller=seller).select_related("order", "variant", "variant__product")
+    total_orders = all_query.count()
+    total_revenue = sum(item.price_at_purchase * item.quantity for item in all_query)
+    
+    # Stats always from all orders
+    pending_orders = OrderItem.objects.filter(seller=seller, order__order_status="PENDING").count()
+    shipped_orders = OrderItem.objects.filter(seller=seller, order__order_status="SHIPPED").count()
+    delivered_orders = OrderItem.objects.filter(seller=seller, order__order_status="DELIVERED").count()
+    cancelled_orders = OrderItem.objects.filter(seller=seller, order__order_status="CANCELLED").count()
 
     context = {
         "order_items": order_items,
@@ -386,7 +415,9 @@ def seller_order(request):
         "total_revenue": total_revenue,
         "pending_orders": pending_orders,
         "shipped_orders": shipped_orders,
+        "delivered_orders": delivered_orders,
         "cancelled_orders": cancelled_orders,
+        "current_status_filter": status_filter,
         "active_menu": "orders",
     }
 
@@ -396,13 +427,70 @@ def seller_order(request):
 @login_required
 @role_required(allowed_roles=["SELLER"])
 def status(request, id):
-
     seller = request.user.seller_profile
     order_item = get_object_or_404(OrderItem, seller=seller, id=id)
 
-    status = request.POST.get("status")
-    if status:
-        order_item.order.order_status = status
+    new_status = request.POST.get("status")
+    if new_status:
+        # Update the main Order status
+        order_item.order.order_status = new_status
         order_item.order.save()
+        
+        # Also update the OrderItem status to keep them in sync
+        order_item.status = new_status
+        order_item.save()
+        
+        messages.success(request, f"Order status updated to {new_status}")
 
     return redirect("seller_orders")
+
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def seller_reviews(request):
+    seller = request.user.seller_profile
+    
+    reviews = (
+        Review.objects
+        .filter(product__seller=seller)
+        .select_related("user", "product")
+        .order_by("-created_at")
+    )
+    
+    paginator = Paginator(reviews, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        "page_obj": page_obj,
+        "active_menu": "reviews",
+    }
+    
+    return render(request, "seller/reviews.html", context)
+
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def reply_review(request, review_id):
+    seller = request.user.seller_profile
+    review = get_object_or_404(
+        Review.objects.select_related("product"),
+        id=review_id,
+        product__seller=seller
+    )
+    
+    if request.method == "POST":
+        reply = request.POST.get("reply", "").strip()
+        
+        if not reply:
+            messages.error(request, "Reply cannot be empty.")
+            return redirect("seller_reviews")
+        
+        review.seller_reply = reply
+        review.replied_at = timezone.now()
+        review.save()
+        
+        messages.success(request, "Reply posted successfully!")
+        return redirect("seller_reviews")
+    
+    return redirect("seller_reviews")

@@ -35,6 +35,8 @@ class Review(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     rating = models.IntegerField()
     comment = models.TextField()
+    seller_reply = models.TextField(blank=True, null=True)
+    replied_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 

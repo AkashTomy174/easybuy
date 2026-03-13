@@ -30,24 +30,27 @@
     </div>
 
     <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
-        <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center mb-4">
-            <span class="material-symbols-outlined text-2xl">pending</span>
+        <div class="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200/50 dark:border-orange-800/30 rounded-xl mb-4 flex items-center gap-3">
+            <span class="material-symbols-outlined text-xl">pending</span>
+            <span class="font-bold text-orange-700 dark:text-orange-300 text-sm">Pending</span>
         </div>
         <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Pending Orders</p>
         <h3 class="text-3xl font-black mt-2 text-orange-600 dark:text-orange-400">{{ pending_orders }}</h3>
     </div>
 
     <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
-        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-4">
-            <span class="material-symbols-outlined text-2xl">local_shipping</span>
+        <div class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-800/30 rounded-xl mb-4 flex items-center gap-3">
+            <span class="material-symbols-outlined text-xl">local_shipping</span>
+            <span class="font-bold text-blue-700 dark:text-blue-300 text-sm">Shipped</span>
         </div>
         <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Shipped Orders</p>
         <h3 class="text-3xl font-black mt-2 text-blue-600 dark:text-blue-400">{{ shipped_orders }}</h3>
     </div>
 
     <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
-        <div class="w-12 h-12 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl flex items-center justify-center mb-4">
-            <span class="material-symbols-outlined text-2xl">cancel</span>
+        <div class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/30 rounded-xl mb-4 flex items-center gap-3">
+            <span class="material-symbols-outlined text-xl">cancel</span>
+            <span class="font-bold text-red-700 dark:text-red-300 text-sm">Cancelled</span>
         </div>
         <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Cancelled Orders</p>
         <h3 class="text-3xl font-black mt-2 text-red-600 dark:text-red-400">{{ cancelled_orders }}</h3>
@@ -61,6 +64,17 @@
         <span class="text-xs bg-stone-100 dark:bg-stone-800 px-3 py-1 rounded-full font-semibold text-stone-500">Updated just now</span>
     </div>
     <div class="overflow-x-auto">
+        <!-- Status Filter Bar -->
+        <div class="px-6 py-4 bg-stone-50/50 dark:bg-stone-800/30 border-b border-stone-100 dark:border-stone-700 flex items-center gap-2 flex-wrap">
+            <span class="text-sm font-bold text-stone-600 dark:text-stone-300 whitespace-nowrap">Filter by status:</span>
+            <a href="?status=PENDING" class="px-2.5 py-1.5 bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-800/50 text-orange-800 dark:text-orange-200 font-bold text-xs rounded-full transition-all border border-orange-200/50 dark:border-orange-800/30 whitespace-nowrap">Pending</a>
+            <a href="?status=SHIPPED" class="px-2.5 py-1.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 text-blue-800 dark:text-blue-200 font-bold text-xs rounded-full transition-all border border-blue-200/50 dark:border-blue-800/30 whitespace-nowrap">Shipped</a>
+            <a href="?status=DELIVERED" class="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:hover:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200 font-bold text-xs rounded-full transition-all border border-emerald-200/50 dark:border-emerald-800/30 whitespace-nowrap">Delivered</a>
+            <a href="?status=CANCELLED" class="px-2.5 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50 text-red-800 dark:text-red-200 font-bold text-xs rounded-full transition-all border border-red-200/50 dark:border-red-800/30 whitespace-nowrap">Cancelled</a>
+            {% if current_status_filter %}
+            <a href="{% url 'seller_orders' %}" class="px-2 py-1.5 bg-stone-200 hover:bg-stone-300 dark:bg-stone-700 dark:hover:bg-stone-600 text-stone-600 dark:text-stone-300 font-bold text-xs rounded-full transition-all ml-2">Clear</a>
+            {% endif %}
+        </div>
         <table class="w-full text-left border-collapse">
             <thead>
                 <tr class="text-[11px] font-bold text-stone-400 uppercase tracking-[0.15em]">
@@ -69,7 +83,9 @@
                     <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Quantity</th>
                     <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Price</th>
                     <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Total</th>
-                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Status</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">
+                        Status
+                    </th>
                     <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Date</th>
                 </tr>
             </thead>
@@ -85,7 +101,7 @@
                         <div class="flex items-center gap-4">
                             <div class="h-10 w-10 bg-stone-100 dark:bg-stone-800 rounded-lg overflow-hidden flex-shrink-0">
                                 {% with item.variant.images.first as img %}
-                                    {% if img %}<img src="{{ img.image.url }}" class="h-full w-full object-cover">{% else %}
+                                    {% if img and img.image %}<img src="{{ img.image.url }}" class="h-full w-full object-cover">{% else %}
                                     <div class="h-full w-full flex items-center justify-center">
                                         <span class="material-symbols-outlined text-stone-300 text-sm">image</span>
                                     </div>
@@ -139,6 +155,46 @@
                 {% endfor %}
             </tbody>
         </table>
+
+        <!-- Pagination -->
+        {% if order_items.has_other_pages %}
+        <div class="px-6 py-4 border-t border-stone-100 dark:border-stone-700 bg-white/60 dark:bg-surface-dark/60">
+            <nav class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-sm text-stone-500">
+                    Showing {{ order_items.start_index }} to {{ order_items.end_index }} of {{ total_orders }} results
+                </div>
+                <div class="flex items-center gap-1">
+                    {% if order_items.has_previous %}
+                        <a href="?{% if current_status_filter %}status={{ current_status_filter }}&{% endif %}page=1" class="p-2 text-stone-400 hover:text-primary hover:bg-stone-100 rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-sm">first_page</span>
+                        </a>
+                        <a href="?{% if current_status_filter %}status={{ current_status_filter }}&{% endif %}page={{ order_items.previous_page_number }}" class="p-2 text-stone-400 hover:text-primary hover:bg-stone-100 rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-sm">chevron_left</span>
+                        </a>
+                    {% endif %}
+                    
+                    <div class="flex items-center gap-1 px-3 py-2 bg-stone-100 dark:bg-stone-800 rounded-lg">
+                        {% for num in order_items.paginator.page_range %}
+                            {% if order_items.number == num %}
+                                <span class="font-bold text-primary px-2 py-1 rounded text-sm">{{ num }}</span>
+                            {% elif num > order_items.number|add:'-3' and num < order_items.number|add:'3' %}
+                                <a href="?{% if current_status_filter %}status={{ current_status_filter }}&{% endif %}page={{ num }}" class="text-stone-600 hover:text-primary px-2 py-1 rounded hover:bg-white text-sm transition-colors">{{ num }}</a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+                    {% if order_items.has_next %}
+                        <a href="?{% if current_status_filter %}status={{ current_status_filter }}&{% endif %}page={{ order_items.next_page_number }}" class="p-2 text-stone-400 hover:text-primary hover:bg-stone-100 rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-sm">chevron_right</span>
+                        </a>
+                        <a href="?{% if current_status_filter %}status={{ current_status_filter }}&{% endif %}page={{ order_items.paginator.num_pages }}" class="p-2 text-stone-400 hover:text-primary hover:bg-stone-100 rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-sm">last_page</span>
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

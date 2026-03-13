@@ -1,0 +1,111 @@
+{% extends 'core/core_base.html' %}
+{% block title %}Reviews - {{ product.name }} | EasyBuy{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl px-4 py-12 lg:px-0">
+  <!-- Product Header -->
+  <div class="mb-12">
+    <a href="{% url 'product_detail_user' product.slug %}" class="inline-flex items-center gap-2 text-primary font-bold hover:underline mb-4">
+      <span class="material-symbols-outlined text-lg">arrow_back</span>
+      Back to product
+    </a>
+    <h1 class="text-4xl lg:text-5xl font-black text-stone-900 dark:text-white mb-2 leading-tight">Customer Reviews</h1>
+    <p class="text-xl text-stone-600 dark:text-stone-400">{{ product.name }}</p>
+  </div>
+
+  <!-- Reviews List -->
+  <div class="space-y-6">
+    {% for review in reviews %}
+      <div class="bg-white dark:bg-surface-dark border border-stone-200 dark:border-stone-700 rounded-3xl p-8 hover:shadow-lg transition-all">
+        <div class="flex items-start gap-6">
+          <!-- Avatar -->
+          <div class="flex-shrink-0">
+            <div class="w-14 h-14 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center shadow-lg">
+              <span class="text-white font-black text-xl">{{ review.user.first_name.0|upper }}{{ review.user.last_name.0|upper }}</span>
+            </div>
+          </div>
+          
+          <!-- Review Content -->
+          <div class="flex-1 min-w-0">
+            <!-- User Name -->
+            <h4 class="font-black text-lg text-stone-900 dark:text-white mb-2">{{ review.user.first_name }} {{ review.user.last_name }}</h4>
+            
+            <!-- Star Rating & Date -->
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex gap-0.5">
+                {% for i in "12345"|make_list %}
+                  <span class="material-symbols-outlined text-lg {% if forloop.counter <= review.rating %}text-yellow-400{% else %}text-stone-300 dark:text-stone-600{% endif %}">star</span>
+                {% endfor %}
+              </div>
+              <span class="text-sm font-bold text-stone-600 dark:text-stone-400">{{ review.rating }}.0 out of 5 stars</span>
+              <span class="text-stone-300 dark:text-stone-600">•</span>
+              <span class="text-sm text-stone-500 dark:text-stone-400">{{ review.created_at|date:"F d, Y" }}</span>
+            </div>
+            
+            <!-- Review Comment -->
+            <div class="mb-6 pb-6 border-b border-stone-100 dark:border-stone-700">
+              <p class="text-base leading-relaxed text-stone-700 dark:text-stone-300">{{ review.comment }}</p>
+            </div>
+
+            <!-- Seller Reply -->
+            {% if review.seller_reply %}
+            <div class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-2xl p-6 border-l-4 border-amber-500">
+              <div class="flex items-start gap-4">
+                <div class="flex-shrink-0">
+                  <div class="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
+                    <span class="material-symbols-outlined text-white text-xl">storefront</span>
+                  </div>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-sm font-black text-amber-900 dark:text-amber-400 uppercase tracking-wider">Seller Response</span>
+                    <span class="text-stone-300 dark:text-stone-600">•</span>
+                    <span class="text-xs text-stone-500 dark:text-stone-400">{{ review.replied_at|date:"F d, Y" }}</span>
+                  </div>
+                  <p class="text-base leading-relaxed text-stone-700 dark:text-stone-300">{{ review.seller_reply }}</p>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Helpful Section -->
+            <div class="mt-6 flex items-center gap-4">
+              <span class="text-sm text-stone-500 dark:text-stone-400">Was this review helpful?</span>
+              <button class="px-4 py-2 rounded-xl border-2 border-stone-200 dark:border-stone-600 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 hover:border-primary transition-all text-sm font-bold">
+                <span class="flex items-center gap-1">
+                  <span class="material-symbols-outlined text-lg">thumb_up</span>
+                  Helpful
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="bg-white dark:bg-surface-dark border border-stone-200 dark:border-stone-700 rounded-3xl p-16 text-center">
+        <span class="material-symbols-outlined text-8xl text-stone-300 dark:text-stone-600 block mb-6">reviews</span>
+        <h3 class="text-2xl font-black text-stone-900 dark:text-white mb-3">No reviews yet</h3>
+        <p class="text-stone-500 dark:text-stone-400 mb-8 max-w-md mx-auto">Be the first to share your experience with this product!</p>
+        {% if user.is_authenticated %}
+          <a href="{% url 'add_review' variant.id %}" class="bg-primary hover:bg-primary-dark text-white font-black py-4 px-10 rounded-2xl inline-flex items-center gap-2 shadow-xl shadow-primary/20 transition-all hover:scale-105">
+            <span class="material-symbols-outlined">edit</span>
+            Write a Review
+          </a>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Write Review Button -->
+  {% if reviews and user.is_authenticated %}
+    <div class="mt-12 text-center pt-12 border-t border-stone-200 dark:border-stone-700">
+      <h3 class="text-2xl font-black text-stone-900 dark:text-white mb-4">Share Your Experience</h3>
+      <p class="text-stone-600 dark:text-stone-400 mb-6">Help other customers make informed decisions</p>
+      <a href="{% url 'add_review' variant.id %}" class="bg-accent-terracotta hover:bg-orange-600 text-white font-black py-4 px-10 rounded-2xl inline-flex items-center gap-2 shadow-xl shadow-orange-500/20 transition-all hover:scale-105">
+        <span class="material-symbols-outlined">edit</span>
+        Write Your Review
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

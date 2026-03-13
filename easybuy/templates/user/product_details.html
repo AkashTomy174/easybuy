@@ -1,8 +1,11 @@
 {% extends 'core/core_base.html' %}
 {% block title %}{{ product.name }} | EasyBuy{% endblock %}
 
+{% block extra_css %}
+{% endblock %}
+
 {% block content %}
-<div class="mx-auto max-w-7xl w-full px-4 py-12 lg:px-12 pb-24 md:pb-12">
+<div class="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-50 dark:from-stone-900 dark:via-stone-800 dark:to-stone-900">
     {% if error %}
         <div class="text-center py-20">
             <span class="material-symbols-outlined text-7xl text-stone-300 block mb-4">search_off</span>
@@ -10,28 +13,67 @@
             <a href="{% url 'all_products' %}" class="text-primary underline mt-4 inline-block font-bold">Back to Shopping</a>
         </div>
     {% else %}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
+    <div class="mx-auto max-w-7xl w-full px-4 py-8 lg:px-12">
+        <!-- Breadcrumb -->
+        <nav class="flex items-center gap-2 text-sm mb-8">
+            <a href="{% url 'home' %}" class="text-stone-500 hover:text-primary transition-colors">Home</a>
+            <span class="material-symbols-outlined text-stone-400 text-sm">chevron_right</span>
+            {% if product.subcategory %}
+            <a href="{% url 'category_products_user' product.subcategory.slug %}" class="text-stone-500 hover:text-primary transition-colors">{{ product.subcategory.name }}</a>
+            <span class="material-symbols-outlined text-stone-400 text-sm">chevron_right</span>
+            {% endif %}
+            <span class="text-stone-900 dark:text-white font-semibold">{{ product.name|truncatewords:5 }}</span>
+        </nav>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-12">
 
         <!-- Image Gallery -->
-        <div class="space-y-6">
-            <div class="aspect-square rounded-[3rem] overflow-hidden bg-white dark:bg-surface-dark border border-stone-200 dark:border-stone-700 shadow-sm">
+        <div class="space-y-4">
+            <div class="relative aspect-square rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-white to-stone-50 dark:from-stone-800 dark:to-stone-900 shadow-2xl shadow-stone-900/10 dark:shadow-black/50 group">
                 {% with product.variants.first as first_variant %}
-                    {% for img in first_variant.images.all %}
-                        {% if img.is_primary %}
-                            <img src="{{ img.image.url }}" id="main-image" alt="{{ product.name }}"
-                                 class="w-full h-full object-cover transition-all duration-500">
-                        {% endif %}
-                    {% endfor %}
+                    {% if first_variant %}
+                        {% with first_variant.images.all as variant_images %}
+                            {% if variant_images %}
+                                {% for img in variant_images %}
+                                    {% if img.is_primary and img.image %}
+                                        <img src="{{ img.image.url }}" id="main-image" alt="{{ product.name }}"
+                                             class="w-full h-full object-cover transition-all duration-700 group-hover:scale-105">
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <div class="flex h-full w-full items-center justify-center">
+                                    <span class="material-symbols-outlined text-7xl text-stone-300">image</span>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    {% else %}
+                        <div class="flex h-full w-full items-center justify-center">
+                            <span class="material-symbols-outlined text-7xl text-stone-300">image</span>
+                        </div>
+                    {% endif %}
                 {% endwith %}
+                
+                <!-- Slideshow Controls -->
+                <button onclick="prevSlide()" class="absolute left-6 top-1/2 -translate-y-1/2 bg-white/95 dark:bg-stone-800/95 backdrop-blur-sm hover:bg-white dark:hover:bg-stone-800 text-stone-900 dark:text-white rounded-full p-4 shadow-2xl opacity-0 group-hover:opacity-100 transition-all hover:scale-110 border border-stone-200 dark:border-stone-700">
+                    <span class="material-symbols-outlined text-3xl">chevron_left</span>
+                </button>
+                <button onclick="nextSlide()" class="absolute right-6 top-1/2 -translate-y-1/2 bg-white/95 dark:bg-stone-800/95 backdrop-blur-sm hover:bg-white dark:hover:bg-stone-800 text-stone-900 dark:text-white rounded-full p-4 shadow-2xl opacity-0 group-hover:opacity-100 transition-all hover:scale-110 border border-stone-200 dark:border-stone-700">
+                    <span class="material-symbols-outlined text-3xl">chevron_right</span>
+                </button>
+                
+                <!-- Slide Indicators -->
+                <div id="slide-indicators" class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 bg-black/20 backdrop-blur-md px-4 py-2 rounded-full"></div>
             </div>
-            <div class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
+            <div class="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
                 {% for variant in product.variants.all %}
                     {% for img in variant.images.all %}
-                        <button onclick="document.getElementById('main-image').src='{{ img.image.url }}'"
+                        {% if img.image %}
+                        <button onclick="changeMainImage('{{ img.image.url }}')"
                                 aria-label="View image {{ forloop.counter }}"
-                                class="h-20 w-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary transition-all bg-white dark:bg-stone-800">
+                                class="thumbnail-btn h-24 w-24 flex-shrink-0 rounded-2xl overflow-hidden border-3 border-stone-200 dark:border-stone-700 hover:border-primary transition-all bg-white dark:bg-stone-800 shadow-lg hover:shadow-xl hover:scale-105">
                             <img src="{{ img.image.url }}" alt="{{ product.name }} thumbnail {{ forloop.counter }}" class="w-full h-full object-cover">
                         </button>
+                        {% endif %}
                     {% endfor %}
                 {% endfor %}
             </div>
@@ -39,31 +81,47 @@
 
         <!-- Product Info -->
         <div class="flex flex-col">
-            <div class="mb-8">
-                <span class="text-xs font-black uppercase tracking-[0.3em] text-accent-terracotta">{{ product.brand|default:"Premium Collection" }}</span>
-                <h1 class="text-4xl lg:text-5xl font-black text-stone-900 dark:text-white mt-2 leading-tight">{{ product.name }}</h1>
-
-                <!-- Price — initialized by JS from the first variant's data attributes -->
-                <div class="flex items-center gap-4 mt-6" id="price-container">
-                    <span class="text-3xl font-black text-primary" id="current-price"></span>
-                    <span class="text-lg text-stone-400 line-through hidden" id="original-price"></span>
-                    <span class="bg-accent-terracotta/10 text-accent-terracotta px-3 py-1 rounded-full text-xs font-bold uppercase hidden" id="discount-badge"></span>
+            <!-- Header Section -->
+            <div class="bg-white dark:bg-stone-800/50 rounded-3xl p-6 shadow-xl border border-stone-200 dark:border-stone-700 mb-4">
+                <div class="flex items-start justify-between mb-4">
+                    <span class="inline-flex items-center gap-2 bg-gradient-to-r from-accent-terracotta/10 to-orange-500/10 text-accent-terracotta px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider border border-accent-terracotta/20">
+                        <span class="material-symbols-outlined text-sm">verified</span>
+                        {{ product.brand|default:"Premium Collection" }}
+                    </span>
+                    {% if avg_rating %}
+                    <div class="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 px-4 py-2 rounded-full border border-amber-200 dark:border-amber-800">
+                        <span class="material-symbols-outlined text-yellow-400 text-lg">star</span>
+                        <span class="font-black text-stone-900 dark:text-white">{{ avg_rating }}.0</span>
+                    </div>
+                    {% endif %}
                 </div>
+                <h1 class="text-2xl lg:text-3xl xl:text-4xl font-black text-stone-900 dark:text-white leading-tight mb-4">{{ product.name }}</h1>
 
-                <!-- Stock Status -->
-                <div class="mt-4">
-                    <span class="text-sm font-bold flex items-center gap-1" id="stock-status"></span>
+                <!-- Price Section -->
+                <div class="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 rounded-2xl p-4 border-2 border-primary/20" id="price-container">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <span class="text-3xl lg:text-4xl font-black text-primary" id="current-price"></span>
+                        <span class="text-xl text-stone-400 line-through hidden" id="original-price"></span>
+                        <span class="bg-gradient-to-r from-accent-terracotta to-orange-500 text-white px-4 py-2 rounded-full text-sm font-black uppercase shadow-lg hidden" id="discount-badge"></span>
+                    </div>
+                    <!-- Stock Status -->
+                    <div class="mt-4">
+                        <span class="text-sm font-bold flex items-center gap-2" id="stock-status"></span>
+                    </div>
                 </div>
             </div>
 
             <!-- Variant Selection -->
-            <div class="mb-8">
-                <h3 class="text-sm font-bold text-stone-900 dark:text-white mb-4 uppercase tracking-widest">Select Variant</h3>
+            <div class="bg-white dark:bg-stone-800/50 rounded-3xl p-6 shadow-xl border border-stone-200 dark:border-stone-700 mb-4">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="material-symbols-outlined text-primary text-2xl">tune</span>
+                    <h3 class="text-lg font-black text-stone-900 dark:text-white uppercase tracking-wider">Choose Your Variant</h3>
+                </div>
                 <div class="flex flex-wrap gap-3" id="variant-buttons">
                     {% for variant in product.variants.all %}
                     <button
                         onclick="selectVariant({{ variant.id }}, {{ variant.selling_price }}, {{ variant.mrp|default:0 }}, {{ variant.stock_quantity }})"
-                        class="variant-btn px-6 py-3 rounded-2xl border-2 border-stone-200 dark:border-stone-700 font-bold text-sm hover:border-primary hover:text-primary transition-all dark:text-white"
+                        class="variant-btn px-8 py-4 rounded-2xl border-2 border-stone-200 dark:border-stone-700 font-bold text-base hover:border-primary hover:text-primary hover:bg-primary/5 transition-all dark:text-white shadow-md hover:shadow-xl hover:scale-105"
                         data-variant-id="{{ variant.id }}"
                         data-selling-price="{{ variant.selling_price }}"
                         data-mrp="{{ variant.mrp|default:0 }}"
@@ -75,131 +133,409 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex flex-col sm:flex-row gap-4 mb-12">
+            <div class="flex flex-col sm:flex-row gap-4 mb-4">
                 <button
                     id="addtocart-btn"
                     data-addtocart-btn
                     onclick="handleAddToCart()"
-                    class="flex-1 h-16 bg-primary text-white rounded-[2rem] font-black text-lg hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span class="material-symbols-outlined" id="cart-btn-icon">shopping_cart</span>
+                    class="flex-1 h-16 bg-gradient-to-r from-primary to-primary-dark text-white rounded-3xl font-black text-lg hover:shadow-2xl hover:shadow-primary/40 transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 border-2 border-primary-dark">
+                    <span class="material-symbols-outlined text-2xl" id="cart-btn-icon">shopping_cart</span>
                     <span id="cart-btn-text">Add to Cart</span>
                 </button>
                 <button
                     id="buynow-btn"
                     onclick="handleBuyNow()"
                     data-buynow-url="{% url 'buy_now' 0 %}"
-                    class="flex-1 h-16 bg-accent-terracotta text-white rounded-[2rem] font-black text-lg hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span class="material-symbols-outlined">bolt</span>
+                    class="flex-1 h-16 bg-gradient-to-r from-accent-terracotta to-orange-500 text-white rounded-3xl font-black text-lg hover:shadow-2xl hover:shadow-orange-500/40 transition-all shadow-xl shadow-orange-500/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 border-2 border-orange-600">
+                    <span class="material-symbols-outlined text-2xl">bolt</span>
                     Buy Now
+                </button>
+                <button
+                    id="wishlist-btn"
+                    onclick="toggleWishlistDetail()"
+                    class="h-16 w-16 bg-white dark:bg-stone-800 border-2 border-stone-200 dark:border-stone-700 text-stone-400 hover:text-red-500 hover:border-red-500 rounded-3xl font-black text-lg hover:shadow-2xl transition-all shadow-xl flex items-center justify-center gap-3 hover:scale-105">
+                    <span class="material-symbols-outlined text-2xl">favorite_border</span>
                 </button>
             </div>
 
             <!-- Description -->
-            <div class="border-t border-stone-200 dark:border-stone-700 pt-8">
-                <h3 class="text-sm font-bold text-stone-900 dark:text-white mb-4 uppercase tracking-widest">Description</h3>
-                <div class="prose prose-stone text-stone-500 dark:text-stone-400 leading-relaxed">
+            <div class="bg-white dark:bg-stone-800/50 rounded-3xl p-6 shadow-xl border border-stone-200 dark:border-stone-700 mb-4">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="material-symbols-outlined text-primary text-2xl">description</span>
+                    <h3 class="text-lg font-black text-stone-900 dark:text-white uppercase tracking-wider">Product Details</h3>
+                </div>
+                <div class="prose prose-stone max-w-none text-stone-600 dark:text-stone-300 leading-relaxed text-base">
                     {{ product.description|safe|default:"No description available for this product." }}
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
-</div>
 
-<!-- Related Products Section -->
-{% if related_products %}
-<section class="mx-auto max-w-7xl px-4 py-16 lg:px-12">
-    <div class="flex items-center justify-between mb-8">
-        <h2 class="text-2xl font-black text-stone-900 dark:text-white">Related Products</h2>
-        <a href="{% url 'category_products_user' product.subcategory.slug %}" class="text-primary font-bold text-sm hover:underline">View All</a>
-    </div>
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {% for related in related_products %}
-        {% with related.variants.first as r_variant %}
-        {% with r_variant.images.first as r_image %}
-        <a href="{% url 'product_detail_user' related.slug %}" class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 transition-all hover:shadow-xl hover:-translate-y-1 hover:border-primary/30">
-            <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4">
-                {% if r_image and r_image.image %}
-                    <img src="{{ r_image.image.url }}" alt="{{ related.name }}" 
-                         class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110">
+    <!-- Reviews Section -->
+    <div class="mx-auto max-w-7xl w-full px-4 py-12 lg:px-12">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div>
+                <!-- Reviews Header -->
+                <div class="bg-white dark:bg-stone-800/50 rounded-3xl p-6 shadow-xl border border-stone-200 dark:border-stone-700 mb-4">
+                    <h3 class="text-xl font-black text-stone-900 dark:text-white mb-4 flex items-center gap-3">
+                        <span class="material-symbols-outlined text-2xl text-primary">reviews</span>
+                        Customer Reviews
+                    </h3>
+                    
+                    {% if avg_rating %}
+                    <!-- Rating Overview -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <!-- Overall Rating -->
+                        <div class="flex items-center gap-6">
+                            <div class="text-center">
+                                <div class="text-5xl font-black text-stone-900 dark:text-white mb-2">{{ avg_rating }}.0</div>
+                                <div class="flex gap-1 mb-2">
+                                    {% for i in "12345"|make_list %}
+                                        <span class="material-symbols-outlined text-2xl {% if forloop.counter <= avg_rating %}text-yellow-400{% else %}text-stone-300{% endif %}">star</span>
+                                    {% endfor %}
+                                </div>
+                                <p class="text-sm text-stone-500 dark:text-stone-400">Based on {{ reviews|length }} review{{ reviews|length|pluralize }}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Rating Breakdown -->
+                        <div class="space-y-2">
+                            {% for rating in "54321"|make_list %}
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-bold text-stone-700 dark:text-stone-300 w-8">{{ rating }} <span class="material-symbols-outlined text-xs align-middle">star</span></span>
+                                <div class="flex-1 h-2 bg-stone-200 dark:bg-stone-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-yellow-400" style="width: 0%"></div>
+                                </div>
+                                <span class="text-sm text-stone-500 dark:text-stone-400 w-8">0</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Write Review Button -->
+                    {% if user.is_authenticated and not existing_review %}
+                    <div class="border-t border-stone-200 dark:border-stone-700 pt-4">
+                        <button onclick="writeReview()" class="w-full sm:w-auto bg-primary hover:bg-primary-dark text-white font-bold py-3 px-6 rounded-2xl transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">rate_review</span>
+                            Write a Review
+                        </button>
+                    </div>
+                    {% elif existing_review %}
+                    <div class="border-t border-stone-200 dark:border-stone-700 pt-4">
+                        <div class="flex items-center gap-3 text-green-600 dark:text-green-400">
+                            <span class="material-symbols-outlined">check_circle</span>
+                            <span class="font-semibold">You've already reviewed this product</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if reviews %}
+                    <!-- Reviews List -->
+                    <div class="space-y-4">
+                        {% for review in reviews %}
+                        <div class="bg-white dark:bg-stone-800/50 rounded-2xl p-5 shadow-lg border border-stone-200 dark:border-stone-700">
+                            <!-- Review Header -->
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center flex-shrink-0">
+                                        <span class="text-white font-bold text-lg">{{ review.user.first_name.0|upper }}{{ review.user.last_name.0|upper }}</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-stone-900 dark:text-white">{{ review.user.first_name }} {{ review.user.last_name }}</h4>
+                                        <p class="text-sm text-stone-500 dark:text-stone-400">{{ review.created_at|date:"F d, Y" }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1 bg-stone-100 dark:bg-stone-700 px-3 py-1.5 rounded-full">
+                                    {% for i in "12345"|make_list %}
+                                        <span class="material-symbols-outlined text-sm {% if forloop.counter <= review.rating %}text-yellow-400{% else %}text-stone-300{% endif %}">star</span>
+                                    {% endfor %}
+                                    <span class="ml-1 text-sm font-bold text-stone-900 dark:text-white">{{ review.rating }}.0</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Review Content -->
+                            <div class="mb-3">
+                                <p class="text-stone-700 dark:text-stone-300 leading-relaxed">{{ review.comment }}</p>
+                            </div>
+                            
+                            <!-- Seller Reply -->
+                            {% if review.seller_reply %}
+                            <div class="bg-stone-50 dark:bg-stone-900/50 rounded-xl p-4 border-l-4 border-primary">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <span class="material-symbols-outlined text-white text-sm">storefront</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-sm font-bold text-stone-900 dark:text-white">Seller Response</span>
+                                            <span class="text-xs text-stone-500 dark:text-stone-400">{{ review.replied_at|date:"M d, Y" }}</span>
+                                        </div>
+                                        <p class="text-sm text-stone-700 dark:text-stone-300">{{ review.seller_reply }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- View All Button -->
+                    {% if reviews and product.variants.first %}
+                    <div class="text-center mt-4">
+                        <a href="{% url 'reviews' product.variants.first.id %}" class="inline-flex items-center gap-2 text-primary hover:text-primary-dark font-bold transition-colors">
+                            View all {{ reviews|length }} reviews
+                            <span class="material-symbols-outlined">arrow_forward</span>
+                        </a>
+                    </div>
+                    {% endif %}
                 {% else %}
-                    <div class="flex h-full w-full items-center justify-center">
-                        <span class="material-symbols-outlined text-5xl text-stone-300">image</span>
+                    <!-- No Reviews State -->
+                    <div class="bg-white dark:bg-stone-800/50 rounded-2xl p-10 text-center border border-stone-200 dark:border-stone-700">
+                        <span class="material-symbols-outlined text-6xl text-stone-300 dark:text-stone-600 mb-4 block">rate_review</span>
+                        <h4 class="text-xl font-bold text-stone-900 dark:text-white mb-2">No reviews yet</h4>
+                        <p class="text-stone-500 dark:text-stone-400 mb-6">Be the first to share your thoughts</p>
+                        {% if user.is_authenticated and not existing_review %}
+                        <button onclick="writeReview()" class="bg-primary hover:bg-primary-dark text-white font-bold py-3 px-6 rounded-xl transition-all inline-flex items-center gap-2">
+                            <span class="material-symbols-outlined">rate_review</span>
+                            Write the First Review
+                        </button>
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>
-            <div class="flex flex-1 flex-col">
-                <span class="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-1">{{ related.brand }}</span>
-                <h3 class="font-bold text-stone-900 dark:text-white text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                    {{ related.name }}
-                </h3>
-                <div class="mt-3 flex items-center gap-2">
-                    {% if r_variant %}
-                    <span class="text-lg font-black text-primary">₹{{ r_variant.selling_price }}</span>
-                    {% if r_variant.mrp > r_variant.selling_price %}
-                    <span class="text-xs font-medium text-stone-400 line-through">₹{{ r_variant.mrp }}</span>
+        </div>
+    </div>
+
+    <!-- Related Products Section -->
+    {% if related_products %}
+    <div class="mx-auto max-w-7xl w-full px-4 py-12 lg:px-12">
+        <div class="flex items-center justify-between mb-8">
+            <h2 class="text-2xl lg:text-3xl font-black text-stone-900 dark:text-white flex items-center gap-3">
+                <span class="material-symbols-outlined text-3xl text-primary">category</span>
+                You May Also Like
+            </h2>
+            {% if product.subcategory %}
+            <a href="{% url 'category_products_user' product.subcategory.slug %}" class="text-primary font-bold hover:underline flex items-center gap-2 group">
+                View All
+                <span class="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
+            </a>
+            {% endif %}
+        </div>
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {% for related in related_products %}
+            {% with related.variants.first as r_variant %}
+            {% with r_variant.images.first as r_image %}
+            <a href="{% url 'product_detail_user' related.slug %}" class="group flex flex-col rounded-3xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-5 transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary">
+                <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4">
+                    {% if r_image and r_image.image %}
+                        <img src="{{ r_image.image.url }}" alt="{{ related.name }}" 
+                             class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% else %}
+                        <div class="flex h-full w-full items-center justify-center">
+                            <span class="material-symbols-outlined text-5xl text-stone-300">image</span>
+                        </div>
                     {% endif %}
+                    {% if r_variant and r_variant.mrp > r_variant.selling_price %}
+                    <div class="absolute top-3 right-3 bg-gradient-to-r from-accent-terracotta to-orange-500 text-white px-3 py-1.5 rounded-full text-xs font-black shadow-lg">
+                        SAVE ₹{{ r_variant.mrp|floatformat:0|add:"-"|add:r_variant.selling_price|floatformat:0 }}
+                    </div>
                     {% endif %}
                 </div>
-            </div>
-        </a>
-        {% endwith %}
-        {% endwith %}
-        {% endfor %}
+                <div class="flex flex-1 flex-col">
+                    <span class="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-2">{{ related.brand|default:"Premium" }}</span>
+                    <h3 class="font-bold text-stone-900 dark:text-white text-base leading-tight line-clamp-2 mb-3 group-hover:text-primary transition-colors">
+                        {{ related.name }}
+                    </h3>
+                    <div class="mt-auto flex items-center gap-2 flex-wrap">
+                        {% if r_variant %}
+                        <span class="text-xl font-black text-primary">₹{{ r_variant.selling_price }}</span>
+                        {% if r_variant.mrp > r_variant.selling_price %}
+                        <span class="text-sm font-medium text-stone-400 line-through">₹{{ r_variant.mrp }}</span>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                    {% if r_variant and r_variant.stock_quantity > 0 %}
+                    <div class="mt-3 flex items-center gap-2 text-green-600 text-xs font-bold">
+                        <span class="material-symbols-outlined text-sm">check_circle</span>
+                        In Stock
+                    </div>
+                    {% else %}
+                    <div class="mt-3 flex items-center gap-2 text-red-600 text-xs font-bold">
+                        <span class="material-symbols-outlined text-sm">cancel</span>
+                        Out of Stock
+                    </div>
+                    {% endif %}
+                </div>
+            </a>
+            {% endwith %}
+            {% endwith %}
+            {% endfor %}
+        </div>
     </div>
-</section>
-{% endif %}
+    {% endif %}
+    </div>
+    {% endif %}
+</div>
 
 <script>
 let selectedVariantId = null;
 let selectedVariantStock = 0;
+let allImages = [];
+let currentSlide = 0;
+let slideInterval = null;
+
+function changeMainImage(imageUrl) {
+    const mainImage = document.getElementById('main-image');
+    if (mainImage) {
+        mainImage.src = imageUrl;
+        currentSlide = allImages.indexOf(imageUrl);
+        if (currentSlide === -1) currentSlide = 0;
+        updateIndicators();
+    }
+}
+
+function initSlideshow() {
+    allImages = [];
+    document.querySelectorAll('.flex.gap-4 button img').forEach(img => {
+        if (img.src) allImages.push(img.src);
+    });
+    
+    if (allImages.length > 1) {
+        createIndicators();
+        startSlideshow();
+    }
+}
+
+function createIndicators() {
+    const container = document.getElementById('slide-indicators');
+    if (!container) return;
+    container.innerHTML = '';
+    allImages.forEach((_, idx) => {
+        const dot = document.createElement('button');
+        dot.className = 'w-2 h-2 rounded-full transition-all';
+        dot.onclick = () => goToSlide(idx);
+        container.appendChild(dot);
+    });
+    updateIndicators();
+}
+
+function updateIndicators() {
+    const dots = document.querySelectorAll('#slide-indicators button');
+    dots.forEach((dot, idx) => {
+        if (idx === currentSlide) {
+            dot.className = 'w-10 h-2.5 rounded-full bg-white shadow-lg transition-all';
+        } else {
+            dot.className = 'w-2.5 h-2.5 rounded-full bg-white/50 hover:bg-white/80 transition-all';
+        }
+    });
+    
+    // Update thumbnail borders
+    const thumbnails = document.querySelectorAll('.thumbnail-btn');
+    thumbnails.forEach((thumb, idx) => {
+        if (idx === currentSlide) {
+            thumb.classList.add('border-primary', 'scale-105');
+            thumb.classList.remove('border-stone-200', 'dark:border-stone-700');
+        } else {
+            thumb.classList.remove('border-primary', 'scale-105');
+            thumb.classList.add('border-stone-200', 'dark:border-stone-700');
+        }
+    });
+}
+
+function goToSlide(index) {
+    if (allImages.length === 0) return;
+    currentSlide = index;
+    changeMainImage(allImages[currentSlide]);
+    resetSlideshow();
+}
+
+function nextSlide() {
+    if (allImages.length === 0) return;
+    currentSlide = (currentSlide + 1) % allImages.length;
+    changeMainImage(allImages[currentSlide]);
+    resetSlideshow();
+}
+
+function prevSlide() {
+    if (allImages.length === 0) return;
+    currentSlide = (currentSlide - 1 + allImages.length) % allImages.length;
+    changeMainImage(allImages[currentSlide]);
+    resetSlideshow();
+}
+
+function startSlideshow() {
+    if (slideInterval) clearInterval(slideInterval);
+    slideInterval = setInterval(() => {
+        nextSlide();
+    }, 3000);
+}
+
+function resetSlideshow() {
+    startSlideshow();
+}
 
 // Initialize with first variant on page load
 document.addEventListener('DOMContentLoaded', () => {
     const firstBtn = document.querySelector('.variant-btn');
     if (firstBtn) {
-        const price = parseFloat(firstBtn.dataset.sellingPrice);
-        const mrp = parseFloat(firstBtn.dataset.mrp);
-        const stock = parseInt(firstBtn.dataset.stock);
-        // selectVariant handles price, discount badge, stock status, and button state
-        selectVariant(firstBtn.dataset.variantId, price, mrp, stock);
+        const price = parseFloat(firstBtn.dataset.sellingPrice) || 0;
+        const mrp = parseFloat(firstBtn.dataset.mrp) || 0;
+        const stock = parseInt(firstBtn.dataset.stock) || 0;
+        const variantId = firstBtn.dataset.variantId;
+        if (variantId) {
+            selectVariant(variantId, price, mrp, stock);
+        }
     }
+    initSlideshow();
 });
 
 function selectVariant(id, price, mrp, stock) {
+    if (!id) return;
+    
     selectedVariantId = id;
-    selectedVariantStock = stock;
+    selectedVariantStock = stock || 0;
 
     // Highlight selected variant button
     document.querySelectorAll('.variant-btn').forEach(btn => {
-        btn.classList.remove('border-primary', 'text-primary');
+        btn.classList.remove('border-primary', 'text-primary', 'bg-primary/5', 'scale-105', 'shadow-xl');
+        btn.classList.add('shadow-md');
         if (btn.dataset.variantId == id) {
-            btn.classList.add('border-primary', 'text-primary');
+            btn.classList.add('border-primary', 'text-primary', 'bg-primary/5', 'scale-105', 'shadow-xl');
+            btn.classList.remove('shadow-md');
         }
     });
 
     // Update price
-    document.getElementById('current-price').textContent = '₹' + price;
+    const priceEl = document.getElementById('current-price');
+    if (priceEl) {
+        priceEl.textContent = '₹' + (price || 0);
+    }
 
     // Update MRP / discount badge
     const origPrice = document.getElementById('original-price');
     const discBadge = document.getElementById('discount-badge');
-    if (mrp > price) {
-        origPrice.textContent = '₹' + mrp;
-        origPrice.classList.remove('hidden');
-        discBadge.textContent = 'Save ₹' + (mrp - price).toFixed(0);
-        discBadge.classList.remove('hidden');
-    } else {
-        origPrice.classList.add('hidden');
-        discBadge.classList.add('hidden');
+    if (origPrice && discBadge) {
+        if (mrp > price) {
+            origPrice.textContent = '₹' + mrp;
+            origPrice.classList.remove('hidden');
+            discBadge.textContent = 'Save ₹' + (mrp - price).toFixed(0);
+            discBadge.classList.remove('hidden');
+        } else {
+            origPrice.classList.add('hidden');
+            discBadge.classList.add('hidden');
+        }
     }
 
     // Update stock status using Material Symbols icons
     const stockStatus = document.getElementById('stock-status');
-    if (stock > 0) {
-        stockStatus.innerHTML = `<span class="material-symbols-outlined text-green-600 text-[18px]">check_circle</span><span class="text-green-600">In Stock (${stock} available)</span>`;
-    } else {
-        stockStatus.innerHTML = `<span class="material-symbols-outlined text-red-600 text-[18px]">cancel</span><span class="text-red-600">Out of Stock</span>`;
+    if (stockStatus) {
+        if (stock > 0) {
+            stockStatus.innerHTML = `<span class="material-symbols-outlined text-green-600 text-[18px]">check_circle</span><span class="text-green-600">In Stock (${stock} available)</span>`;
+        } else {
+            stockStatus.innerHTML = `<span class="material-symbols-outlined text-red-600 text-[18px]">cancel</span><span class="text-red-600">Out of Stock</span>`;
+        }
     }
 
     updateButtonState();
@@ -218,10 +554,17 @@ function updateButtonState() {
 }
 
 function handleAddToCart() {
+    if (!selectedVariantId) {
+        showToast('Please select a variant', 'error');
+        return;
+    }
+    if (selectedVariantStock <= 0) {
+        showToast('Product is out of stock', 'error');
+        return;
+    }
     const btn = document.getElementById('addtocart-btn');
     const imgEl = document.getElementById('main-image');
     const productImage = imgEl && imgEl.src ? imgEl.src : null;
-    // addToCart is defined in core_base.html
     addToCart(selectedVariantId, btn, productImage);
 }
 
@@ -232,6 +575,32 @@ function handleBuyNow() {
     const btn = document.getElementById('buynow-btn');
     const baseUrl = btn.dataset.buynowUrl.replace('/0/', '/' + selectedVariantId + '/');
     window.location.href = baseUrl;
+}
+
+function writeReview() {
+    if (!selectedVariantId) {
+        showToast('Please select a variant first', 'error');
+        return;
+    }
+    try {
+        const baseUrl = "{% url 'add_review' 0 %}".replace('/0/', '/' + selectedVariantId + '/');
+        window.location.href = baseUrl;
+    } catch (e) {
+        console.error('Error navigating to review page:', e);
+        showToast('Error opening review page', 'error');
+    }
+}
+
+function toggleWishlistDetail() {
+    if (!selectedVariantId) {
+        showToast('Please select a variant first', 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('wishlist-btn');
+    const icon = btn.querySelector('.material-symbols-outlined');
+    
+    toggleWishlist(selectedVariantId, btn);
 }
 </script>
 {% endblock %}

@@ -33,7 +33,7 @@
             </span>
         </div>
         <p class="text-sm font-medium text-stone-500 uppercase tracking-wider">Total Revenue</p>
-        <h3 class="text-2xl font-black text-stone-900 dark:text-white mt-1">$128,430.00</h3>
+        <h3 class="text-2xl font-black text-stone-900 dark:text-white mt-1">${{ total_revenue|floatformat:2 }}</h3>
         <p class="text-xs text-stone-400 mt-2">+$14,200 vs last 30 days</p>
     </div>
 
@@ -48,7 +48,7 @@
             </span>
         </div>
         <p class="text-sm font-medium text-stone-500 uppercase tracking-wider">Orders Processed</p>
-        <h3 class="text-2xl font-black text-stone-900 dark:text-white mt-1">1,240</h3>
+        <h3 class="text-2xl font-black text-stone-900 dark:text-white mt-1">{{ total_orders }}</h3>
         <p class="text-xs text-stone-400 mt-2">+94 new orders this month</p>
     </div>
 
@@ -63,7 +63,7 @@
             </span>
         </div>
         <p class="text-sm font-medium text-stone-500 uppercase tracking-wider">Average Order Value</p>
-        <h3 class="text-2xl font-black text-stone-900 dark:text-white mt-1">$103.57</h3>
+        <h3 class="text-2xl font-black text-stone-900 dark:text-white mt-1">${{ average_order_value|floatformat:2 }}</h3>
         <p class="text-xs text-stone-400 mt-2">Growth in multi-item carts</p>
     </div>
 </div>

@@ -8,104 +8,93 @@
         <p class="text-stone-500 mt-2 font-medium">Track and manage your orders</p>
     </div>
 
-    {% if orders %}
-        <div class="space-y-6">
-            {% for order in orders %}
-            <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm overflow-hidden">
-                <!-- Order Header -->
+    {% if order_items %}
+        <div class="space-y-4">
+            {% for item in order_items %}
+            <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <!-- Item Header -->
                 <div class="bg-stone-50 dark:bg-stone-800/50 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
                     <div class="flex items-center gap-4">
                         <div>
                             <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Order Number</span>
-                            <p class="font-mono text-sm font-bold text-stone-900 dark:text-white">{{ order.order_number }}</p>
+                            <p class="font-mono text-sm font-bold text-stone-900 dark:text-white">{{ item.order.order_number }}</p>
                         </div>
                         <div>
                             <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Ordered On</span>
-                            <p class="text-sm font-medium text-stone-600 dark:text-stone-300">{{ order.ordered_at|date:"M d, Y" }}</p>
+                            <p class="text-sm font-medium text-stone-600 dark:text-stone-300">{{ item.order.ordered_at|date:"M d, Y" }}</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="text-right">
-                            <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Total</span>
-                            <p class="text-lg font-black text-primary">₹{{ order.total_amount|floatformat:2 }}</p>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Status:</span>
+                            <span class="px-3 py-1 text-xs font-black uppercase tracking-wider rounded-full 
+                                {% if item.status == 'DELIVERED' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
+                                {% elif item.status == 'SHIPPED' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400
+                                {% elif item.status == 'CONFIRMED' %}bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                {% elif item.status == 'CANCELLED' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
+                                {% elif item.status == 'RETURNED' %}bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400
+                                {% else %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400{% endif %}">
+                                {{ item.status }}
+                            </span>
                         </div>
-                    {% if order.order_status == 'CONFIRMED' or order.order_status == 'PENDING' %}
-                        <button onclick="cancelOrder({{ order.id }})" class="px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 font-bold text-xs rounded-xl transition-colors">
-                            Cancel Order
+                        {% if item.order.order_status == 'CONFIRMED' or item.order.order_status == 'PENDING' %}
+                        <button onclick="cancelOrder({{ item.order.id }})" class="px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 font-bold text-xs rounded-xl transition-colors">
+                            Cancel
                         </button>
                         {% endif %}
                     </div>
                 </div>
 
-                <!-- Order Status Pills -->
-                <div class="px-6 py-3 flex flex-wrap gap-3 border-b border-stone-100 dark:border-stone-700">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Payment:</span>
-                        <span class="px-2 py-1 text-[10px] font-black uppercase tracking-wider rounded-full 
-                            {% if order.payment_status == 'PAID' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
-                            {% elif order.payment_status == 'PENDING' %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400
-                            {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400{% endif %}">
-                            {{ order.payment_status }}
-                        </span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Order:</span>
-                        <span class="px-2 py-1 text-[10px] font-black uppercase tracking-wider rounded-full 
-                            {% if order.order_status == 'DELIVERED' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
-                            {% elif order.order_status == 'SHIPPED' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400
-                            {% elif order.order_status == 'CONFIRMED' %}bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
-                            {% elif order.order_status == 'CANCELLED' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
-                            {% else %}bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400{% endif %}">
-                            {{ order.order_status }}
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Order Items -->
+                <!-- Product Details -->
                 <div class="p-6">
-                    <h3 class="text-sm font-bold text-stone-400 uppercase tracking-wider mb-4">Order Items</h3>
-                    <div class="space-y-3">
-                        {% for item in order.items.all %}
-                        <div class="flex items-center gap-4 p-3 bg-stone-50 dark:bg-stone-800 rounded-xl">
-                            <div class="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-stone-200 dark:bg-stone-700">
-                                {% with item.variant.images.first as img %}
-                                    {% if img %}
-                                        <img src="{{ img.image.url }}" alt="{{ item.variant.product.name }}" class="w-full h-full object-cover">
-                                    {% else %}
-                                        <span class="material-symbols-outlined text-xl text-stone-400 flex items-center justify-center w-full h-full">image</span>
-                                    {% endif %}
-                                {% endwith %}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-bold text-stone-900 dark:text-white truncate">{{ item.variant.product.name }}</h4>
-                                <p class="text-xs text-stone-500 dark:text-stone-400">SKU: {{ item.variant.sku_code }}</p>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-xs text-stone-500">Qty: {{ item.quantity }} × ₹{{ item.price_at_purchase }}</span>
-                                    <span class="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-full 
-                                        {% if item.status == 'SHIPPED' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400
-                                        {% elif item.status == 'PENDING' %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400
-                                        {% elif item.status == 'CANCELLED' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
-                                        {% elif item.status == 'RETURNED' %}bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
-                                        {% else %}bg-stone-100 text-stone-700 dark:bg-stone-700 dark:text-stone-300{% endif %}">
-                                        {{ item.status }}
-                                    </span>
+                    <div class="flex items-start gap-4">
+                        <div class="w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden bg-stone-100 dark:bg-stone-800">
+                            {% with item.variant.images.first as img %}
+                                {% if img and img.image %}
+                                    <img src="{{ img.image.url }}" alt="{{ item.variant.product.name }}" class="w-full h-full object-cover">
+                                {% else %}
+                                    <div class="w-full h-full flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-3xl text-stone-400">image</span>
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-lg font-bold text-stone-900 dark:text-white mb-1">{{ item.variant.product.name }}</h3>
+                            <p class="text-sm text-stone-500 dark:text-stone-400 mb-2">{{ item.variant.product.brand }}</p>
+                            <div class="flex flex-wrap items-center gap-3 text-sm">
+                                <div class="flex items-center gap-1">
+                                    <span class="text-stone-400">SKU:</span>
+                                    <span class="font-mono text-stone-600 dark:text-stone-300">{{ item.variant.sku_code }}</span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <span class="text-stone-400">Quantity:</span>
+                                    <span class="font-bold text-stone-900 dark:text-white">{{ item.quantity }}</span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <span class="text-stone-400">Price:</span>
+                                    <span class="font-bold text-stone-900 dark:text-white">₹{{ item.price_at_purchase }}</span>
                                 </div>
                             </div>
-                            <div class="text-right">
-                                <p class="font-black text-stone-900 dark:text-white">₹{% widthratio item.price_at_purchase 1 item.quantity %}</p>
+                            <div class="mt-3 flex items-center gap-2">
+                                <span class="text-xs text-stone-400">Sold by:</span>
+                                <span class="text-xs font-bold text-primary">{{ item.seller.store_name }}</span>
                             </div>
                         </div>
-                        {% endfor %}
+                        <div class="text-right">
+                            <p class="text-xs text-stone-400 mb-1">Total</p>
+                            <p class="text-2xl font-black text-primary">₹{% widthratio item.price_at_purchase 1 item.quantity %}</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Delivery Address -->
                 <div class="px-6 pb-6">
                     <div class="p-4 bg-stone-50 dark:bg-stone-800 rounded-xl">
-                        <h3 class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Delivery Address</h3>
-                        <p class="font-bold text-stone-900 dark:text-white">{{ order.shipping_name }}</p>
-                        <p class="text-sm text-stone-500 dark:text-stone-400">{{ order.shipping_address }}</p>
-                        <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Phone: {{ order.shipping_phone }}</p>
+                        <h4 class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Delivery Address</h4>
+                        <p class="font-bold text-stone-900 dark:text-white">{{ item.order.shipping_name }}</p>
+                        <p class="text-sm text-stone-500 dark:text-stone-400">{{ item.order.shipping_address }}</p>
+                        <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Phone: {{ item.order.shipping_phone }}</p>
                     </div>
                 </div>
             </div>
@@ -157,9 +146,5 @@ function cancelOrder(orderId) {
         showToast('Error cancelling order', 'error');
     });
 }
-
-// getCookie is defined in core_base.html
 </script>
 {% endblock %}
-
-

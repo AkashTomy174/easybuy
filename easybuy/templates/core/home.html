@@ -90,7 +90,9 @@
                     </div>
                     {% endif %}
                     
-                    <button class="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all duration-300 hover:bg-white hover:text-accent-terracotta hover:scale-110 dark:bg-black/50">
+                    <button onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ item.variant.id }}, this); return false;" 
+                            class="wishlist-btn absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all duration-300 hover:bg-white hover:text-accent-terracotta hover:scale-110 dark:bg-black/50"
+                            data-variant-id="{{ item.variant.id }}">
                         <span class="material-symbols-outlined text-[20px]">favorite_border</span>
                     </button>
                 </div>

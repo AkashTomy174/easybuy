@@ -1,0 +1,166 @@
+{% extends 'core/core_base.html' %}
+{% block title %}Profile Settings | EasyBuy{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto w-full px-4 lg:px-12 py-12">
+    
+    {% if messages %}
+    <div class="mb-8 space-y-2">
+        {% for message in messages %}
+        <div class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 shadow-sm flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
+            <span class="material-symbols-outlined">check_circle</span>
+            <p class="text-sm font-bold">{{ message }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="flex flex-col lg:flex-row gap-12">
+
+        <!-- Sidebar -->
+        <aside class="w-full lg:w-72 flex-shrink-0">
+            <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-3xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm sticky top-28">
+                <div class="px-4 py-3 mb-2">
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">Settings</span>
+                </div>
+                <nav class="space-y-2">
+                    <a href="{% url 'profile_settings' %}" 
+                       class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all bg-primary text-white shadow-lg shadow-primary/20">
+                        <span class="material-symbols-outlined text-[20px]">person</span>
+                        <span class="text-sm font-bold">Personal Info</span>
+                    </a>
+                    <a href="{% url 'manage_addresses' %}" 
+                       class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800">
+                        <span class="material-symbols-outlined text-[20px]">location_on</span>
+                        <span class="text-sm font-bold">Addresses</span>
+                    </a>
+                    <a href="{% url 'user_orders' %}" class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800">
+                        <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+                        <span class="text-sm font-bold">My Orders</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-grow">
+            <div class="bg-white dark:bg-surface-dark rounded-3xl border border-stone-200 dark:border-stone-700 shadow-sm overflow-hidden">
+                
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-primary to-primary-dark p-8 text-white">
+                    <h2 class="text-3xl font-black">Personal Information</h2>
+                    <p class="text-white/80 text-sm font-medium mt-1">Update your profile details</p>
+                </div>
+
+                <!-- Profile Form -->
+                <form method="POST" enctype="multipart/form-data" class="p-8">
+                    {% csrf_token %}
+                    
+                    <div class="flex flex-col md:flex-row gap-8 mb-8">
+                        <!-- Profile Image -->
+                        <div class="flex flex-col items-center gap-4">
+                            <div class="relative">
+                                {% if user.profile_image %}
+                                <img src="{{ user.profile_image.url }}" alt="Profile" class="w-32 h-32 rounded-full object-cover border-4 border-stone-100 dark:border-stone-700 shadow-lg">
+                                {% else %}
+                                <div class="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center border-4 border-stone-100 dark:border-stone-700 shadow-lg">
+                                    <span class="material-symbols-outlined text-5xl text-white">person</span>
+                                </div>
+                                {% endif %}
+                                <div class="absolute bottom-0 right-0 w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg cursor-pointer hover:bg-primary-dark transition-colors" onclick="document.getElementById('profile_image').click()">
+                                    <span class="material-symbols-outlined text-white text-xl">photo_camera</span>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <label for="profile_image" class="text-xs font-bold text-primary cursor-pointer hover:underline">Change Photo</label>
+                                <input type="file" id="profile_image" name="profile_image" class="hidden" accept="image/*">
+                                <p class="text-xs text-stone-400 mt-1">JPG, PNG (max 2MB)</p>
+                            </div>
+                        </div>
+
+                        <!-- Form Fields -->
+                        <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-bold text-stone-700 dark:text-stone-300 mb-2">First Name</label>
+                                <input type="text" name="first_name" value="{{ user.first_name|default:'' }}" required
+                                    class="w-full rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-bold text-stone-700 dark:text-stone-300 mb-2">Last Name</label>
+                                <input type="text" name="last_name" value="{{ user.last_name|default:'' }}" required
+                                    class="w-full rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-bold text-stone-700 dark:text-stone-300 mb-2">Email</label>
+                                <input type="email" name="email" value="{{ user.email }}" required
+                                    class="w-full rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-bold text-stone-700 dark:text-stone-300 mb-2">Phone Number</label>
+                                <input type="tel" name="phone_number" value="{{ user.phone_number|default:'' }}"
+                                    class="w-full rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-bold text-stone-700 dark:text-stone-300 mb-2">Date of Birth</label>
+                                <input type="date" name="dob" value="{{ user.dob|date:'Y-m-d'|default:'' }}"
+                                    class="w-full rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-bold text-stone-700 dark:text-stone-300 mb-2">Gender</label>
+                                <select name="gender" class="w-full rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                                    <option value="">Select Gender</option>
+                                    <option value="M" {% if user.gender == 'M' %}selected{% endif %}>Male</option>
+                                    <option value="F" {% if user.gender == 'F' %}selected{% endif %}>Female</option>
+                                    <option value="O" {% if user.gender == 'O' %}selected{% endif %}>Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-stone-100 dark:border-stone-700">
+                        <button type="submit" class="flex-1 bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">save</span>
+                            Update Profile
+                        </button>
+                        <a href="{% url 'manage_addresses' %}" class="flex-1 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-stone-200 dark:hover:bg-stone-700 transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">location_on</span>
+                            Manage Addresses
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+
+        </div>
+    </div>
+</div>
+
+<script>
+// Preview image before upload
+document.getElementById('profile_image').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.querySelector('img[alt="Profile"]') || document.querySelector('.rounded-full');
+            if (img.tagName === 'IMG') {
+                img.src = e.target.result;
+            } else {
+                const newImg = document.createElement('img');
+                newImg.src = e.target.result;
+                newImg.alt = 'Profile';
+                newImg.className = 'w-32 h-32 rounded-full object-cover border-4 border-stone-100 dark:border-stone-700 shadow-lg';
+                img.parentNode.replaceChild(newImg, img);
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}

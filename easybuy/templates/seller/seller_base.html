@@ -67,6 +67,11 @@
                 <span class="material-symbols-outlined">receipt_long</span>
                 <span>Orders</span>
             </a>
+            <a href="{% url 'seller_reviews' %}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'reviews' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
+                <span class="material-symbols-outlined">rate_review</span>
+                <span>Reviews</span>
+            </a>
             <a href="#"
                class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
                 <span class="material-symbols-outlined">analytics</span>
@@ -95,11 +100,7 @@
         <!-- Top Bar -->
         <header class="h-16 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 flex items-center justify-between px-8 sticky top-0 z-10">
             <div class="flex items-center gap-4 flex-1">
-                <div class="relative w-full max-w-md">
-                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">search</span>
-                    <input class="w-full bg-stone-50 dark:bg-stone-800 border-none rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/50 transition-all"
-                           placeholder="Search orders, products..." type="text"/>
-                </div>
+               
             </div>
             <div class="flex items-center gap-3">
                 <button class="p-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl relative" aria-label="Notifications">

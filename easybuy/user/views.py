@@ -4,22 +4,19 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from easybuy.core.decorators import role_required
 from easybuy.seller.models import Product, ProductVariant, ProductImage
-from .models import Cart, CartItem, Order, OrderItem, Review
+from .models import Cart, CartItem, Order, OrderItem, Review, Wishlist, WishlistItem
 from easybuy.core.models import SubCategory, Category, Address
 import json
 from django.http import Http404
-from django.db.models import Q
+from django.db.models import Q, Avg
 from django.db import transaction
 from decimal import Decimal
 from django.utils import timezone
 from django.core.paginator import Paginator
 import random
 import string
+from django.db.models import Sum
 
-
-# ============================================
-# PUBLIC VIEWS
-# ============================================
 
 def home_view(request):
     if request.user.is_authenticated:
@@ -27,24 +24,33 @@ def home_view(request):
             return redirect("admin_dashboard")
         elif request.user.role == "SELLER":
             return redirect("seller_dashboard")
-    
+
     categories = Category.objects.filter(is_active=True)
     variants = (
-        ProductVariant.objects.filter(product__is_active=True)
+        ProductVariant.objects.filter(
+            product__is_active=True,
+            product__approval_status="APPROVED",
+            product__seller__status="APPROVED"
+        )
         .select_related("product", "product__seller")
+        .prefetch_related("images")
         .order_by("-id")[:8]
     )
-    variant_ids = [v.id for v in variants]
-    primary_images = {
-        img.variant_id: img
-        for img in ProductImage.objects.filter(
-            variant_id__in=variant_ids, is_primary=True
-        )
-    }
+    
     product_data = []
     for variant in variants:
+        primary_image = None
+        for img in variant.images.filter(is_primary=True):
+            if img.image:
+                primary_image = img
+                break
+        if not primary_image:
+            for img in variant.images.all():
+                if img.image:
+                    primary_image = img
+                    break
         product_data.append(
-            {"variant": variant, "image": primary_images.get(variant.id)}
+            {"variant": variant, "image": primary_image}
         )
     return render(
         request,
@@ -66,7 +72,7 @@ def all_products(request):
     max_price = request.GET.get("max")
     iprod = request.GET.get("q")
     sort = request.GET.get("sort", "newest")
-    
+
     variants = ProductVariant.objects.filter(
         product__is_active=True,
         product__approval_status="APPROVED",
@@ -77,7 +83,7 @@ def all_products(request):
         "product__subcategory",
         "product__subcategory__category",
     )
-    
+
     if icategory:
         variants = variants.filter(product__subcategory__category__slug=icategory)
     if isubCategory:
@@ -97,7 +103,7 @@ def all_products(request):
     if max_price:
         max_price = float(max_price)
         variants = variants.filter(selling_price__lte=max_price)
-    
+
     if sort == "price_low":
         variants = variants.order_by("selling_price")
     elif sort == "price_high":
@@ -108,7 +114,7 @@ def all_products(request):
         variants = variants.order_by("-product__name")
     else:
         variants = variants.order_by("-id")
-    
+
     all_brands = (
         Product.objects.filter(
             is_active=True, approval_status="APPROVED", seller__status="APPROVED"
@@ -118,22 +124,25 @@ def all_products(request):
     )
     categories = Category.objects.filter(is_active=True)
     subcategories = SubCategory.objects.filter(is_active=True)
-    
+
     variant_list = list(variants)
     variant_ids = [v.id for v in variant_list]
-    primary_images = {
-        img.variant_id: img
-        for img in ProductImage.objects.filter(
-            variant_id__in=variant_ids, is_primary=True
-        )
-    }
+    primary_images = {}
+    for img in ProductImage.objects.filter(variant_id__in=variant_ids, is_primary=True):
+        if img.image:
+            primary_images[img.variant_id] = img
     
+    # Fallback to any image if no primary image
+    for img in ProductImage.objects.filter(variant_id__in=variant_ids).exclude(variant_id__in=primary_images.keys()):
+        if img.image and img.variant_id not in primary_images:
+            primary_images[img.variant_id] = img
+
     product_data = []
     for variant in variant_list:
         product_data.append(
             {"variant": variant, "image": primary_images.get(variant.id)}
         )
-    
+
     paginator = Paginator(product_data, 12)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -154,23 +163,100 @@ def all_products(request):
     return render(request, "user/all_products.html", context)
 
 
-def reviews(request, id):
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def add_reviews(request, variant_id):
+
+    variant = get_object_or_404(ProductVariant.objects.select_related("product"), id=variant_id)
+
+    product = variant.product
     user = request.user
-    variant = ProductVariant.objects.select_related("product").prefetch_related("images").get(id=id)
-    reviews = Review.objects.select_related("user").filter(product=variant.product)
-    context = {"reviews": reviews, "variant": variant, "user": user}
+
+    # Check if user has purchased this product
+    has_purchased = OrderItem.objects.filter(
+        order__user=user, variant__product=product, order__order_status="DELIVERED"
+    ).exists()
+
+    if not has_purchased:
+        messages.error(
+            request, "You can only review products you have purchased and received."
+        )
+        return redirect("product_detail_user", slug=product.slug)
+
+    # Prevent duplicate reviews
+    if Review.objects.filter(user=user, product=product).exists():
+        messages.error(request, "You have already reviewed this product.")
+        return redirect("product_detail_user", slug=product.slug)
+
+    if request.method == "POST":
+
+        rating = request.POST.get("rating")
+        comment = request.POST.get("comment", "").strip()
+
+        # Validate rating
+        try:
+            rating = int(rating)
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid rating.")
+            return redirect("product_detail_user", slug=product.slug)
+
+        if rating < 1 or rating > 5:
+            messages.error(request, "Rating must be between 1 and 5.")
+            return redirect("product_detail_user", slug=product.slug)
+
+        if not comment:
+            messages.error(request, "Comment is required.")
+            return redirect("product_detail_user", slug=product.slug)
+
+        # Create review
+        Review.objects.create(
+            user=user, product=product, rating=rating, comment=comment
+        )
+
+        messages.success(request, "Thank you for your review!")
+        return redirect("product_detail_user", slug=product.slug)
+
+    context = {"product": product, "variant": variant}
+
+    return render(request, "user/add_review.html", context)
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def reviews(request, variant_id):
+
+    user = request.user
+
+    variant = get_object_or_404(
+        ProductVariant.objects.select_related("product").prefetch_related("images"),
+        id=variant_id,
+    )
+
+    reviews_qs = (
+        Review.objects.select_related("user")
+        .filter(product=variant.product)
+        .order_by("-created_at")
+    )
+
+    context = {
+        "reviews": reviews_qs,
+        "variant": variant,
+        "product": variant.product,
+        "user": user,
+    }
+
     return render(request, "user/reviews.html", context)
 
-
-def add_reviews(request, id):
-    user = request.user
-    variant = ProductVariant.objects.select_related("product").prefetch_related("images").get(id=id)
-    # TODO: Implement review functionality
-    return redirect("product_detail", id=id)
 
 def new_arrival(request):
     products = Product.objects.filter(
         is_active=True,
+        approval_status="APPROVED",
+        seller__status="APPROVED",
+    ).select_related(
+        "seller"
+    ).prefetch_related(
+        "variants__images"
     ).order_by(
         "-created_at"
     )[:8]
@@ -279,10 +365,26 @@ def product_detail(request, slug=None, id=None):
         .exclude(slug=product.slug)[:4]
     )
 
+    # Reviews context
+    reviews = Review.objects.filter(product=product).order_by("-created_at")[:5]
+    avg_rating = reviews.aggregate(Avg("rating"))["rating__avg"] or 0
+    existing_review = None
+    if request.user.is_authenticated:
+        existing_review = Review.objects.filter(
+            user=request.user, product=product
+        ).first()
+
+    context = {
+        "product": product,
+        "related_products": related_products,
+        "reviews": reviews,
+        "avg_rating": round(float(avg_rating), 1),
+        "existing_review": existing_review,
+    }
     return render(
         request,
         "user/product_details.html",
-        {"product": product, "related_products": related_products},
+        context,
     )
 
 
@@ -334,9 +436,8 @@ def addtocart(request, id):
     )
 
 
-role_required(allowed_roles=["CUSTOMER"])
-
-
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
 def cart_view(request):
     if not request.user.is_authenticated:
         return render(
@@ -428,7 +529,9 @@ def remove_from_cart(request, item_id):
 
 def filtering(request):
     products = (
-        Product.objects.filter(is_active=True,)
+        Product.objects.filter(
+            is_active=True,
+        )
         .select_related("subcategory__category")
         .prefetch_related("variants__images")
     )
@@ -481,10 +584,18 @@ def filtering(request):
     product_data = []
     for product in products:
         lowest_variant = product.variants.all().order_by("selling_price").first()
-        primary_image = (
-            product.variants.all().first().images.filter(is_primary=True).first()
-            or product.variants.all().first().images.first()
-        )
+        primary_image = None
+        if product.variants.all().first():
+            first_variant = product.variants.all().first()
+            for img in first_variant.images.filter(is_primary=True):
+                if img.image:
+                    primary_image = img
+                    break
+            if not primary_image:
+                for img in first_variant.images.all():
+                    if img.image:
+                        primary_image = img
+                        break
 
         product_data.append(
             {
@@ -599,14 +710,14 @@ def checkout(request):
 @role_required(allowed_roles=["CUSTOMER"])
 def display_order(request):
     user = request.user
-    orders = (
-        Order.objects.prefetch_related(
-            "items__variant__product", "items__variant__images"
-        )
-        .filter(user=user)
-        .order_by("-ordered_at")
+    order_items = (
+        OrderItem.objects
+        .filter(order__user=user)
+        .select_related("order", "variant__product", "seller", "seller__user")
+        .prefetch_related("variant__images")
+        .order_by("-order__ordered_at")
     )
-    return render(request, "user/orders.html", {"orders": orders})
+    return render(request, "user/orders.html", {"order_items": order_items})
 
 
 @login_required
@@ -732,7 +843,7 @@ def profile_settings(request):
         return redirect("profile_settings")
     return render(
         request,
-        "core/profile.html",
+        "user/profile.html",
         {"addresses": addresses, "default_address": default_address, "user": user},
     )
 
@@ -741,7 +852,7 @@ def profile_settings(request):
 @role_required(allowed_roles=["CUSTOMER"])
 def manage_addresses(request):
     addresses = Address.objects.filter(user=request.user).order_by("-is_default", "-id")
-    return render(request, "core/addresses.html", {"addresses": addresses})
+    return render(request, "user/addresses.html", {"addresses": addresses})
 
 
 @login_required
@@ -803,3 +914,147 @@ def delete_address(request, id):
     address = Address.objects.get(id=id, user=request.user)
     address.delete()
     return redirect("manage_addresses")
+
+
+# ============================================
+# WISHLIST VIEWS
+# ============================================
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def toggle_wishlist(request, variant_id):
+    if request.method != "POST":
+        return JsonResponse({"message": "Invalid request"}, status=400)
+    variant = get_object_or_404(ProductVariant, id=variant_id)
+    user = request.user
+    # Get or create default wishlist
+    wishlist, _ = Wishlist.objects.get_or_create(
+        user=user,
+        wishlist_name="My Wishlist"
+    )
+    # Check if item already in wishlist
+    wishlist_item = WishlistItem.objects.filter(wishlist=wishlist, variant=variant).first()
+    if wishlist_item:
+        # Remove from wishlist
+        wishlist_item.delete()
+        return JsonResponse({
+            "success": True,
+            "action": "removed",
+            "message": "Removed from wishlist",
+            "in_wishlist": False
+        })
+    else:
+        # Add to wishlist
+        WishlistItem.objects.create(wishlist=wishlist, variant=variant)
+        return JsonResponse({
+            "success": True,
+            "action": "added",
+            "message": "Added to wishlist",
+            "in_wishlist": True
+        })
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def wishlist_view(request):
+    user = request.user
+    wishlist = Wishlist.objects.filter(user=user, wishlist_name="My Wishlist").first()
+    if not wishlist:
+        return render(request, "user/wishlist.html", {"items": []})
+    items = (
+        WishlistItem.objects
+        .filter(wishlist=wishlist)
+        .select_related("variant__product", "variant__product__seller")
+        .prefetch_related("variant__images")
+        .order_by("-added_at")
+    )
+    return render(request, "user/wishlist.html", {"items": items, "wishlist": wishlist})
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def remove_from_wishlist(request, item_id):
+    if request.method != "POST":
+        return JsonResponse({"message": "Invalid request"}, status=40)
+    wishlist_item = get_object_or_404(
+        WishlistItem,
+        id=item_id,
+        wishlist__user=request.user
+    )
+    wishlist_item.delete()
+    return JsonResponse({
+        "success": True,
+        "message": "Item removed from wishlist"
+    })
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def move_to_cart(request, item_id):
+    if request.method != "POST":
+        return JsonResponse({"message": "Invalid request"}, status=400)
+    wishlist_item = get_object_or_404(
+        WishlistItem,
+        id=item_id,
+        wishlist__user=request.user
+    )
+    variant = wishlist_item.variant
+    if variant.stock_quantity <= 0:
+        return JsonResponse({"message": "Out of stock"}, status=400)
+    user = request.user
+    cart, _ = Cart.objects.get_or_create(user=user)
+    cartitem, created = CartItem.objects.get_or_create(
+        cart=cart,
+        variant=variant,
+        defaults={"quantity": 1, "price_at_time": variant.selling_price}
+    )
+    if not created:
+        if cartitem.quantity + 1 <= variant.stock_quantity:
+            cartitem.quantity += 1
+            cartitem.save()
+        else:
+            return JsonResponse(
+                {"message": f"Only {variant.stock_quantity} items available"},
+                status=400
+            )
+    total = sum(item.quantity * item.price_at_time for item in cart.items.all())
+    cart.total_amount = total
+    cart.save()
+    wishlist_item.delete()
+    return JsonResponse({
+        "success": True,
+        "message": "Moved to cart successfully",
+        "cart_count": cart.items.count()
+    })
+def best_seller(request):
+    best_selling_variants = (
+        ProductVariant.objects
+        .filter(
+            product__is_active=True,
+            product__approval_status="APPROVED",
+            product__seller__status="APPROVED"
+        )
+        .annotate(total_sold=Sum('orderitem__quantity'))
+        .filter(total_sold__gt=0)
+        .select_related('product', 'product__seller')
+        .prefetch_related('images')
+        .order_by('-total_sold')[:12]
+    )
+    product_data = []
+    for variant in best_selling_variants:
+        primary_image = None
+        for img in variant.images.filter(is_primary=True):
+            if img.image:
+                primary_image = img
+                break
+        if not primary_image:
+            for img in variant.images.all():
+                if img.image:
+                    primary_image = img
+                    break
+        product_data.append({
+            "variant": variant,
+            "image": primary_image,
+            "total_sold": variant.total_sold
+        })
+    return render(request, "user/best_sellers.html", {"product_data": product_data})

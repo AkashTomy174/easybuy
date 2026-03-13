@@ -1,0 +1,204 @@
+{% extends 'core/core_base.html' %}
+{% block title %}My Wishlist | EasyBuy{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-50 dark:from-stone-900 dark:via-stone-800 dark:to-stone-900">
+    <div class="mx-auto max-w-7xl w-full px-4 py-8 lg:px-12">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="material-symbols-outlined text-4xl text-primary">favorite</span>
+                <h1 class="text-3xl lg:text-4xl font-black text-stone-900 dark:text-white">My Wishlist</h1>
+            </div>
+            <p class="text-stone-600 dark:text-stone-400">Save your favorite items for later</p>
+        </div>
+
+        {% if items %}
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {% for item in items %}
+            {% with item.variant as variant %}
+            {% with variant.product as product %}
+            {% with variant.images.first as image %}
+            <div class="wishlist-item group flex flex-col rounded-3xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-5 transition-all hover:shadow-2xl" data-item-id="{{ item.id }}">
+                <!-- Product Image -->
+                <a href="{% url 'product_detail_user' product.slug %}" class="relative aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4 block">
+                    {% if image and image.image %}
+                        <img src="{{ image.image.url }}" alt="{{ product.name }}" 
+                             class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% else %}
+                        <div class="flex h-full w-full items-center justify-center">
+                            <span class="material-symbols-outlined text-5xl text-stone-300">image</span>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Remove Button -->
+                    <button onclick="event.preventDefault(); event.stopPropagation(); removeFromWishlist({{ item.id }}); return false;" 
+                            class="absolute top-3 right-3 bg-white/95 dark:bg-stone-800/95 backdrop-blur-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 rounded-full p-2 shadow-lg transition-all hover:scale-110">
+                        <span class="material-symbols-outlined text-xl">close</span>
+                    </button>
+                    
+                    <!-- Discount Badge -->
+                    {% if variant.mrp > variant.selling_price %}
+                    <div class="absolute top-3 left-3 bg-gradient-to-r from-accent-terracotta to-orange-500 text-white px-3 py-1.5 rounded-full text-xs font-black shadow-lg">
+                        SAVE ₹{{ variant.mrp|floatformat:0|add:"-"|add:variant.selling_price|floatformat:0 }}
+                    </div>
+                    {% endif %}
+                </a>
+
+                <!-- Product Info -->
+                <div class="flex flex-1 flex-col">
+                    <span class="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-2">{{ product.brand|default:"Premium" }}</span>
+                    <a href="{% url 'product_detail_user' product.slug %}">
+                        <h3 class="font-bold text-stone-900 dark:text-white text-base leading-tight line-clamp-2 mb-3 group-hover:text-primary transition-colors">
+                            {{ product.name }}
+                        </h3>
+                    </a>
+                    
+                    <!-- Variant Info -->
+                    <div class="mb-3">
+                        <span class="text-xs text-stone-500 dark:text-stone-400">Variant: {{ variant.name|default:"Standard" }}</span>
+                    </div>
+                    
+                    <!-- Price -->
+                    <div class="flex items-center gap-2 flex-wrap mb-4">
+                        <span class="text-xl font-black text-primary">₹{{ variant.selling_price }}</span>
+                        {% if variant.mrp > variant.selling_price %}
+                        <span class="text-sm font-medium text-stone-400 line-through">₹{{ variant.mrp }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Stock Status -->
+                    {% if variant.stock_quantity > 0 %}
+                    <div class="flex items-center gap-2 text-green-600 text-xs font-bold mb-4">
+                        <span class="material-symbols-outlined text-sm">check_circle</span>
+                        In Stock
+                    </div>
+                    {% else %}
+                    <div class="flex items-center gap-2 text-red-600 text-xs font-bold mb-4">
+                        <span class="material-symbols-outlined text-sm">cancel</span>
+                        Out of Stock
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="mt-auto space-y-2">
+                        {% if variant.stock_quantity > 0 %}
+                        <button onclick="moveToCart({{ item.id }})" 
+                                class="w-full bg-gradient-to-r from-primary to-primary-dark text-white rounded-2xl font-bold text-sm py-3 hover:shadow-xl transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-lg">shopping_cart</span>
+                            Move to Cart
+                        </button>
+                        <a href="{% url 'buy_now' variant.id %}" 
+                           class="w-full bg-gradient-to-r from-accent-terracotta to-orange-500 text-white rounded-2xl font-bold text-sm py-3 hover:shadow-xl transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-lg">bolt</span>
+                            Buy Now
+                        </a>
+                        {% else %}
+                        <button disabled 
+                                class="w-full bg-stone-300 dark:bg-stone-700 text-stone-500 dark:text-stone-400 rounded-2xl font-bold text-sm py-3 cursor-not-allowed flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-lg">block</span>
+                            Out of Stock
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endwith %}
+            {% endwith %}
+            {% endwith %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Empty Wishlist State -->
+        <div class="bg-white dark:bg-stone-800 rounded-3xl p-12 text-center border-2 border-stone-200 dark:border-stone-700 shadow-xl">
+            <span class="material-symbols-outlined text-8xl text-stone-300 dark:text-stone-600 mb-6 block">favorite_border</span>
+            <h2 class="text-2xl font-black text-stone-900 dark:text-white mb-3">Your Wishlist is Empty</h2>
+            <p class="text-stone-600 dark:text-stone-400 mb-8">Start adding items you love to your wishlist</p>
+            <a href="{% url 'all_products' %}" 
+               class="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white font-bold py-4 px-8 rounded-2xl hover:shadow-2xl transition-all">
+                <span class="material-symbols-outlined">shopping_bag</span>
+                Continue Shopping
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function removeFromWishlist(itemId) {
+    if (!confirm('Remove this item from your wishlist?')) return;
+    
+    fetch(`/user/wishlist/remove/${itemId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            // Remove the item from DOM
+            const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
+            if (itemElement) {
+                itemElement.style.opacity = '0';
+                itemElement.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    itemElement.remove();
+                    // Check if wishlist is empty
+                    const remainingItems = document.querySelectorAll('.wishlist-item');
+                    if (remainingItems.length === 0) {
+                        location.reload();
+                    }
+                }, 300);
+            }
+        } else {
+            showToast(data.message || 'Failed to remove item', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('An error occurred', 'error');
+    });
+}
+
+function moveToCart(itemId) {
+    fetch(`/user/wishlist/move-to-cart/${itemId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            // Update cart count
+            updateCartCount(data.cart_count);
+            // Remove the item from DOM
+            const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
+            if (itemElement) {
+                itemElement.style.opacity = '0';
+                itemElement.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    itemElement.remove();
+                    // Check if wishlist is empty
+                    const remainingItems = document.querySelectorAll('.wishlist-item');
+                    if (remainingItems.length === 0) {
+                        location.reload();
+                    }
+                }, 300);
+            }
+        } else {
+            showToast(data.message || 'Failed to move item', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('An error occurred', 'error');
+    });
+}
+</script>
+{% endblock %}
