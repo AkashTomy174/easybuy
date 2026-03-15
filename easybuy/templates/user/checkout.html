@@ -1,4 +1,5 @@
 {% extends 'core/core_base.html' %}
+
 {% block title %}Checkout | EasyBuy{% endblock %}
 
 {% block extra_css %}
@@ -8,117 +9,21 @@
 .payment-option.selected { border-color: #4a7c43; background-color: #f0f7ef; }
 .dark .payment-option.selected { background-color: rgba(74,124,67,0.15); border-color: #4a7c43; }
 </style>
-{% endblock %}
+{% endblock extra_css %}
 
 {% block content %}
 <section class="mx-auto max-w-7xl px-4 py-12 sm:px-12 pb-24 md:pb-12">
     <h1 class="text-3xl font-black text-stone-900 dark:text-white mb-8">Checkout</h1>
 
-    {% if single_product %}
-    {# ─── Buy Now — Single Product Checkout ─── #}
-    {% url 'buy_now' variant.id as buy_now_next_url %}
-    <form method="POST" action="{% url 'buy_now' variant.id %}" id="checkout-form">
+    <form method="POST" id="checkout-form">
         {% csrf_token %}
         <input type="hidden" name="selected_address_id" id="selected_address_id" value="">
         <input type="hidden" name="payment_method" id="payment_method" value="">
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <!-- Left Column -->
             <div class="lg:col-span-8 space-y-8">
+                {% include 'includes/checkout_delivery_address.html' %}
 
-                {% include 'includes/checkout_delivery_address.html' with next_url=buy_now_next_url %}
-
-                <!-- Single Product Order Summary -->
-                <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
-                    <div class="flex items-center gap-3 mb-6">
-                        <span class="material-symbols-outlined text-2xl text-primary">shopping_cart</span>
-                        <h2 class="text-xl font-black text-stone-900 dark:text-white">Order Summary</h2>
-                    </div>
-                    <div class="flex gap-4 p-4 rounded-xl border border-stone-200 dark:border-stone-700">
-                        <div class="w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-stone-100 dark:bg-stone-800">
-                            {% if variant.images.first %}
-                                <img src="{{ variant.images.first.image.url }}" alt="{{ variant.product.name }}" class="w-full h-full object-cover">
-                            {% else %}
-                                <div class="flex h-full w-full items-center justify-center">
-                                    <span class="material-symbols-outlined text-3xl text-stone-300">image</span>
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="flex-1 flex flex-col justify-between">
-                            <div>
-                                <h3 class="font-bold text-stone-900 dark:text-white">{{ variant.product.name }}</h3>
-                                <p class="text-sm text-stone-500 dark:text-stone-400">SKU: {{ variant.sku_code }}</p>
-                            </div>
-                            <div class="flex items-center justify-between mt-2">
-                                <span class="text-sm text-stone-500">Qty: 1</span>
-                                <span class="font-black text-lg text-stone-900 dark:text-white">₹{{ variant.selling_price|floatformat:2 }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {% include 'includes/checkout_payment_methods.html' %}
-            </div>
-
-            <!-- Right Column — Order Total -->
-            <div class="lg:col-span-4">
-                <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm sticky top-28">
-                    <h3 class="text-xl font-black text-stone-900 dark:text-white mb-6">Order Total</h3>
-                    <div class="space-y-3 mb-6">
-                        <div class="flex justify-between text-stone-600 dark:text-stone-300">
-                            <span class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-lg">shopping_bag</span>Items (1)
-                            </span>
-                            <span>₹{{ subtotal|floatformat:2 }}</span>
-                        </div>
-                        <div class="flex justify-between text-stone-600 dark:text-stone-300">
-                            <span class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-lg">local_shipping</span>Shipping
-                            </span>
-                            <span>{% if subtotal >= 999 %}<span class="text-green-600 font-medium">FREE</span>{% else %}₹99.00{% endif %}</span>
-                        </div>
-                        <div class="flex justify-between text-stone-600 dark:text-stone-300">
-                            <span class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-lg">receipt</span>Tax (GST 18%)
-                            </span>
-                            <span>₹{{ tax_amount|floatformat:2 }}</span>
-                        </div>
-                    </div>
-                    <div class="border-t border-stone-200 dark:border-stone-700 pt-4 mb-6">
-                        <div class="flex justify-between items-center">
-                            <span class="text-lg font-black text-stone-900 dark:text-white">Total</span>
-                            <span class="text-2xl font-black text-primary">₹{{ grand_total|floatformat:2 }}</span>
-                        </div>
-                    </div>
-                    <button type="submit" id="place-order-btn"
-                            class="w-full bg-primary text-white font-black py-4 rounded-2xl hover:bg-primary-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            {% if not addresses %}disabled{% endif %}>
-                        <span class="material-symbols-outlined">lock</span>Place Order
-                    </button>
-                    <p class="text-xs text-stone-400 text-center mt-4 flex items-center justify-center gap-1">
-                        <span class="material-symbols-outlined text-sm">verified</span>
-                        Secure checkout · SSL Encrypted
-                    </p>
-                </div>
-            </div>
-        </div>
-    </form>
-
-    {% elif cart.items.exists %}
-    {# ─── Cart Checkout ─── #}
-    {% url 'checkout' as checkout_next_url %}
-    <form method="POST" action="{% url 'checkout' %}" id="checkout-form">
-        {% csrf_token %}
-        <input type="hidden" name="selected_address_id" id="selected_address_id" value="">
-        <input type="hidden" name="payment_method" id="payment_method" value="">
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <!-- Left Column -->
-            <div class="lg:col-span-8 space-y-8">
-
-                {% include 'includes/checkout_delivery_address.html' with next_url=checkout_next_url %}
-
-                <!-- Cart Items Summary -->
                 <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
                     <div class="flex items-center gap-3 mb-6">
                         <span class="material-symbols-outlined text-2xl text-primary">shopping_cart</span>
@@ -147,6 +52,8 @@
                                 </div>
                             </div>
                         </div>
+                        {% empty %}
+                        <p class="text-center text-stone-500 py-8">Your cart is empty</p>
                         {% endfor %}
                     </div>
                 </div>
@@ -154,7 +61,6 @@
                 {% include 'includes/checkout_payment_methods.html' %}
             </div>
 
-            <!-- Right Column — Order Total -->
             <div class="lg:col-span-4">
                 <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm sticky top-28">
                     <h3 class="text-xl font-black text-stone-900 dark:text-white mb-6">Order Total</h3>
@@ -184,47 +90,28 @@
                             <span class="text-2xl font-black text-primary">₹{{ grand_total|floatformat:2 }}</span>
                         </div>
                     </div>
-                    <button type="submit" id="place-order-btn"
+                    <button type="button" id="place-order-btn"
                             class="w-full bg-primary text-white font-black py-4 rounded-2xl hover:bg-primary-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            {% if not addresses %}disabled{% endif %}>
-                        <span class="material-symbols-outlined">lock</span>Place Order
+                            {% if not addresses %}disabled title="Add delivery address first"{% endif %}>
+                        <span class="material-symbols-outlined">lock</span>Pay with Razorpay
                     </button>
-                    <p class="text-xs text-stone-400 text-center mt-4 flex items-center justify-center gap-1">
-                        <span class="material-symbols-outlined text-sm">verified</span>
-                        Secure checkout · SSL Encrypted
-                    </p>
                 </div>
             </div>
         </div>
     </form>
-
-    {% else %}
-    <div class="text-center py-20">
-        <div class="w-24 h-24 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span class="material-symbols-outlined text-5xl text-stone-300">shopping_cart</span>
-        </div>
-        <h2 class="text-2xl font-bold mt-4 text-stone-900 dark:text-white">Your cart is empty</h2>
-        <a href="{% url 'all_products' %}" class="mt-4 inline-block text-primary underline font-bold">Shop Now</a>
-    </div>
-    {% endif %}
 </section>
+{% endblock content %}
 
+{% block extra_js %}
 <script>
 let selectedAddressId = null;
-let selectedPaymentMethod = null;
+let selectedPaymentMethod = 'RAZORPAY';
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Pre-select the default address
     const defaultAddress = document.querySelector('.address-card.selected');
-    if (defaultAddress) {
-        selectAddress(defaultAddress.dataset.addressId, defaultAddress);
-    }
-    updatePlaceOrderButton();
+    if (defaultAddress) selectAddress(defaultAddress.dataset.addressId, defaultAddress);
 
-    // Wire up radio change events for payment
-    document.querySelectorAll('input[name="payment"]').forEach(radio => {
-        radio.addEventListener('change', updatePlaceOrderButton);
-    });
+    document.getElementById('place-order-btn')?.addEventListener('click', handleRazorpayPayment);
 });
 
 function selectAddress(addressId, element) {
@@ -232,36 +119,55 @@ function selectAddress(addressId, element) {
     element.classList.add('selected');
     selectedAddressId = addressId;
     document.getElementById('selected_address_id').value = addressId;
-    updatePlaceOrderButton();
 }
 
-function selectPayment(method, element) {
-    document.querySelectorAll('.payment-option').forEach(o => o.classList.remove('selected'));
-    element.classList.add('selected');
-    element.querySelector('input[type="radio"]').checked = true;
-    selectedPaymentMethod = method;
-    document.getElementById('payment_method').value = method;
-    updatePlaceOrderButton();
+function handleRazorpayPayment() {
+    if (!selectedAddressId) { alert("Select delivery address"); return; }
+
+    const formData = new FormData();
+    formData.append('selected_address_id', selectedAddressId);
+    formData.append('payment_method', 'RAZORPAY');
+
+    fetch('{% url "create_razorpay_order" %}', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+    })
+    .then(res => res.json())
+    .then(data => {
+        const options = {
+            key: data.key,
+            amount: data.amount,
+            currency: data.currency,
+            name: "EasyBuy",
+            description: "Order Payment",
+            order_id: data.order_id,
+            prefill: data.prefill,
+            theme: { color: "#4a7c43" },
+            handler: function(response){ verifyPayment(response); }
+        };
+        const rzp = new Razorpay(options);
+        rzp.open();
+    });
 }
 
-function updatePlaceOrderButton() {
-    const btn = document.getElementById('place-order-btn');
-    if (!btn) return;
-    const paymentSelected = document.querySelector('input[name="payment"]:checked');
-    btn.disabled = !(selectedAddressId && paymentSelected);
+function verifyPayment(response) {
+    const params = new URLSearchParams();
+    params.append('razorpay_payment_id', response.razorpay_payment_id);
+    params.append('razorpay_order_id', response.razorpay_order_id);
+    params.append('razorpay_signature', response.razorpay_signature);
+
+    fetch('{% url "verify_razorpay_payment" %}', {
+        method: 'POST',
+        body: params,
+        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+    })
+    .then(() => window.location.href = '{% url "user_orders" %}');
 }
 
-document.getElementById('checkout-form') && document.getElementById('checkout-form').addEventListener('submit', function (e) {
-    if (!selectedAddressId) {
-        e.preventDefault();
-        showToast('Please select a delivery address', 'error');
-        return;
-    }
-    const paymentSelected = document.querySelector('input[name="payment"]:checked');
-    if (!paymentSelected) {
-        e.preventDefault();
-        showToast('Please select a payment method', 'error');
-    }
-});
+// Load Razorpay SDK
+const script = document.createElement('script');
+script.src = "https://checkout.razorpay.com/v1/checkout.js";
+document.head.appendChild(script);
 </script>
-{% endblock %}
+{% endblock extra_js %}

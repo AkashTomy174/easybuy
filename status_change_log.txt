@@ -1,0 +1,113 @@
+
+==================================================
+Status change request received
+Time: 2026-03-13 21:18:44.857808+00:00
+User: seller1
+OrderItem ID: 222
+New Status: SHIPPED
+Order: EB202603133Q2N03H8
+Old Status: PENDING
+Phone: 9497634775
+Status updated in database
+WhatsApp Enabled: False
+WhatsApp notifications DISABLED
+
+==================================================
+Status change request received
+Time: 2026-03-13 21:26:04.755936+00:00
+User: seller1
+OrderItem ID: 222
+New Status: SHIPPED
+Order: EB202603133Q2N03H8
+Old Status: PENDING
+Phone: 9497634775
+Status updated in database
+WhatsApp Enabled: True
+Attempting WhatsApp notification...
+SHIPPED notification sent: True
+
+==================================================
+Status change request received
+Time: 2026-03-13 21:26:22.994960+00:00
+User: seller1
+OrderItem ID: 222
+New Status: DELIVERED
+Order: EB202603133Q2N03H8
+Old Status: SHIPPED
+Phone: 9497634775
+Status updated in database
+WhatsApp Enabled: True
+Attempting WhatsApp notification...
+DELIVERED notification sent: True
+FEEDBACK notification sent: True
+
+==================================================
+Status change request received
+Time: 2026-03-13 21:38:16.626201+00:00
+User: seller1
+OrderItem ID: 220
+New Status: SHIPPED
+Order: EB20260313HWXUX5R1
+Old Status: DELIVERED
+Phone: 9497634775
+Status updated in database
+WhatsApp Enabled: True
+Attempting WhatsApp notification...
+SHIPPED notification sent: True
+
+==================================================
+Status change request received
+Time: 2026-03-13 21:38:54.691905+00:00
+User: seller1
+OrderItem ID: 216
+New Status: DELIVERED
+Order: EB202603136X0BNWSQ
+Old Status: DELIVERED
+Phone: 9497634775
+Status updated in database
+WhatsApp Enabled: True
+Attempting WhatsApp notification...
+DELIVERED notification sent: True
+FEEDBACK notification sent: True
+
+==================================================
+Status change request received
+Time: 2026-03-13 21:39:01.772649+00:00
+User: seller1
+OrderItem ID: 216
+New Status: CANCELLED
+Order: EB202603136X0BNWSQ
+Old Status: DELIVERED
+Phone: 9497634775
+Status updated in database
+WhatsApp Enabled: True
+Attempting WhatsApp notification...
+CANCELLED notification sent: True
+
+==================================================
+Status change request received
+Time: 2026-03-13 21:39:11.843954+00:00
+User: seller1
+OrderItem ID: 217
+New Status: DELIVERED
+Order: EB20260313775572VZ
+Old Status: DELIVERED
+Phone: 9497634775
+Status updated in database
+WhatsApp Enabled: True
+Attempting WhatsApp notification...
+DELIVERED notification sent: True
+FEEDBACK notification sent: True
+
+==================================================
+Status change request received
+Time: 2026-03-13 21:39:26.641904+00:00
+User: seller1
+OrderItem ID: 217
+New Status: PENDING
+Order: EB20260313775572VZ
+Old Status: DELIVERED
+Phone: 9497634775
+Status updated in database
+WhatsApp Enabled: True
+Attempting WhatsApp notification...

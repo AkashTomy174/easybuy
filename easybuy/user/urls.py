@@ -62,4 +62,6 @@ urlpatterns = [
     path("api/brands/", views.get_brands_ajax, name="get_brands_ajax"),
     path("api/subcategories/", views.get_subcategories_ajax, name="get_subcategories_ajax"),
     path("api/search-autocomplete/", views.search_autocomplete, name="search_autocomplete"),
+    path("create-razorpay-order/", views.create_razorpay_order, name="create_razorpay_order"),
+    path("verify-razorpay-payment/", views.verify_razorpay_payment, name="verify_razorpay_payment"),
 ]

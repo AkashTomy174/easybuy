@@ -151,9 +151,26 @@ EMAIL_HOST_PASSWORD = "nryveglvlttybnwn"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Twilio WhatsApp Configuration
-TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID', '')
-TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN', '')
-TWILIO_WHATSAPP_FROM = os.getenv('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')  # Twilio Sandbox number
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
+TWILIO_WHATSAPP_FROM = os.getenv(
+    "TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886"
+)  # Twilio Sandbox number
 
 # WhatsApp Notifications
-WHATSAPP_NOTIFICATIONS_ENABLED = os.getenv('WHATSAPP_NOTIFICATIONS_ENABLED', 'False').lower() in ('true', '1', 'yes')
+WHATSAPP_NOTIFICATIONS_ENABLED = os.getenv(
+    "WHATSAPP_NOTIFICATIONS_ENABLED", "False"
+).lower() in ("true", "1", "yes")
+
+# Razorpay Configuration
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
+print("Razorpay Key:", RAZORPAY_KEY_ID)       # Optional debug
+print("Razorpay Secret:", RAZORPAY_KEY_SECRET)
+RAZORPAY_TEST_MODE = True  # make sure your integration knows this is test
+# Validation
+if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+    print(
+        "WARNING: Razorpay keys missing! Copy .env.example to .env and add your test keys."
+    )
+    print("Signup: https://dashboard.razorpay.com/app/keys")

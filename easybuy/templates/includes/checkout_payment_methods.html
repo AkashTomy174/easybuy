@@ -5,7 +5,7 @@
     </div>
     <div class="space-y-3">
         <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
-             onclick="selectPayment('UPI', this)">
+data-method="UPI" class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all selected:border-primary selected:bg-primary/5">
             <div class="flex items-center gap-3">
                 <input type="radio" name="payment" value="UPI" class="w-5 h-5 text-primary focus:ring-primary">
                 <span class="material-symbols-outlined text-stone-600 dark:text-stone-400">qr_code</span>
@@ -16,7 +16,7 @@
             </div>
         </div>
         <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
-             onclick="selectPayment('CARD', this)">
+data-method="CARD" class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all selected:border-primary selected:bg-primary/5">
             <div class="flex items-center gap-3">
                 <input type="radio" name="payment" value="CARD" class="w-5 h-5 text-primary focus:ring-primary">
                 <span class="material-symbols-outlined text-stone-600 dark:text-stone-400">credit_card</span>
@@ -27,7 +27,7 @@
             </div>
         </div>
         <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
-             onclick="selectPayment('NETBANKING', this)">
+data-method="NETBANKING" class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all selected:border-primary selected:bg-primary/5">
             <div class="flex items-center gap-3">
                 <input type="radio" name="payment" value="NETBANKING" class="w-5 h-5 text-primary focus:ring-primary">
                 <span class="material-symbols-outlined text-stone-600 dark:text-stone-400">account_balance</span>
@@ -38,13 +38,24 @@
             </div>
         </div>
         <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
-             onclick="selectPayment('COD', this)">
+data-method="COD" class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all selected:border-primary selected:bg-primary/5">
             <div class="flex items-center gap-3">
                 <input type="radio" name="payment" value="COD" class="w-5 h-5 text-primary focus:ring-primary">
                 <span class="material-symbols-outlined text-stone-600 dark:text-stone-400">payments</span>
                 <div>
                     <h4 class="font-bold text-stone-900 dark:text-white">Cash on Delivery</h4>
                     <p class="text-sm text-stone-500">Pay when you receive</p>
+                </div>
+            </div>
+        </div>
+        <div class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all"
+data-method="RAZORPAY" class="payment-option cursor-pointer p-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-primary transition-all selected:border-primary selected:bg-primary/5">
+            <div class="flex items-center gap-3">
+                <input type="radio" name="payment" value="RAZORPAY" class="w-5 h-5 text-primary focus:ring-primary">
+                <span class="material-symbols-outlined text-stone-600 dark:text-stone-400">credit_card</span>
+                <div>
+                    <h4 class="font-bold text-stone-900 dark:text-white">Razorpay (Cards/UPI)</h4>
+                    <p class="text-sm text-stone-500">Secure online payment</p>
                 </div>
             </div>
         </div>
