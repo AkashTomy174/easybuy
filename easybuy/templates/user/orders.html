@@ -37,9 +37,15 @@
                                 {{ item.status }}
                             </span>
                         </div>
-                        {% if item.order.order_status == 'CONFIRMED' or item.order.order_status == 'PENDING' %}
-                        <button onclick="cancelOrder({{ item.order.id }})" class="px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 font-bold text-xs rounded-xl transition-colors">
-                            Cancel
+                        {% if item.shipment_display %}
+                        <div class="flex items-center gap-1">
+                            <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Ships:</span>
+                            <span class="{{ item.shipment_class }} text-xs font-semibold">{{ item.shipment_display }}</span>
+                        </div>
+                        {% endif %}
+                        {% if item.status == 'PENDING' or item.status == 'CONFIRMED' %}
+                        <button type="button" onclick="cancelItem({{ item.id }})" class="px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 font-bold text-xs rounded-xl transition-colors cursor-pointer" title="Cancel item only">
+                            Cancel Item
                         </button>
                         {% endif %}
                     </div>
@@ -147,12 +153,10 @@
 
 {% block extra_js %}
 <script>
-function cancelOrder(orderId) {
-    if (!confirm('Are you sure you want to cancel this order?')) {
-        return;
-    }
+function cancelItem(itemId) {
+    if (!confirm('Cancel this item only? Stock will be restored.')) return;
     
-    fetch(`/user/orders/cancel/${orderId}/`, {
+    fetch(`/user/orders/item-cancel/${itemId}/`, {
         method: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken'),
@@ -162,18 +166,13 @@ function cancelOrder(orderId) {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            showToast('Order cancelled successfully', 'success');
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
+            showToast('Item cancelled successfully', 'success');
+            setTimeout(() => location.reload(), 1000);
         } else {
-            showToast(data.message || 'Error cancelling order', 'error');
+            showToast(data.message || 'Error', 'error');
         }
     })
-    .catch(err => {
-        console.error(err);
-        showToast('Error cancelling order', 'error');
-    });
+    .catch(() => showToast('Network error', 'error'));
 }
 </script>
 {% endblock %}

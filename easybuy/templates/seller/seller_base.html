@@ -72,7 +72,7 @@
                 <span class="material-symbols-outlined">rate_review</span>
                 <span>Reviews</span>
             </a>
-            <a href="#"
+            <!-- <a href="#"
                class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
                 <span class="material-symbols-outlined">analytics</span>
                 <span>Analytics</span>
@@ -81,14 +81,14 @@
                class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
                 <span class="material-symbols-outlined">payments</span>
                 <span>Payments</span>
-            </a>
+            </a> -->
         </nav>
 
         <!-- Store Info -->
         <div class="p-4 border-t border-stone-200 dark:border-stone-800">
             <div class="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-4">
                 <p class="text-xs font-semibold text-stone-500 uppercase mb-2">Store</p>
-                <p class="text-sm font-bold text-stone-900 dark:text-white">{% block store_name %}{{ data1.store_name|default:"My Store" }}{% endblock %}</p>
+                <p class="text-sm font-bold text-stone-900 dark:text-white">{% block store_name %}{{ data1.store_name}}{% endblock %}</p>
                 <p class="text-xs font-semibold text-stone-500 uppercase mt-3 mb-1">Seller</p>
                 <p class="text-sm font-bold text-stone-900 dark:text-white">{{ user.username }}</p>
             </div>
@@ -121,7 +121,7 @@
                 <div class="h-8 w-px bg-stone-200 dark:bg-stone-800 mx-1"></div>
                 <div class="flex items-center gap-3">
                     <div class="text-right hidden sm:block">
-                        <p class="text-sm font-bold text-stone-900 dark:text-white">{% block header_store_name %}{{ data1.store_name|default:"My Store" }}{% endblock %}</p>
+                        <p class="text-sm font-bold text-stone-900 dark:text-white">{% block header_store_name %}{{ data1.store_name}}{% endblock %}</p>
                         <p class="text-xs text-stone-500">@{{ user.username }}</p>
                     </div>
                     <div class="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">

@@ -1,173 +1,169 @@
 {% extends 'core/core_base.html' %}
-
 {% block title %}Checkout | EasyBuy{% endblock %}
 
-{% block extra_css %}
-<style>
-.address-card.selected { border-color: #4a7c43; background-color: #f0f7ef; }
-.dark .address-card.selected { background-color: rgba(74,124,67,0.15); border-color: #4a7c43; }
-.payment-option.selected { border-color: #4a7c43; background-color: #f0f7ef; }
-.dark .payment-option.selected { background-color: rgba(74,124,67,0.15); border-color: #4a7c43; }
-</style>
-{% endblock extra_css %}
-
 {% block content %}
-<section class="mx-auto max-w-7xl px-4 py-12 sm:px-12 pb-24 md:pb-12">
-    <h1 class="text-3xl font-black text-stone-900 dark:text-white mb-8">Checkout</h1>
-
-    <form method="POST" id="checkout-form">
-        {% csrf_token %}
-        <input type="hidden" name="selected_address_id" id="selected_address_id" value="">
-        <input type="hidden" name="payment_method" id="payment_method" value="">
+<div class="min-h-screen bg-stone-50 dark:bg-stone-900 py-12">
+    {% if error %}
+        <div class="text-center py-20">
+            <span class="material-symbols-outlined text-7xl text-stone-300">search_off</span>
+            <h1 class="text-2xl font-bold mt-4">{{ error }}</h1>
+            <a href="{% url 'all_products' %}" class="text-primary underline mt-4 inline-block font-bold">Back to Shopping</a>
+        </div>
+    {% else %}
+    <div class="mx-auto max-w-7xl px-4 lg:px-12">
+        <h1 class="text-3xl font-black mb-8 text-stone-900 dark:text-white">Checkout</h1>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div class="lg:col-span-8 space-y-8">
-                {% include 'includes/checkout_delivery_address.html' %}
-
-                <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
-                    <div class="flex items-center gap-3 mb-6">
-                        <span class="material-symbols-outlined text-2xl text-primary">shopping_cart</span>
-                        <h2 class="text-xl font-black text-stone-900 dark:text-white">Order Summary</h2>
-                    </div>
-                    <div class="space-y-4">
-                        {% for item in cart.items.all %}
-                        <div class="flex gap-4 p-4 rounded-xl border border-stone-200 dark:border-stone-700">
-                            <div class="w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-stone-100 dark:bg-stone-800">
-                                {% if item.variant.images.first %}
-                                    <img src="{{ item.variant.images.first.image.url }}" alt="{{ item.variant.product.name }}" class="w-full h-full object-cover">
-                                {% else %}
-                                    <div class="flex h-full w-full items-center justify-center">
-                                        <span class="material-symbols-outlined text-3xl text-stone-300">image</span>
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <div class="flex-1 flex flex-col justify-between">
-                                <div>
-                                    <h3 class="font-bold text-stone-900 dark:text-white">{{ item.variant.product.name }}</h3>
-                                    <p class="text-sm text-stone-500 dark:text-stone-400">Variant: {{ item.variant.name|default:"Standard" }}</p>
-                                </div>
-                                <div class="flex items-center justify-between mt-2">
-                                    <span class="text-sm text-stone-500">Qty: {{ item.quantity }}</span>
-                                    <span class="font-black text-lg text-stone-900 dark:text-white">₹{{ item.price_at_time|floatformat:2 }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        {% empty %}
-                        <p class="text-center text-stone-500 py-8">Your cart is empty</p>
+            
+            <div class="lg:col-span-7 space-y-6">
+                <div class="bg-white dark:bg-stone-800 p-6 rounded-3xl shadow-sm border border-stone-200 dark:border-stone-700">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <span class="material-symbols-outlined mr-2">location_on</span> Delivery Address
+                    </h2>
+                    <select id="address-select" class="w-full rounded-xl border-stone-300 dark:bg-stone-700 p-3 outline-none focus:ring-2 focus:ring-primary">
+                        <option value="">-- Select Saved Address --</option>
+                        {% for address in addresses %}
+                            <option value="{{ address.id }}" {% if address.is_default %}selected{% endif %}>
+                                {{ address.full_name }} - {{ address.house_info }}, {{ address.city }}
+                            </option>
                         {% endfor %}
-                    </div>
+                    </select>
                 </div>
 
-                {% include 'includes/checkout_payment_methods.html' %}
+                <div class="bg-white dark:bg-stone-800 p-6 rounded-3xl shadow-sm border border-stone-200 dark:border-stone-700">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <span class="material-symbols-outlined mr-2">payments</span> Payment Method
+                    </h2>
+                    
+                    <div class="space-y-3">
+                        <label class="flex items-center p-4 border rounded-2xl cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700 transition-all">
+                            <input type="radio" name="payment_method" value="ONLINE" checked class="w-5 h-5 text-primary">
+                            <div class="ml-4">
+                                <span class="block font-bold">Secure Online Payment</span>
+                                <span class="text-sm text-stone-500">Razorpay (Cards, UPI, NetBanking)</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center p-4 border rounded-2xl cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700 transition-all">
+                            <input type="radio" name="payment_method" value="COD" class="w-5 h-5 text-primary">
+                            <div class="ml-4">
+                                <span class="block font-bold">Cash on Delivery</span>
+                                <span class="text-sm text-stone-500">Pay in cash upon delivery</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
             </div>
 
-            <div class="lg:col-span-4">
-                <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm sticky top-28">
-                    <h3 class="text-xl font-black text-stone-900 dark:text-white mb-6">Order Total</h3>
+            <div class="lg:col-span-5">
+                <div class="bg-white dark:bg-stone-800 p-6 rounded-3xl shadow-xl border border-stone-200 dark:border-stone-700 sticky top-8">
+                    <h2 class="text-xl font-bold mb-6">Order Summary</h2>
+                    
                     <div class="space-y-3 mb-6">
-                        <div class="flex justify-between text-stone-600 dark:text-stone-300">
-                            <span class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-lg">shopping_bag</span>Items ({{ cart.items.count }})
-                            </span>
-                            <span>₹{{ cart.total_amount|floatformat:2 }}</span>
-                        </div>
-                        <div class="flex justify-between text-stone-600 dark:text-stone-300">
-                            <span class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-lg">local_shipping</span>Shipping
-                            </span>
-                            <span>{% if cart.total_amount >= 999 %}<span class="text-green-600 font-medium">FREE</span>{% else %}₹99.00{% endif %}</span>
-                        </div>
-                        <div class="flex justify-between text-stone-600 dark:text-stone-300">
-                            <span class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-lg">receipt</span>Tax (GST 18%)
-                            </span>
-                            <span>₹{{ tax_amount|floatformat:2 }}</span>
+                        {% if single_product %}
+                            <div class="flex justify-between text-stone-600 dark:text-stone-300">
+                                <span>{{ variant.product.name }} (x{{ quantity }})</span>
+                                <span>₹{{ subtotal|floatformat:2 }}</span>
+                            </div>
+                        {% else %}
+                            {% for item in cart.items.all %}
+                                <div class="flex justify-between text-stone-600 dark:text-stone-300">
+                                    <span>{{ item.variant.product.name }} (x{{ item.quantity }})</span>
+                                    <span>₹{{ item.total_price|floatformat:2 }}</span>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <div class="border-t border-stone-100 dark:border-stone-700 pt-4 space-y-2">
+                        <div class="flex justify-between text-sm"><span>Subtotal</span><span>₹{{ subtotal|floatformat:2 }}</span></div>
+                        <div class="flex justify-between text-sm"><span>Shipping</span><span>₹{{ shipping|floatformat:2 }}</span></div>
+                        <div class="flex justify-between text-sm"><span>GST (18%)</span><span>₹{{ tax_amount|floatformat:2 }}</span></div>
+                        <div class="flex justify-between text-xl font-black mt-4 pt-4 border-t border-stone-200">
+                            <span>Total</span><span>₹{{ grand_total|floatformat:2 }}</span>
                         </div>
                     </div>
-                    <div class="border-t border-stone-200 dark:border-stone-700 pt-4 mb-6">
-                        <div class="flex justify-between items-center">
-                            <span class="text-lg font-black text-stone-900 dark:text-white">Total</span>
-                            <span class="text-2xl font-black text-primary">₹{{ grand_total|floatformat:2 }}</span>
-                        </div>
-                    </div>
-                    <button type="button" id="place-order-btn"
-                            class="w-full bg-primary text-white font-black py-4 rounded-2xl hover:bg-primary-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            {% if not addresses %}disabled title="Add delivery address first"{% endif %}>
-                        <span class="material-symbols-outlined">lock</span>Pay with Razorpay
+
+                    <button id="place-order-btn" onclick="handlePlaceOrder()"
+                            class="w-full mt-8 h-14 bg-stone-900 dark:bg-primary text-white rounded-2xl font-bold text-lg hover:opacity-90 transition-all active:scale-95">
+                        Place Order
                     </button>
                 </div>
             </div>
         </div>
-    </form>
-</section>
-{% endblock content %}
+    </div>
+    {% endif %}
+</div>
 
-{% block extra_js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
-let selectedAddressId = null;
-let selectedPaymentMethod = 'RAZORPAY';
+    async function handlePlaceOrder() {
+        const addressId = document.getElementById('address-select').value;
+        const method = document.querySelector('input[name="payment_method"]:checked').value;
+        const btn = document.getElementById('place-order-btn');
 
-document.addEventListener('DOMContentLoaded', function () {
-    const defaultAddress = document.querySelector('.address-card.selected');
-    if (defaultAddress) selectAddress(defaultAddress.dataset.addressId, defaultAddress);
+        if (!addressId) { alert("Please select a delivery address"); return; }
 
-    document.getElementById('place-order-btn')?.addEventListener('click', handleRazorpayPayment);
-});
+        btn.disabled = true;
+        btn.innerText = "Processing...";
 
-function selectAddress(addressId, element) {
-    document.querySelectorAll('.address-card').forEach(c => c.classList.remove('selected'));
-    element.classList.add('selected');
-    selectedAddressId = addressId;
-    document.getElementById('selected_address_id').value = addressId;
-}
+        try {
+            // Step 1: Create the Pending Order in Django
+            const response = await fetch("{% url 'create_razorpay_order' %}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
+                body: JSON.stringify({
+                    selected_address_id: addressId,
+                    {% if single_product %}
+                    buy_now_variant_id: "{{ variant.id }}",
+                    buy_now_quantity: "{{ quantity }}",
+                    {% endif %}
+                })
+            });
 
-function handleRazorpayPayment() {
-    if (!selectedAddressId) { alert("Select delivery address"); return; }
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
 
-    const formData = new FormData();
-    formData.append('selected_address_id', selectedAddressId);
-    formData.append('payment_method', 'RAZORPAY');
-
-    fetch('{% url "create_razorpay_order" %}', {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
-    })
-    .then(res => res.json())
-    .then(data => {
-        const options = {
-            key: data.key,
-            amount: data.amount,
-            currency: data.currency,
-            name: "EasyBuy",
-            description: "Order Payment",
-            order_id: data.order_id,
-            prefill: data.prefill,
-            theme: { color: "#4a7c43" },
-            handler: function(response){ verifyPayment(response); }
-        };
-        const rzp = new Razorpay(options);
-        rzp.open();
-    });
-}
-
-function verifyPayment(response) {
-    const params = new URLSearchParams();
-    params.append('razorpay_payment_id', response.razorpay_payment_id);
-    params.append('razorpay_order_id', response.razorpay_order_id);
-    params.append('razorpay_signature', response.razorpay_signature);
-
-    fetch('{% url "verify_razorpay_payment" %}', {
-        method: 'POST',
-        body: params,
-        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
-    })
-    .then(() => window.location.href = '{% url "user_orders" %}');
-}
-
-// Load Razorpay SDK
-const script = document.createElement('script');
-script.src = "https://checkout.razorpay.com/v1/checkout.js";
-document.head.appendChild(script);
+            if (method === "ONLINE") {
+                // Step 2a: Launch Razorpay
+                const options = {
+                    "key": data.key,
+                    "amount": data.amount,
+                    "currency": "INR",
+                    "name": "EasyBuy",
+                    "order_id": data.order_id,
+                    "handler": function (rzp_res) {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = "{% url 'verify_razorpay_payment' %}";
+                        const fields = {
+                            'razorpay_payment_id': rzp_res.razorpay_payment_id,
+                            'razorpay_order_id': rzp_res.razorpay_order_id,
+                            'razorpay_signature': rzp_res.razorpay_signature,
+                            'csrfmiddlewaretoken': '{{ csrf_token }}'
+                        };
+                        for (const key in fields) {
+                            const input = document.createElement('input');
+                            input.type = 'hidden'; input.name = key; input.value = fields[key];
+                            form.appendChild(input);
+                        }
+                        document.body.appendChild(form);
+                        form.submit();
+                    },
+                    "prefill": data.prefill,
+                    "modal": { "ondismiss": function() { btn.disabled = false; btn.innerText = "Place Order"; } }
+                };
+                const rzp = new Razorpay(options);
+                rzp.open();
+            } else {
+                // Step 2b: Redirect to COD Success
+                window.location.href = "{% url 'process_cod_order' %}";
+            }
+        } catch (err) {
+            alert(err.message);
+            btn.disabled = false;
+            btn.innerText = "Place Order";
+        }
+    }
 </script>
-{% endblock extra_js %}
+{% endblock %}

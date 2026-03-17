@@ -53,7 +53,7 @@
         
         <nav class="flex-1 px-4 space-y-1 mt-4">
             <!-- Dashboard -->
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'dashboard' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
+            <a href="{%url 'admin_dashboard' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'dashboard' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
                 <span class="material-symbols-outlined">dashboard</span>
                 <span class="text-sm font-{% if active_menu == 'dashboard' %}semibold{% else %}medium{% endif %}">Dashboard</span>
             </a>

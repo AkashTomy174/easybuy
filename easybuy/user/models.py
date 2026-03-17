@@ -115,6 +115,8 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField(default=1)
     price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, default="PENDING")
+    estimated_ship_date = models.DateTimeField(null=True, blank=True)
+    shipped_at = models.DateTimeField(null=True, blank=True)
     subtotal = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -125,6 +127,10 @@ class OrderItem(models.Model):
     )
 
     def save(self, *args, **kwargs):
+        from django.utils import timezone
+
+        if self.status in ["PENDING", "CONFIRMED"] and not self.estimated_ship_date:
+            self.estimated_ship_date = timezone.now() + timezone.timedelta(days=2)
         self.subtotal = self.quantity * self.price_at_purchase
         super().save(*args, **kwargs)
 

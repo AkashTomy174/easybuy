@@ -12,12 +12,12 @@ print("🗄️ Populating EasyBuy database...")
 admin = User.objects.create_user(
     username="admin",
     email="admin@easybuy.com",
-    password="admin123",
+    password="921967",
     role="ADMIN",
     is_staff=True,
     is_superuser=True,
 )
-print("✅ Admin: admin/admin123")
+print("✅ Admin: admin/921967")
 
 # 2. Sellers
 sellers = []
@@ -148,6 +148,6 @@ for customer in customers:
 print("✅ Orders created")
 
 print("\n🎉 DATABASE FULLY POPULATED!")
-print("👤 Logins: admin/admin123 | seller1/seller123 | customer1/customer123")
+print("👤 Logins: admin/921967 | seller1/seller123 | customer1/customer123")
 print("📱 Run: python manage.py runserver")
 print("🌐 Visit: http://127.0.0.1:8000")

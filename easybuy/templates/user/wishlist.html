@@ -6,11 +6,20 @@
     <div class="mx-auto max-w-7xl w-full px-4 py-8 lg:px-12">
         <!-- Header -->
         <div class="mb-8">
-            <div class="flex items-center gap-3 mb-2">
+<div class="flex items-center gap-3 mb-2">
                 <span class="material-symbols-outlined text-4xl text-primary">favorite</span>
                 <h1 class="text-3xl lg:text-4xl font-black text-stone-900 dark:text-white">My Wishlist</h1>
             </div>
             <p class="text-stone-600 dark:text-stone-400">Save your favorite items for later</p>
+            
+            <!-- Manage Wishlists Button -->
+            <div class="flex gap-3 mt-6">
+                <a href="{% url 'manage_wishlists' %}" 
+                   class="inline-flex items-center gap-2 bg-gradient-to-r from-accent-terracotta to-orange-500 text-white px-6 py-3 rounded-2xl font-bold hover:shadow-xl transition-all">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    Manage Wishlists
+                </a>
+            </div>
         </div>
 
         {% if page_obj %}
@@ -156,78 +165,58 @@
 <script>
 function removeFromWishlist(itemId) {
     if (!confirm('Remove this item from your wishlist?')) return;
-    
-    fetch(`/user/wishlist/remove/${itemId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.message, 'success');
-            // Remove the item from DOM
-            const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
-            if (itemElement) {
-                itemElement.style.opacity = '0';
-                itemElement.style.transform = 'scale(0.8)';
-                setTimeout(() => {
-                    itemElement.remove();
-                    // Check if wishlist is empty
-                    const remainingItems = document.querySelectorAll('.wishlist-item');
-                    if (remainingItems.length === 0) {
-                        location.reload();
-                    }
-                }, 300);
-            }
-        } else {
-            showToast(data.message || 'Failed to remove item', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('An error occurred', 'error');
-    });
-}
 
-function moveToCart(itemId) {
-    fetch(`/user/wishlist/move-to-cart/${itemId}/`, {
-        method: 'POST',
+    const csrftoken = getCookie("csrftoken");
+
+    fetch(`/user/wishlist/remove/${itemId}/`, {
+        method: "POST",
         headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'Content-Type': 'application/json'
-        }
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken
+        },
+        body: JSON.stringify({}) // required for Django to see it as POST
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             showToast(data.message, 'success');
-            // Update cart count
-            updateCartCount(data.cart_count);
-            // Remove the item from DOM
             const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
             if (itemElement) {
-                itemElement.style.opacity = '0';
-                itemElement.style.transform = 'scale(0.8)';
-                setTimeout(() => {
-                    itemElement.remove();
-                    // Check if wishlist is empty
-                    const remainingItems = document.querySelectorAll('.wishlist-item');
-                    if (remainingItems.length === 0) {
-                        location.reload();
-                    }
-                }, 300);
+                itemElement.remove();
+                if (!document.querySelector('.wishlist-item')) location.reload();
             }
         } else {
-            showToast(data.message || 'Failed to move item', 'error');
+            showToast(data.message || "Failed to remove item", 'error');
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('An error occurred', 'error');
-    });
+    .catch(() => showToast('An error occurred', 'error'));
+}
+function moveToCart(itemId) {
+    const csrftoken = getCookie("csrftoken");
+
+    fetch(`/user/wishlist/move-to-cart/${itemId}/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            updateCartCount(data.cart_count);
+            const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
+            if (itemElement) {
+                itemElement.remove();
+                if (!document.querySelector('.wishlist-item')) location.reload();
+            }
+        } else {
+            showToast(data.message || "Failed to move item", 'error');
+        }
+    })
+    .catch(() => showToast('An error occurred', 'error'));
 }
 </script>
 {% endblock %}

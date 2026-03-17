@@ -126,18 +126,30 @@
                     <td class="px-6 py-5">
                         <form action="{% url 'status' item.id %}" method="POST" class="inline" id="status-form-{{ item.id }}">
                             {% csrf_token %}
-                            <div class="flex items-center gap-2">
-                                <select name="status" id="status-select-{{ item.id }}"
-                                    class="text-[10px] font-black uppercase tracking-wider bg-transparent border-0 cursor-pointer focus:ring-0 
-                                    {% if item.order.order_status == 'PENDING' %}text-orange-600{% elif item.order.order_status == 'SHIPPED' %}text-blue-600{% elif item.order.order_status == 'DELIVERED' %}text-emerald-600{% elif item.order.order_status == 'CANCELLED' %}text-red-600{% else %}text-stone-600{% endif %}">
-                                    <option value="PENDING" {% if item.order.order_status == 'PENDING' %}selected{% endif %}>Pending</option>
-                                    <option value="SHIPPED" {% if item.order.order_status == 'SHIPPED' %}selected{% endif %}>Shipped</option>
-                                    <option value="DELIVERED" {% if item.order.order_status == 'DELIVERED' %}selected{% endif %}>Delivered</option>
-                                    <option value="CANCELLED" {% if item.order.order_status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
-                                </select>
-                                <button type="submit" class="px-2 py-1 bg-primary text-white text-xs rounded hover:bg-primary/80 transition-colors">
-                                    Update
-                                </button>
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center gap-2">
+                                    <select name="status"
+                                            id="status-select-{{ item.id }}"
+                                            onchange="updateStatus({{ item.id }}, this.value)"
+                                            class="text-[10px] font-black uppercase tracking-wider bg-transparent border-0 cursor-pointer focus:ring-0
+                                            {% if item.status == 'PENDING' %}text-orange-600
+                                            {% elif item.status == 'SHIPPED' %}text-blue-600
+                                            {% elif item.status == 'DELIVERED' %}text-emerald-600
+                                            {% elif item.status == 'CANCELLED' %}text-red-600
+                                            {% else %}text-stone-600
+                                            {% endif %}">
+                                        <option value="PENDING" {% if item.status == 'PENDING' %}selected{% endif %}>Pending</option>
+                                        <option value="SHIPPED" {% if item.status == 'SHIPPED' %}selected{% endif %}>Shipped</option>
+                                        <option value="DELIVERED" {% if item.status == 'DELIVERED' %}selected{% endif %}>Delivered</option>
+                                        <option value="CANCELLED" {% if item.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                                    </select>
+                                </div>
+                                {% if item.estimated_ship_date %}
+                                <span class="text-xs text-stone-500">Est. Ship: {{ item.estimated_ship_date|date:"M d" }}</span>
+                                {% endif %}
+                                {% if item.shipped_at %}
+                                <span class="text-xs text-blue-600 font-semibold">Shipped: {{ item.shipped_at|date:"M d" }}</span>
+                                {% endif %}
                             </div>
                         </form>
                     </td>
@@ -202,4 +214,51 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateStatus(itemId, newStatus) {
+    const form = document.getElementById(`status-form-${itemId}`);
+    const select = document.getElementById(`status-select-${itemId}`);
+    const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+    select.classList.add('ring-2', 'ring-primary', 'ring-opacity-50');
+
+    const colorMap = {
+        'PENDING': 'text-orange-600',
+        'SHIPPED': 'text-blue-600',
+        'DELIVERED': 'text-emerald-600',
+        'CANCELLED': 'text-red-600'
+    };
+
+    fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            select.classList.remove('text-orange-600', 'text-blue-600', 'text-emerald-600', 'text-red-600');
+            select.classList.add(colorMap[newStatus]);
+            select.classList.replace('ring-primary', 'ring-emerald-500');
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+        } else {
+            alert('Update failed: ' + (data.message || 'Unknown error'));
+            select.classList.remove('ring-2', 'ring-primary');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Network error. Please try again.');
+        select.classList.remove('ring-2', 'ring-primary');
+    });
+}
+</script>
 {% endblock %}

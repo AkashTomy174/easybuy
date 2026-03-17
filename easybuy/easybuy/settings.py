@@ -134,7 +134,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 MEDIA_URL = "/media/"
 
 
-MEDIA_ROOT = r"C:\Users\hp\OneDrive\Desktop\BESTBUY\project\images\category"
+MEDIA_ROOT = BASE_DIR / "images"
 
 # Authentication settings
 LOGIN_URL = "login"
@@ -157,15 +157,16 @@ TWILIO_WHATSAPP_FROM = os.getenv(
     "TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886"
 )  # Twilio Sandbox number
 
-# WhatsApp Notifications
+# WhatsApp Notifications - FIXED: Enable for order status notifications
 WHATSAPP_NOTIFICATIONS_ENABLED = os.getenv(
-    "WHATSAPP_NOTIFICATIONS_ENABLED", "False"
+    "WHATSAPP_NOTIFICATIONS_ENABLED", "true"
 ).lower() in ("true", "1", "yes")
+print(f"WhatsApp Notifications Enabled: {WHATSAPP_NOTIFICATIONS_ENABLED}")
 
 # Razorpay Configuration
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
-print("Razorpay Key:", RAZORPAY_KEY_ID)       # Optional debug
+print("Razorpay Key:", RAZORPAY_KEY_ID)  # Optional debug
 print("Razorpay Secret:", RAZORPAY_KEY_SECRET)
 RAZORPAY_TEST_MODE = True  # make sure your integration knows this is test
 # Validation

@@ -1,0 +1,107 @@
+<div class="wishlist-selector relative group">
+    <button id="wishlist-btn"
+            onclick="toggleWishlistDetail()"
+            class="h-16 w-16 bg-white dark:bg-stone-800 border-2 border-stone-200 dark:border-stone-700 text-stone-400 hover:text-red-500 hover:border-red-500 rounded-3xl font-black text-lg hover:shadow-2xl transition-all shadow-xl flex items-center justify-center gap-3 hover:scale-105">
+        <span class="material-symbols-outlined text-2xl" id="wishlist-icon">favorite_border</span>
+    </button>
+    
+    <!-- Wishlist Dropdown -->
+    <div id="wishlist-dropdown" class="absolute -top-4 right-0 hidden group-hover:block bg-white dark:bg-stone-800 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-700 py-2 min-w-[200px] z-50" style="top: -100%;">
+        <div class="px-4 py-3 border-b border-stone-200 dark:border-stone-700">
+            <h4 class="font-bold text-stone-900 dark:text-white text-sm">Save to Wishlist</h4>
+        </div>
+        {% for wishlist in user.wishlists.all %}
+        <a href="#" onclick="addToSpecificWishlist({{ wishlist.id }}, event)" 
+           class="wishlist-option flex items-center gap-3 px-4 py-3 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors text-sm {% if wishlist.wishlist_name == 'My Wishlist' %}font-bold border-r-4 border-primary{% endif %}">
+            <span class="material-symbols-outlined text-primary text-lg">favorite</span>
+            <span>{{ wishlist.wishlist_name }}</span>
+            <span class="ml-auto text-xs text-stone-400">({{ wishlist.items.count }})</span>
+        </a>
+        {% empty %}
+        <div class="px-4 py-4 text-center text-stone-500 dark:text-stone-400">
+            <span class="material-symbols-outlined text-2xl block mb-1">favorite_border</span>
+            No wishlists yet
+        </div>
+        {% endfor %}
+        <div class="border-t border-stone-200 dark:border-stone-700 mt-1 pt-2">
+            <a href="{% url 'manage_wishlists' %}" class="flex items-center gap-3 px-4 py-3 text-sm hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors">
+                <span class="material-symbols-outlined text-lg">dashboard</span>
+                Manage Wishlists
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.wishlist-selector {
+    position: relative;
+}
+.wishlist-dropdown {
+    position: absolute;
+    top: calc(-100% - 1rem);
+    right: 0;
+}
+.group:hover .wishlist-dropdown {
+    display: block !important;
+}
+</style>
+
+<script>
+
+// Helper to read a cookie by name (needed to fetch the CSRF token)
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let cookie of cookies) {
+            const c = cookie.trim();
+            if (c.startsWith(name + "=")) {
+                cookieValue = decodeURIComponent(c.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function addToSpecificWishlist(wishlistId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!selectedVariantId) {
+        showToast('Please select a variant first', 'error');
+        return;
+    }
+
+    // Read CSRF token from cookie and include it in the header
+    const csrftoken = getCookie('csrftoken');
+
+    fetch(`/user/wishlist/toggle/${selectedVariantId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,  // REQUIRED for Django CSRF
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ wishlist_id: wishlistId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message || 'Added to wishlist!', 'success');
+
+            // Optionally update UI count
+            // document.querySelector(`#wishlist-count-${wishlistId}`).textContent = data.new_count;
+
+            // Close dropdown
+            document.getElementById('wishlist-dropdown').style.display = 'none';
+        } else {
+            showToast(data.message || 'Error adding to wishlist', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error adding to wishlist', 'error');
+    });
+}
+</script>
+

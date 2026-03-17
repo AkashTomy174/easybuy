@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 import json
 import logging
 import traceback
+import random
+import string
 from easybuy.core.decorators import role_required
 from .models import SellerProfile, Product, ProductVariant, ProductImage, InventoryLog
 from easybuy.core.models import SubCategory
@@ -20,6 +22,11 @@ from easybuy.user.models import Order, OrderItem, Review
 from easybuy.core.whatsapp_utils import whatsapp_notifier
 
 User = get_user_model()
+
+
+def generate_sku(length=8):
+    """Generate a random SKU: uppercase letters + digits."""
+    return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
 
 def seller_regi_success(request):
@@ -123,61 +130,121 @@ def seller_product_list(request):
 def seller_dashboard(request):
     seller = request.user.seller_profile
     now = timezone.now()
-    
-    all_order_items = OrderItem.objects.filter(seller=seller).select_related("order", "variant__product")
-    
+
+    all_order_items = OrderItem.objects.filter(seller=seller).select_related(
+        "order", "variant__product"
+    )
+
+    # Orders & Revenue
     total_orders = all_order_items.count()
-    total_revenue = sum(float(item.price_at_purchase * item.quantity) for item in all_order_items)
-    pending_orders = all_order_items.filter(order__order_status="PENDING").count()
-    
+    total_revenue = sum(
+        float(item.price_at_purchase * item.quantity) for item in all_order_items
+    )
+    pending_orders = all_order_items.filter(status="PENDING").count()
+
+    average_order_value = total_revenue / total_orders if total_orders > 0 else 0
+
+    delivered_revenue = sum(
+        float(item.price_at_purchase * item.quantity)
+        for item in all_order_items.filter(order__order_status="DELIVERED")
+    )
+
+    # Recent Orders
+    recent_orders = all_order_items.order_by("-order__ordered_at")[:5]
+
+    # Products
     total_products = Product.objects.filter(seller=seller).count()
     active_products = Product.objects.filter(seller=seller, is_active=True).count()
-    
-    average_order_value = total_revenue / total_orders if total_orders > 0 else 0
-    
-    delivered_revenue = sum(float(item.price_at_purchase * item.quantity) 
-                           for item in all_order_items.filter(order__order_status="DELIVERED"))
-    pending_revenue = sum(float(item.price_at_purchase * item.quantity) 
-                         for item in all_order_items.filter(order__order_status="PENDING"))
-    
+
+    # Daily revenue data
     daily_revenue = []
     daily_labels = []
     for i in range(6, -1, -1):
         date = now - timedelta(days=i)
-        day_start = date.replace(hour=0, minute=0, second=0, microsecond=0)
-        day_end = day_start + timedelta(days=1)
-        
-        day_orders = all_order_items.filter(
-            order__ordered_at__gte=day_start,
-            order__ordered_at__lt=day_end
-        )
-        day_revenue = sum(float(item.price_at_purchase * item.quantity) for item in day_orders)
-        
-        daily_revenue.append(day_revenue)
+        day_orders = all_order_items.filter(order__ordered_at__date=date.date())
         daily_labels.append(date.strftime("%b %d"))
-    
+        daily_revenue.append(
+            round(
+                sum(
+                    float(item.price_at_purchase * item.quantity) for item in day_orders
+                ),
+                2,
+            )
+        )
+
+    # Top products
     top_products = (
-        all_order_items
-        .values('variant__product__name')
-        .annotate(total_sold=Sum('quantity'), revenue=Sum(F('price_at_purchase') * F('quantity')))
-        .order_by('-total_sold')[:5]
+        all_order_items.values("variant__product__name")
+        .annotate(
+            total_sold=Sum("quantity"),
+            revenue=Sum(F("price_at_purchase") * F("quantity")),
+        )
+        .order_by("-total_sold")[:5]
     )
-    
+
+    # Order status counts
     status_counts = {
-        'PENDING': all_order_items.filter(order__order_status='PENDING').count(),
-        'SHIPPED': all_order_items.filter(order__order_status='SHIPPED').count(),
-        'DELIVERED': all_order_items.filter(order__order_status='DELIVERED').count(),
-        'CANCELLED': all_order_items.filter(order__order_status='CANCELLED').count(),
+        "PENDING": all_order_items.filter(status="PENDING").count(),
+        "SHIPPED": all_order_items.filter(status="SHIPPED").count(),
+        "DELIVERED": all_order_items.filter(status="DELIVERED").count(),
+        "CANCELLED": all_order_items.filter(status="CANCELLED").count(),
     }
-    
-    recent_orders = all_order_items.order_by('-order__ordered_at')[:5]
-    
+
+    # -----------------------------
+    # Inventory Movement Section
+    # -----------------------------
+
+    # Data lists for last 7 days
+    inv_labels = []
+    inv_changes = []
+    total_stock_in = 0
+    total_stock_out = 0
+
+    for i in range(6, -1, -1):
+        date = now - timedelta(days=i)
+        inv_labels.append(date.strftime("%b %d"))
+
+        # Sum positive changes (stock in)
+        stock_in = (
+            InventoryLog.objects.filter(
+                variant__product__seller=seller,
+                change_amount__gt=0,
+                created_at__date=date.date(),
+            ).aggregate(total=Sum("change_amount"))["total"]
+            or 0
+        )
+
+        # Sum negative changes (stock out)
+        stock_out = (
+            InventoryLog.objects.filter(
+                variant__product__seller=seller,
+                change_amount__lt=0,
+                created_at__date=date.date(),
+            ).aggregate(total=Sum("change_amount"))["total"]
+            or 0
+        )
+
+        # Net change on that day
+        net_daily = stock_in + stock_out
+        inv_changes.append(net_daily)
+
+        # Accumulate for KPIs
+        total_stock_in += stock_in
+        total_stock_out += abs(stock_out)
+
+    # Net movement across all days
+    net_stock_movement = total_stock_in - total_stock_out
+
+    # -----------------------------
+    # Low stock items
+    # -----------------------------
     low_stock_items = ProductVariant.objects.filter(
-        product__seller=seller,
-        stock_quantity__lte=10,
-        stock_quantity__gt=0
-    ).select_related('product')[:5]
-    
+        product__seller=seller, stock_quantity__lte=10, stock_quantity__gt=0
+    ).select_related("product")[:5]
+
+    # -----------------------------
+    # Context (Serialized for JS)
+    # -----------------------------
     context = {
         "seller": seller,
         "total_orders": total_orders,
@@ -187,15 +254,22 @@ def seller_dashboard(request):
         "active_products": active_products,
         "average_order_value": average_order_value,
         "delivered_revenue": delivered_revenue,
-        "pending_revenue": pending_revenue,
-        "daily_revenue_data": json.dumps(daily_revenue),
+        # Revenue chart
         "daily_labels_data": json.dumps(daily_labels),
+        "daily_revenue_data": json.dumps(daily_revenue),
+        # Inventory movement chart
+        "daily_inv_labels_data": json.dumps(inv_labels),
+        "daily_inv_changes_data": json.dumps(inv_changes),
+        "total_stock_in": total_stock_in,
+        "total_stock_out": total_stock_out,
+        "net_stock_movement": net_stock_movement,
         "top_products": top_products,
         "status_counts": status_counts,
         "recent_orders": recent_orders,
         "low_stock_items": low_stock_items,
         "active_menu": "dashboard",
     }
+
     return render(request, "seller/dashboard.html", context)
 
 
@@ -258,6 +332,7 @@ def add_product(request):
         with transaction.atomic():
             subcategory_id = request.POST.get("subcategory")
             subcategory_obj = SubCategory.objects.get(id=subcategory_id)
+
             product = Product.objects.create(
                 seller=request.user.seller_profile,
                 subcategory=subcategory_obj,
@@ -274,9 +349,16 @@ def add_product(request):
                     else 0
                 ),
             )
+
+            # Auto‑generate SKU
+            raw_sku = generate_sku()
+            # Ensure uniqueness
+            while ProductVariant.objects.filter(sku_code=raw_sku).exists():
+                raw_sku = generate_sku()
+
             item = ProductVariant.objects.create(
                 product=product,
-                sku_code=request.POST.get("sku"),
+                sku_code=raw_sku,
                 mrp=request.POST.get("mrp"),
                 selling_price=request.POST.get("price"),
                 cost_price=request.POST.get("cost"),
@@ -287,6 +369,7 @@ def add_product(request):
                 height=request.POST.get("height"),
                 tax_percentage=request.POST.get("tax"),
             )
+
             images = request.FILES.getlist("images")
             for idx, img in enumerate(images):
                 ProductImage.objects.create(
@@ -350,6 +433,10 @@ def add_stock(request):
 @role_required(allowed_roles=["SELLER"])
 def deactivate(request, id):
     if request.method != "POST":
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse(
+                {"success": False, "message": "POST required"}, status=405
+            )
         return JsonResponse(
             {"success": False, "error": "Invalid request method"}, status=405
         )
@@ -381,27 +468,37 @@ def deactivate(request, id):
 @role_required(allowed_roles=["SELLER"])
 def seller_order(request):
     seller = request.user.seller_profile
-    status_filter = request.GET.get('status')
-    page = request.GET.get('page', 1)
-    
-    base_query = OrderItem.objects.filter(seller=seller).select_related("order", "variant", "variant__product").annotate(
-        subtotal=F("price_at_purchase") * F("quantity")
+    status_filter = request.GET.get("status")
+    page = request.GET.get("page", 1)
+
+    base_query = (
+        OrderItem.objects.filter(seller=seller)
+        .select_related("order", "variant", "variant__product")
+        .order_by("-order__ordered_at")
     )
-    
+
     if status_filter:
-        base_query = base_query.filter(order__order_status=status_filter)
-   
+        base_query = base_query.filter(status=status_filter)
+
     paginator = Paginator(base_query, 8)
     order_items = paginator.get_page(page)
-    
-    all_query = OrderItem.objects.filter(seller=seller).select_related("order", "variant", "variant__product")
+
+    all_query = OrderItem.objects.filter(seller=seller).select_related(
+        "order", "variant", "variant__product"
+    )
     total_orders = all_query.count()
-    total_revenue = sum(item.price_at_purchase * item.quantity for item in all_query)
-    
-    pending_orders = OrderItem.objects.filter(seller=seller, order__order_status="PENDING").count()
-    shipped_orders = OrderItem.objects.filter(seller=seller, order__order_status="SHIPPED").count()
-    delivered_orders = OrderItem.objects.filter(seller=seller, order__order_status="DELIVERED").count()
-    cancelled_orders = OrderItem.objects.filter(seller=seller, order__order_status="CANCELLED").count()
+    total_revenue = sum(
+        float(item.price_at_purchase * item.quantity) for item in all_query
+    )
+
+    pending_orders = OrderItem.objects.filter(seller=seller, status="PENDING").count()
+    shipped_orders = OrderItem.objects.filter(seller=seller, status="SHIPPED").count()
+    delivered_orders = OrderItem.objects.filter(
+        seller=seller, status="DELIVERED"
+    ).count()
+    cancelled_orders = OrderItem.objects.filter(
+        seller=seller, status="CANCELLED"
+    ).count()
 
     context = {
         "order_items": order_items,
@@ -418,116 +515,109 @@ def seller_order(request):
     return render(request, "seller/orders.html", context)
 
 
+from django.db import transaction
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+import logging
+import traceback
+
+logger = logging.getLogger(__name__)
+
+
 @login_required
 @role_required(allowed_roles=["SELLER"])
 def status(request, id):
-    logger = logging.getLogger(__name__)
-    
-    with open('status_change_log.txt', 'a') as f:
-        f.write(f"\n{'='*50}\n")
-        f.write(f"Status change request received\n")
-        f.write(f"Time: {timezone.now()}\n")
-        f.write(f"User: {request.user.username}\n")
-        f.write(f"OrderItem ID: {id}\n")
-    
     seller = request.user.seller_profile
     order_item = get_object_or_404(OrderItem, seller=seller, id=id)
-
     new_status = request.POST.get("status")
-    
-    with open('status_change_log.txt', 'a') as f:
-        f.write(f"New Status: {new_status}\n")
-        f.write(f"Order: {order_item.order.order_number}\n")
-        f.write(f"Old Status: {order_item.order.order_status}\n")
-        f.write(f"Phone: {order_item.order.shipping_phone}\n")
-    
-    if new_status:
-        old_status = order_item.order.order_status
-        
-        print(f"\n=== ORDER STATUS CHANGE ===")
-        print(f"Order: {order_item.order.order_number}")
-        print(f"Old Status: {old_status}")
-        print(f"New Status: {new_status}")
-        print(f"Phone: {order_item.order.shipping_phone}")
-        print(f"WhatsApp Enabled: {getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False)}")
-        
-        order_item.order.order_status = new_status
-        order_item.order.save()
-        
-        order_item.status = new_status
-        order_item.save()
-        
-        with open('status_change_log.txt', 'a') as f:
-            f.write(f"Status updated in database\n")
-            f.write(f"WhatsApp Enabled: {getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False)}\n")
-        
-        if getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False):
-            print(f"Attempting to send WhatsApp notification...")
-            with open('status_change_log.txt', 'a') as f:
-                f.write(f"Attempting WhatsApp notification...\n")
+
+    if not new_status:
+        print("status illa")
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse(
+                {"success": False, "message": "No status provided"}, status=400
+            )
+        return redirect("seller_orders")
+
+    try:
+        with transaction.atomic():
+            old_status = order_item.status
+            order_item.status = new_status
+            if new_status == "SHIPPED" and not order_item.shipped_at:
+                from django.utils import timezone
+
+                order_item.shipped_at = timezone.now()
+            order_item.save()
+            logger.info(
+                f"Status Change: Order {order_item.order.order_number} | {old_status} -> {new_status} by {request.user.username}"
+            )
+        if getattr(settings, "WHATSAPP_NOTIFICATIONS_ENABLED", True):
+            logger.info(
+                f"WhatsApp notifications enabled, sending for OrderItem {order_item.id} status {new_status}"
+            )
+            logger.info(f"Target phone: {order_item.order.shipping_phone}")
+            logger.info(f"Client ready: {whatsapp_notifier.client is not None}")
             try:
                 if new_status == "SHIPPED":
-                    print("Sending SHIPPED notification...")
+                    print("ship ayi ketto")
                     result = whatsapp_notifier.send_order_shipped(order_item.order)
-                    print(f"SHIPPED notification result: {result}")
-                    with open('status_change_log.txt', 'a') as f:
-                        f.write(f"SHIPPED notification sent: {result}\n")
+                    logger.info(f"Shipped notification result: {result}")
                 elif new_status == "DELIVERED":
-                    print("Sending DELIVERED notification...")
-                    result1 = whatsapp_notifier.send_order_delivered(order_item.order)
-                    print(f"DELIVERED notification result: {result1}")
-                    with open('status_change_log.txt', 'a') as f:
-                        f.write(f"DELIVERED notification sent: {result1}\n")
-                    print("Sending FEEDBACK notification...")
-                    result2 = whatsapp_notifier.send_feedback_request(order_item.order)
-                    print(f"FEEDBACK notification result: {result2}")
-                    with open('status_change_log.txt', 'a') as f:
-                        f.write(f"FEEDBACK notification sent: {result2}\n")
+                    print("deliver ayi ketto")
+                    result = whatsapp_notifier.send_order_delivered(order_item.order)
+                    logger.info(f"Delivered notification result: {result}")
+                    feedback_result = whatsapp_notifier.send_feedback_request(
+                        order_item.order
+                    )
+                    logger.info(f"Feedback notification result: {feedback_result}")
                 elif new_status == "CANCELLED":
-                    print("Sending CANCELLED notification...")
+                    print("cancel ayi ketto")
                     result = whatsapp_notifier.send_order_cancelled(order_item.order)
-                    print(f"CANCELLED notification result: {result}")
-                    with open('status_change_log.txt', 'a') as f:
-                        f.write(f"CANCELLED notification sent: {result}\n")
-                print("WhatsApp notification process completed")
+                    logger.info(f"Cancelled notification result: {result}")
             except Exception as e:
-                print(f"ERROR sending WhatsApp: {str(e)}")
-                with open('status_change_log.txt', 'a') as f:
-                    f.write(f"ERROR: {str(e)}\n")
-                traceback.print_exc()
+                logger.error(f"WhatsApp Notify Failed for Order {id}: {str(e)}")
         else:
-            print("WhatsApp notifications are DISABLED")
-            with open('status_change_log.txt', 'a') as f:
-                f.write(f"WhatsApp notifications DISABLED\n")
-        
-        print(f"=== END STATUS CHANGE ===\n")
-        
-        messages.success(request, f"Order status updated to {new_status}")
+            logger.info("WhatsApp notifications DISABLED - skipping send")
 
-    return redirect("seller_orders")
+        success_msg = f"Order status updated to {new_status}"
+
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True, "message": success_msg})
+
+        messages.success(request, success_msg)
+        return redirect("seller_orders")
+
+    except Exception as e:
+        logger.error(f"Critical error in status update: {traceback.format_exc()}")
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse(
+                {"success": False, "message": "Server Error"}, status=500
+            )
+        messages.error(request, "An error occurred while updating status.")
+        return redirect("seller_orders")
 
 
 @login_required
 @role_required(allowed_roles=["SELLER"])
 def seller_reviews(request):
     seller = request.user.seller_profile
-    
+
     reviews = (
-        Review.objects
-        .filter(product__seller=seller)
+        Review.objects.filter(product__seller=seller)
         .select_related("user", "product")
         .order_by("-created_at")
     )
-    
+
     paginator = Paginator(reviews, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
-    
+
     context = {
         "page_obj": page_obj,
         "active_menu": "reviews",
     }
-    
+
     return render(request, "seller/reviews.html", context)
 
 
@@ -536,25 +626,23 @@ def seller_reviews(request):
 def reply_review(request, review_id):
     seller = request.user.seller_profile
     review = get_object_or_404(
-        Review.objects.select_related("product"),
-        id=review_id,
-        product__seller=seller
+        Review.objects.select_related("product"), id=review_id, product__seller=seller
     )
-    
+
     if request.method == "POST":
         reply = request.POST.get("reply", "").strip()
-        
+
         if not reply:
             messages.error(request, "Reply cannot be empty.")
             return redirect("seller_reviews")
-        
+
         review.seller_reply = reply
         review.replied_at = timezone.now()
         review.save()
-        
+
         messages.success(request, "Reply posted successfully!")
         return redirect("seller_reviews")
-    
+
     return redirect("seller_reviews")
 
 
@@ -563,27 +651,33 @@ def reply_review(request, review_id):
 def reply_to_review(request, review_id):
     if request.method != "POST":
         return JsonResponse({"message": "Invalid request"}, status=400)
-    
-    review = get_object_or_404(Review.objects.select_related('product__seller'), id=review_id)
-    
+
+    review = get_object_or_404(
+        Review.objects.select_related("product__seller"), id=review_id
+    )
+
     if review.product.seller.user != request.user:
         return JsonResponse({"success": False, "message": "Unauthorized"}, status=403)
-    
+
     reply = request.POST.get("reply", "").strip()
-    
+
     if not reply:
         return JsonResponse({"success": False, "message": "Reply cannot be empty"})
-    
+
     if len(reply) > 500:
-        return JsonResponse({"success": False, "message": "Reply too long (max 500 characters)"})
-    
+        return JsonResponse(
+            {"success": False, "message": "Reply too long (max 500 characters)"}
+        )
+
     review.seller_reply = reply
     review.replied_at = timezone.now()
     review.save()
-    
-    return JsonResponse({
-        "success": True,
-        "message": "Reply posted successfully",
-        "reply": reply,
-        "replied_at": review.replied_at.strftime("%B %d, %Y")
-    })
+
+    return JsonResponse(
+        {
+            "success": True,
+            "message": "Reply posted successfully",
+            "reply": reply,
+            "replied_at": review.replied_at.strftime("%B %d, %Y"),
+        }
+    )

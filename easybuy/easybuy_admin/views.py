@@ -8,18 +8,77 @@ from django.contrib.auth.decorators import login_required
 from easybuy.core.decorators import role_required
 from easybuy.core.models import Category, User
 from easybuy.seller.models import SellerProfile, Product
+from easybuy.user.models import OrderItem
+from django.db.models import Sum, F
+from django.shortcuts import render
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import timedelta
+import json
+
+User = get_user_model()
 
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def admin_dashboard(request):
-    user = request.user
-    sellers = User.objects.filter(role="SELLER").count()
-    users = User.objects.filter(role="CUSTOMER").count()
-    return render(
-        request,
-        "admin/admin_dashboard.html",
-        {"sellers": sellers, "users": users},
+
+    rev_agg = OrderItem.objects.aggregate(
+        total_revenue=Sum(F("price_at_purchase") * F("quantity"))
     )
+    total_revenue = rev_agg["total_revenue"] or 0
+
+    # --- Counts ---
+    total_sellers = User.objects.filter(role="SELLER").count()
+    total_users = User.objects.filter(role="CUSTOMER").count()
+
+
+    daily_revenue = []
+    daily_labels = []
+    now = timezone.now()
+    for i in range(6, -1, -1):
+        date = now - timedelta(days=i)
+        day_rev = OrderItem.objects.filter(
+            order__ordered_at__date=date.date()
+        ).aggregate(day_total=Sum(F("price_at_purchase") * F("quantity")))["day_total"] or 0
+        daily_revenue.append(round(day_rev, 2))
+        daily_labels.append(date.strftime("%b %d"))
+
+    cat_data = (
+    OrderItem.objects
+    .values('variant__product__subcategory__category__name')
+    .annotate(sales=Sum(F('price_at_purchase') * F('quantity')))
+    .order_by('-sales')
+)
+    cat_labels = [c['variant__product__subcategory__category__name'] for c in cat_data]
+    cat_values = [float(c['sales'] or 0) for c in cat_data]
+
+ 
+    top_sellers = (
+        User.objects.filter(role="SELLER")
+        .annotate(
+            total_sales=Sum(
+                F("seller_profile__orderitem__price_at_purchase")
+                * F("seller_profile__orderitem__quantity")
+            )
+        )
+        .order_by("-total_sales")[:5]
+    )
+    
+    daily_revenue = [float(x) for x in daily_revenue]
+
+    cat_values = [float(x) for x in cat_values]
+    context = {
+        "sellers": total_sellers,
+        "users": total_users,
+        "total_revenue": total_revenue,
+        "top_sellers": top_sellers,
+        "growth_labels": json.dumps(daily_labels),
+        "growth_data": json.dumps(daily_revenue),
+        "cat_labels": json.dumps(cat_labels),
+        "cat_values": json.dumps(cat_values),
+    }
+    return render(request, "admin/admin_dashboard.html", context)
+
 
 
 def admin_email(email, seller_name, status):
