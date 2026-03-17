@@ -39,39 +39,52 @@
 <div class="flex h-screen overflow-hidden">
     <!-- Sidebar Navigation -->
     <aside class="w-64 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-md border-r border-stone-200 dark:border-stone-800 flex flex-col hidden lg:flex">
-        <div class="p-6 flex items-center gap-3">
-            <div class="bg-gradient-to-br from-primary to-primary-dark p-2 rounded-xl text-white shadow-lg shadow-primary/20">
-                <span class="material-symbols-outlined">storefront</span>
-            </div>
-            <h1 class="text-lg font-black tracking-tight text-stone-900 dark:text-white">Seller Central</h1>
+    <div class="p-6 flex items-center gap-3">
+        <div class="bg-gradient-to-br from-primary to-primary-dark p-2 rounded-xl text-white shadow-lg shadow-primary/20">
+            <span class="material-symbols-outlined">storefront</span>
         </div>
+        <h1 class="text-lg font-black tracking-tight text-stone-900 dark:text-white">Seller Central</h1>
+    </div>
 
-        <nav class="flex-1 px-4 space-y-1">
-            <a href="{% url 'sellerdashboard' %}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'dashboard' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">dashboard</span>
-                <span>Dashboard</span>
-            </a>
-            <a href="{% url 'seller_products_list' %}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'inventory' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">inventory_2</span>
-                <span>Inventory</span>
-            </a>
-            <a href="{% url 'add_product' %}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'add_product' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">add_box</span>
-                <span>Add Product</span>
-            </a>
-            <a href="{% url 'seller_orders' %}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'orders' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">receipt_long</span>
-                <span>Orders</span>
-            </a>
-            <a href="{% url 'seller_reviews' %}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'reviews' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">rate_review</span>
-                <span>Reviews</span>
-            </a>
+    <nav class="flex-1 px-4 space-y-1">
+        <a href="{% url 'sellerdashboard' %}"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'dashboard' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span>Dashboard</span>
+        </a>
+
+        <a href="{% url 'seller_products_list' %}"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'inventory' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
+            <span class="material-symbols-outlined">inventory_2</span>
+            <span>Inventory</span>
+        </a>
+
+        <a href="{% url 'select_product_for_variant' %}"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'manage_variants' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
+            <span class="material-symbols-outlined">layers</span>
+            <span>Manage Variants</span>
+        </a>
+
+        <a href="{% url 'add_product' %}"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'add_product' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
+            <span class="material-symbols-outlined">add_box</span>
+            <span>Add Product</span>
+        </a>
+
+        <a href="{% url 'seller_orders' %}"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'orders' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
+            <span class="material-symbols-outlined">receipt_long</span>
+            <span>Orders</span>
+        </a>
+
+        <a href="{% url 'seller_reviews' %}"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'reviews' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
+            <span class="material-symbols-outlined">rate_review</span>
+            <span>Reviews</span>
+        </a>
+    </nav>
+
+    </aside>
             <!-- <a href="#"
                class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
                 <span class="material-symbols-outlined">analytics</span>

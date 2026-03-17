@@ -20,6 +20,9 @@ from .models import SellerProfile, Product, ProductVariant, ProductImage, Invent
 from easybuy.core.models import SubCategory
 from easybuy.user.models import Order, OrderItem, Review
 from easybuy.core.whatsapp_utils import whatsapp_notifier
+from django.db import transaction, IntegrityError
+from decimal import Decimal, InvalidOperation
+
 
 User = get_user_model()
 
@@ -135,7 +138,6 @@ def seller_dashboard(request):
         "order", "variant__product"
     )
 
-    # Orders & Revenue
     total_orders = all_order_items.count()
     total_revenue = sum(
         float(item.price_at_purchase * item.quantity) for item in all_order_items
@@ -149,14 +151,11 @@ def seller_dashboard(request):
         for item in all_order_items.filter(order__order_status="DELIVERED")
     )
 
-    # Recent Orders
     recent_orders = all_order_items.order_by("-order__ordered_at")[:5]
 
-    # Products
     total_products = Product.objects.filter(seller=seller).count()
     active_products = Product.objects.filter(seller=seller, is_active=True).count()
 
-    # Daily revenue data
     daily_revenue = []
     daily_labels = []
     for i in range(6, -1, -1):
@@ -172,7 +171,7 @@ def seller_dashboard(request):
             )
         )
 
-    # Top products
+
     top_products = (
         all_order_items.values("variant__product__name")
         .annotate(
@@ -182,7 +181,6 @@ def seller_dashboard(request):
         .order_by("-total_sold")[:5]
     )
 
-    # Order status counts
     status_counts = {
         "PENDING": all_order_items.filter(status="PENDING").count(),
         "SHIPPED": all_order_items.filter(status="SHIPPED").count(),
@@ -190,11 +188,7 @@ def seller_dashboard(request):
         "CANCELLED": all_order_items.filter(status="CANCELLED").count(),
     }
 
-    # -----------------------------
-    # Inventory Movement Section
-    # -----------------------------
 
-    # Data lists for last 7 days
     inv_labels = []
     inv_changes = []
     total_stock_in = 0
@@ -204,7 +198,6 @@ def seller_dashboard(request):
         date = now - timedelta(days=i)
         inv_labels.append(date.strftime("%b %d"))
 
-        # Sum positive changes (stock in)
         stock_in = (
             InventoryLog.objects.filter(
                 variant__product__seller=seller,
@@ -213,8 +206,6 @@ def seller_dashboard(request):
             ).aggregate(total=Sum("change_amount"))["total"]
             or 0
         )
-
-        # Sum negative changes (stock out)
         stock_out = (
             InventoryLog.objects.filter(
                 variant__product__seller=seller,
@@ -224,27 +215,15 @@ def seller_dashboard(request):
             or 0
         )
 
-        # Net change on that day
         net_daily = stock_in + stock_out
         inv_changes.append(net_daily)
 
-        # Accumulate for KPIs
         total_stock_in += stock_in
         total_stock_out += abs(stock_out)
-
-    # Net movement across all days
     net_stock_movement = total_stock_in - total_stock_out
-
-    # -----------------------------
-    # Low stock items
-    # -----------------------------
     low_stock_items = ProductVariant.objects.filter(
         product__seller=seller, stock_quantity__lte=10, stock_quantity__gt=0
     ).select_related("product")[:5]
-
-    # -----------------------------
-    # Context (Serialized for JS)
-    # -----------------------------
     context = {
         "seller": seller,
         "total_orders": total_orders,
@@ -254,10 +233,8 @@ def seller_dashboard(request):
         "active_products": active_products,
         "average_order_value": average_order_value,
         "delivered_revenue": delivered_revenue,
-        # Revenue chart
         "daily_labels_data": json.dumps(daily_labels),
         "daily_revenue_data": json.dumps(daily_revenue),
-        # Inventory movement chart
         "daily_inv_labels_data": json.dumps(inv_labels),
         "daily_inv_changes_data": json.dumps(inv_changes),
         "total_stock_in": total_stock_in,
@@ -277,118 +254,287 @@ def seller_dashboard(request):
 @role_required(allowed_roles=["SELLER", "ADMIN"])
 def seller_inventory(request):
     seller = request.user.seller_profile
+
     if seller:
-        products = (
-            Product.objects.filter(seller=seller)
-            .prefetch_related("variants", "variants__images")
-            .select_related("subcategory")
-            .order_by("-created_at")
+        variants = (
+            ProductVariant.objects.filter(product__seller=seller)
+            .select_related("product", "product__subcategory")
+            .prefetch_related("images")
+            .order_by("-id")
         )
-        total_inventory_value = 0
         total_stock = 0
+        total_inventory_value = 0
         low_stock_count = 0
         out_of_stock_count = 0
-        all_items = []
-        for product in products:
-            for item in product.variants.all():
-                all_items.append(item)
-                total_stock += item.stock_quantity
-                total_inventory_value += float(item.selling_price) * item.stock_quantity
-                if item.stock_quantity == 0:
-                    out_of_stock_count += 1
-                elif item.stock_quantity <= 10:
-                    low_stock_count += 1
 
-        paginator = Paginator(products, 10)
+        for item in variants:
+            total_stock += item.stock_quantity
+            total_inventory_value += float(item.selling_price) * item.stock_quantity
+
+            if item.stock_quantity == 0:
+                out_of_stock_count += 1
+            elif item.stock_quantity <= 10:
+                low_stock_count += 1
+
+        paginator = Paginator(variants, 5)
         page_number = request.GET.get("page")
         page_obj = paginator.get_page(page_number)
+
     else:
-        products = []
-        all_items = []
-        total_inventory_value = 1000
+        page_obj = None
         total_stock = 0
+        total_inventory_value = 0
         low_stock_count = 0
         out_of_stock_count = 0
-        page_obj = None
+
     context = {
-        "seller": seller,
         "page_obj": page_obj,
-        "all_items": all_items,
-        "total_products": len(products) if seller else 0,
-        "total_variants": len(all_items),
+        "total_products": Product.objects.filter(seller=seller).count() if seller else 0,
+        "total_variants": variants.count() if seller else 0,
         "total_stock": total_stock,
         "total_inventory_value": total_inventory_value,
         "low_stock_count": low_stock_count,
         "out_of_stock_count": out_of_stock_count,
         "active_menu": "inventory",
     }
+
     return render(request, "seller/inventory.html", context)
 
 
-@login_required
-@role_required(allowed_roles="SELLER")
-def add_product(request):
-    if request.method == "POST":
-        with transaction.atomic():
-            subcategory_id = request.POST.get("subcategory")
-            subcategory_obj = SubCategory.objects.get(id=subcategory_id)
 
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def add_product(request):
+
+    if request.method == "POST":
+
+        # Normalize
+        name = request.POST.get("name", "").strip()
+        description = request.POST.get("des", "").strip()
+        brand = request.POST.get("brand", "").strip()
+        model = request.POST.get("model", "").strip()
+        subcategory_id = request.POST.get("subcategory")
+
+        # Required validation
+        if not name:
+            messages.error(request, "Product name is required.")
+            return redirect("add_product")
+
+        if len(name) < 3:
+            messages.error(request, "Product name must be at least 3 characters.")
+            return redirect("add_product")
+
+        if not subcategory_id:
+            messages.error(request, "Please select a subcategory.")
+            return redirect("add_product")
+
+        # Subcategory validation
+        try:
+            subcategory_obj = SubCategory.objects.get(id=subcategory_id)
+        except SubCategory.DoesNotExist:
+            messages.error(request, "Invalid subcategory selected.")
+            return redirect("add_product")
+
+        # Boolean handling
+        is_cancellable = request.POST.get("cancellable") == "on"
+        is_returnable = request.POST.get("returnable") == "on"
+        is_active = request.POST.get("is_active") == "on"
+
+        # Return days
+        try:
+            return_days = int(request.POST.get("return_days") or 0)
+        except ValueError:
+            messages.error(request, "Return days must be a number.")
+            return redirect("add_product")
+
+        if is_returnable and return_days <= 0:
+            messages.error(request, "Return days must be greater than 0.")
+            return redirect("add_product")
+
+        if not is_returnable:
+            return_days = 0
+
+        if Product.objects.filter(
+    seller=request.user.seller_profile,
+    name__iexact=name,
+    model_number__iexact=model
+).exists():
+            messages.error(request, "Product already exists.")
+            return redirect("add_product")
+
+        try:
             product = Product.objects.create(
                 seller=request.user.seller_profile,
                 subcategory=subcategory_obj,
-                name=request.POST.get("name"),
-                description=request.POST.get("des"),
-                brand=request.POST.get("brand"),
-                model_number=request.POST.get("model"),
-                is_cancellable=True if request.POST.get("cancellable") else False,
-                is_returnable=True if request.POST.get("returnable") else False,
-                is_active=request.POST.get("is_active") != "on",
-                return_days=(
-                    int(request.POST.get("return"))
-                    if request.POST.get("returnable")
-                    else 0
-                ),
+                name=name,
+                description=description,
+                brand=brand,
+                model_number=model,
+                is_cancellable=is_cancellable,
+                is_returnable=is_returnable,
+                is_active=is_active,
+                return_days=return_days,
             )
 
-            # Auto‑generate SKU
-            raw_sku = generate_sku()
-            # Ensure uniqueness
-            while ProductVariant.objects.filter(sku_code=raw_sku).exists():
-                raw_sku = generate_sku()
+        except Exception:
+            messages.error(request, "Failed to create product.")
+            return redirect("add_product")
 
-            item = ProductVariant.objects.create(
-                product=product,
-                sku_code=raw_sku,
-                mrp=request.POST.get("mrp"),
-                selling_price=request.POST.get("price"),
-                cost_price=request.POST.get("cost"),
-                stock_quantity=request.POST.get("stock"),
-                weight=request.POST.get("weight"),
-                length=request.POST.get("length"),
-                width=request.POST.get("width"),
-                height=request.POST.get("height"),
-                tax_percentage=request.POST.get("tax"),
-            )
+        messages.success(request, "Product created. Now add variants.")
+        return redirect("add_variant", product_id=product.id)
 
-            images = request.FILES.getlist("images")
-            for idx, img in enumerate(images):
-                ProductImage.objects.create(
-                    variant=item,
-                    image=img,
-                    is_primary=(idx == 0),
-                )
+    subcategories = SubCategory.objects.filter(is_active=True).select_related("category")
 
-        return redirect("seller_products_list")
-
-    subcategories = SubCategory.objects.filter(is_active=True).select_related(
-        "category"
-    )
     return render(
         request,
         "seller/add_product.html",
-        {"subcategories": subcategories, "active_menu": "add_product"},
+        {
+            "subcategories": subcategories,
+            "active_menu": "add_product"
+        },
     )
 
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def add_variant(request, product_id):
+
+    product = get_object_or_404(
+        Product,
+        id=product_id,
+        seller=request.user.seller_profile
+    )
+
+    if request.method == "POST":
+
+        required_fields = {
+            "mrp": "MRP",
+            "price": "Selling price",
+            "stock": "Stock"
+        }
+
+        for field, name in required_fields.items():
+            if not request.POST.get(field):
+                messages.error(request, f"{name} is required.")
+                return redirect("add_variant", product_id=product.id)
+
+        images = request.FILES.getlist("images")
+        if not images:
+            messages.error(request, "At least one image is required.")
+            return redirect("add_variant", product_id=product.id)
+
+        try:
+            mrp = Decimal(request.POST.get("mrp"))
+            price = Decimal(request.POST.get("price"))
+            cost = Decimal(request.POST.get("cost") or 0)
+
+            stock = int(request.POST.get("stock"))
+
+            tax = Decimal(request.POST.get("tax") or 0)
+
+            weight = Decimal(request.POST.get("weight") or 0)
+            length = Decimal(request.POST.get("length") or 0)
+            width = Decimal(request.POST.get("width") or 0)
+            height = Decimal(request.POST.get("height") or 0)
+
+        except (InvalidOperation, ValueError):
+            messages.error(request, "Invalid numeric input.")
+            return redirect("add_variant", product_id=product.id)
+
+        if mrp <= 0:
+            messages.error(request, "MRP must be greater than 0.")
+            return redirect("add_variant", product_id=product.id)
+
+        if price <= 0:
+            messages.error(request, "Selling price must be greater than 0.")
+            return redirect("add_variant", product_id=product.id)
+
+        if stock < 0:
+            messages.error(request, "Stock cannot be negative.")
+            return redirect("add_variant", product_id=product.id)
+
+        if price > mrp:
+            messages.error(request, "Selling price cannot exceed MRP.")
+            return redirect("add_variant", product_id=product.id)
+        if price < cost:
+            messages.error(request, "Selling price cannot be less than cost price.")
+            return redirect("add_variant", product_id=product.id)
+
+        if cost < 0:
+            messages.error(request, "Cost price cannot be negative.")
+            return redirect("add_variant", product_id=product.id)
+
+        if tax < 0:
+            messages.error(request, "Tax cannot be negative.")
+            return redirect("add_variant", product_id=product.id)
+        for value, name in [
+            (weight, "Weight"),
+            (length, "Length"),
+            (width, "Width"),
+            (height, "Height"),
+        ]:
+            if value < 0:
+                messages.error(request, f"{name} cannot be negative.")
+                return redirect("add_variant", product_id=product.id)
+
+        for img in images:
+            if img.size > 5 * 1024 * 1024: 
+                messages.error(request, "Each image must be under 5MB.")
+                return redirect("add_variant", product_id=product.id)
+        try:
+            with transaction.atomic():
+
+                variant = ProductVariant.objects.create(
+                    product=product,
+                    sku_code=generate_sku(), 
+                    mrp=mrp,
+                    selling_price=price,
+                    cost_price=cost,
+                    stock_quantity=stock,
+                    weight=weight,
+                    length=length,
+                    width=width,
+                    height=height,
+                    tax_percentage=tax,
+                )
+
+                for idx, img in enumerate(images):
+                    ProductImage.objects.create(
+                        variant=variant,
+                        image=img,
+                        is_primary=(idx == 0),
+                    )
+
+        except IntegrityError:
+            messages.error(request, "SKU conflict occurred. Please try again.")
+            return redirect("add_variant", product_id=product.id)
+
+        except Exception:
+            messages.error(request, "Unexpected error occurred.")
+            return redirect("add_variant", product_id=product.id)
+        if "finish" in request.POST:
+            messages.success(request, "Product completed successfully.")
+            return redirect("seller_products_list")
+
+        messages.success(request, "Variant added successfully.")
+        return redirect("add_variant", product_id=product.id)
+    variants = product.variants.all()
+
+    return render(request, "seller/add_variant.html", {
+        "product": product,
+        "variants": variants
+    })
+    
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def select_product_for_variant(request):
+    products = Product.objects.filter(seller=request.user.seller_profile).order_by('-created_at')
+    
+    return render(request, "seller/select_product_variant.html", {
+        "products": products,
+        "active_menu": "manage_variants"
+    })
 
 @login_required
 @role_required(allowed_roles=["SELLER"])
@@ -480,7 +626,7 @@ def seller_order(request):
     if status_filter:
         base_query = base_query.filter(status=status_filter)
 
-    paginator = Paginator(base_query, 8)
+    paginator = Paginator(base_query, 5)
     order_items = paginator.get_page(page)
 
     all_query = OrderItem.objects.filter(seller=seller).select_related(

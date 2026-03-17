@@ -74,80 +74,110 @@
                     <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700 text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-stone-100 dark:divide-stone-700">
-                {% for product in page_obj %}
-                    {% for variant in product.variants.all %}
-                    <tr class="group hover:bg-stone-50/50 dark:hover:bg-stone-800/30 transition-colors">
-                        <td class="px-6 py-5">
-                            <div class="flex items-center gap-4">
-                                <div class="h-14 w-14 bg-stone-100 dark:bg-stone-800 rounded-2xl overflow-hidden flex-shrink-0 border border-stone-200 dark:border-stone-700">
-                                    {% with variant.images.first as img %}
-                                        {% if img and img.image %}<img src="{{ img.image.url }}" class="h-full w-full object-cover">{% else %}
+                <tbody class="divide-y divide-stone-100 dark:divide-stone-700">
+
+                {% for variant in page_obj %}
+                <tr class="group hover:bg-stone-50/50 dark:hover:bg-stone-800/30 transition-colors">
+
+                    <!-- Product -->
+                    <td class="px-6 py-5">
+                        <div class="flex items-center gap-4">
+                            <div class="h-14 w-14 bg-stone-100 dark:bg-stone-800 rounded-2xl overflow-hidden flex-shrink-0 border border-stone-200 dark:border-stone-700">
+                                {% with variant.images.first as img %}
+                                    {% if img and img.image %}
+                                        <img src="{{ img.image.url }}" class="h-full w-full object-cover">
+                                    {% else %}
                                         <div class="h-full w-full flex items-center justify-center">
                                             <span class="material-symbols-outlined text-stone-300">image</span>
                                         </div>
-                                        {% endif %}
-                                    {% endwith %}
-                                </div>
-                                <div class="min-w-0">
-                                    <p class="text-sm font-bold text-stone-900 dark:text-white truncate">{{ product.name }}</p>
-                                    <p class="text-xs text-stone-500 font-medium mt-0.5">Category: Electronics</p>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+
+                            <div class="min-w-0">
+                                <p class="text-sm font-bold text-stone-900 dark:text-white truncate">
+                                    {{ variant.product.name }}
+                                </p>
+                                <p class="text-xs text-stone-500 font-medium mt-0.5">
+                                    Category: {{ variant.product.subcategory.name }}
+                                </p>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- SKU -->
+                    <td class="px-6 py-5">
+                        <span class="font-mono text-xs font-bold text-stone-500 bg-stone-100 dark:bg-stone-800 px-2 py-1 rounded">
+                            {{ variant.sku_code }}
+                        </span>
+                    </td>
+
+                    <!-- Pricing -->
+                    <td class="px-6 py-5 text-right">
+                        <p class="text-sm font-black text-stone-900 dark:text-white">
+                            ${{ variant.selling_price }}
+                        </p>
+                        <p class="text-[10px] text-stone-400 line-through">
+                            ${{ variant.mrp }}
+                        </p>
+                    </td>
+
+                    <!-- Stock -->
+                    <td class="px-6 py-5 text-center">
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="w-16 h-1.5 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
+                                <div class="h-full
+                                    {% if variant.stock_quantity > 10 %}
+                                        bg-emerald-500
+                                    {% elif variant.stock_quantity > 0 %}
+                                        bg-orange-500
+                                    {% else %}
+                                        bg-red-500
+                                    {% endif %}"
+                                    style="width: {{ variant.stock_quantity }}%">
                                 </div>
                             </div>
-                        </td>
-                        <td class="px-6 py-5">
-                            <span class="font-mono text-xs font-bold text-stone-500 bg-stone-100 dark:bg-stone-800 px-2 py-1 rounded">
-                                {{ variant.sku_code }}
+                            <span class="text-xs font-bold">
+                                {{ variant.stock_quantity }} units
                             </span>
-                        </td>
-                        <td class="px-6 py-5 text-right">
-                            <p class="text-sm font-black text-stone-900 dark:text-white">${{ variant.selling_price }}</p>
-                            <p class="text-[10px] text-stone-400 line-through decoration-stone-300">${{ variant.mrp }}</p>
-                        </td>
-                        <td class="px-6 py-5 text-center">
-                            <div class="flex flex-col items-center gap-1">
-                                <div class="w-16 h-1.5 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
-                                    <div class="h-full {% if variant.stock_quantity > 10 %}bg-emerald-500{% elif variant.stock_quantity > 0 %}bg-orange-500{% else %}bg-red-500{% endif %}" style="width: {% if variant.stock_quantity %}{{ variant.stock_quantity }}{% else %}0{% endif %}%"></div>
-                                </div>
-                                <span class="text-xs font-bold">{{ variant.stock_quantity }} units</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-5 text-center">
-                            <button onclick="toggleVariantStatus('{{ variant.id }}')" class="focus:outline-none">
-                                {% if product.is_active %}
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 cursor-pointer hover:opacity-80 transition-opacity">
-                                        Active
-                                    </span>
-                                {% else %}
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 cursor-pointer hover:opacity-80 transition-opacity">
-                                        Inactive
-                                    </span>
-                                {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- Status -->
+                    <td class="px-6 py-5 text-center">
+                        <button onclick="toggleVariantStatus('{{ variant.id }}')" class="focus:outline-none">
+                            {% if variant.product.is_active %}
+                                <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-600">
+                                    Active
+                                </span>
+                            {% else %}
+                                <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-red-50 text-red-600">
+                                    Inactive
+                                </span>
+                            {% endif %}
+                        </button>
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="px-6 py-5 text-center">
+                        <div class="flex items-center justify-center gap-1">
+                            <button onclick="openStockModal('{{ variant.id }}', '{{ variant.product.name }}', '{{ variant.sku_code }}', {{ variant.stock_quantity }})"
+                                class="p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg text-stone-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-xl">add_circle</span>
                             </button>
-                        </td>
-                        <td class="px-6 py-5 text-center">
-                            <div class="flex items-center justify-center gap-1">
-                                <button onclick="openStockModal('{{ variant.id }}', '{{ product.name }}', '{{ variant.sku_code }}', {{ variant.stock_quantity }})" class="p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg text-stone-400 hover:text-primary transition-colors" title="Add Stock">
-                                    <span class="material-symbols-outlined text-xl">add_circle</span>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
+                        </div>
+                    </td>
+
+                </tr>
+
                 {% empty %}
-                    <tr>
-                        <td colspan="6" class="px-6 py-20 text-center">
-                            <div class="flex flex-col items-center">
-                                <div class="w-20 h-20 bg-stone-100 dark:bg-stone-800 rounded-3xl flex items-center justify-center mb-4">
-                                    <span class="material-symbols-outlined text-4xl text-stone-300">inventory_2</span>
-                                </div>
-                                <h5 class="text-lg font-bold text-stone-900 dark:text-white">Your inventory is empty</h5>
-                                <p class="text-stone-500 text-sm max-w-xs mx-auto mt-2">Start growing your business by adding your first product to the catalog.</p>
-        <a href="{% url 'add_product' %}" class="mt-6 px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20">Add First Product</a>
-                            </div>
-                        </td>
-                    </tr>
+                <tr>
+                    <td colspan="6" class="px-6 py-20 text-center">
+                        No inventory found
+                    </td>
+                </tr>
                 {% endfor %}
+
             </tbody>
         </table>
     </div>

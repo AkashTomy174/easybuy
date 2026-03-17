@@ -14,6 +14,9 @@ urlpatterns = [
     path("sellerdashboard/", views.seller_dashboard, name="sellerdashboard"),
     path("logout/", logout_view, name="logout"),
     path("add-product/", views.add_product, name="add_product"),
+    
+    path('add_variant/<int:product_id>/', views.add_variant, name='add_variant'),
+    path("select-product-variant/", views.select_product_for_variant, name="select_product_for_variant"), 
     path("add_stock/", views.add_stock, name="add_stock"),
     path("deactivate/<int:id>/", views.deactivate, name="deactivate"),
     path("orders/", views.seller_order, name="seller_orders"),

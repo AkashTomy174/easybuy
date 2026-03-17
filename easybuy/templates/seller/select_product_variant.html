@@ -1,0 +1,61 @@
+{% extends "seller/seller_base.html" %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-12 px-4">
+    <div class="mb-10 text-center">
+        <h1 class="text-4xl font-black text-stone-900 tracking-tight">Manage Inventory</h1>
+        <p class="text-stone-500 font-medium mt-2 text-lg">Select a product to add or manage its variants</p>
+    </div>
+
+    <div class="mb-8 relative max-w-2xl mx-auto">
+        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">search</span>
+        <input type="text" id="productSearch" placeholder="Search your products..." 
+               class="w-full pl-12 pr-4 py-4 bg-white border border-stone-200 rounded-[2rem] focus:border-stone-900 outline-none transition-all shadow-sm font-medium">
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="productGrid">
+        {% for product in products %}
+        <div class="product-card group relative bg-white border border-stone-200 p-6 rounded-[2.5rem] hover:border-stone-900 hover:shadow-2xl hover:shadow-stone-200/50 transition-all cursor-pointer">
+            <div class="flex flex-col h-full">
+                <div class="w-full aspect-square bg-stone-50 rounded-[2rem] mb-6 overflow-hidden border border-stone-100 flex items-center justify-center">
+                    {% if product.variants.first.images.first %}
+                        <img src="{{ product.variants.first.images.first.image.url }}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                    {% else %}
+                        <span class="material-symbols-outlined text-stone-200 text-5xl">inventory_2</span>
+                    {% endif %}
+                </div>
+
+                <div class="flex-1">
+                    <h3 class="font-black text-stone-900 text-xl mb-1 truncate">{{ product.name }}</h3>
+                    <p class="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">
+                        {{ product.variants.count }} Existing Variants
+                    </p>
+                </div>
+
+                <a href="{% url 'add_variant' product.id %}" 
+                   class="mt-6 flex items-center justify-center gap-2 w-full py-4 bg-stone-900 text-white rounded-2xl font-black text-xs hover:bg-stone-800 transition-all shadow-lg shadow-stone-200">
+                    <span class="material-symbols-outlined text-sm">add_circle</span>
+                    ADD VARIANTS
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full py-24 text-center bg-stone-50 rounded-[3rem] border-2 border-dashed border-stone-200">
+            <p class="text-stone-400 font-bold uppercase tracking-widest text-sm">No products found</p>
+            <a href="{% url 'add_product' %}" class="inline-block mt-4 text-stone-900 font-black underline">Add your first product</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    // Real-time search filter
+    document.getElementById('productSearch').addEventListener('input', function(e) {
+        const term = e.target.value.toLowerCase();
+        document.querySelectorAll('.product-card').forEach(card => {
+            const name = card.querySelector('h3').textContent.toLowerCase();
+            card.style.display = name.includes(term) ? 'block' : 'none';
+        });
+    });
+</script>
+{% endblock %}

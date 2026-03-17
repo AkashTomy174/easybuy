@@ -1,0 +1,218 @@
+{% extends "seller/seller_base.html" %}
+{% load static %}
+
+{% block title %}Add Variants - {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto pb-24">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div>
+            <nav class="flex text-stone-400 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
+                <a href="{% url 'seller_products_list' %}" class="hover:text-primary transition-colors">Inventory</a>
+                <span class="mx-3 opacity-30">/</span>
+                <span class="text-stone-900">{{ product.name }}</span>
+            </nav>
+            <h1 class="text-4xl font-black text-stone-900 tracking-tight">Add Variants</h1>
+            <p class="text-stone-500 font-medium mt-1 text-lg">Define stock, pricing, and logistics for this product.</p>
+        </div>
+        <div class="flex items-center gap-3 bg-stone-100 p-2 rounded-2xl border border-stone-200">
+            <span class="material-symbols-outlined text-stone-400 ml-2">fingerprint</span>
+            <span class="text-xs font-bold text-stone-600 pr-4">Auto-SKU Enabled</span>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="mb-8 p-4 rounded-2xl border flex items-center gap-4 animate-in fade-in slide-in-from-top-4 
+                {% if message.tags == 'success' %}bg-emerald-50 border-emerald-100 text-emerald-700{% else %}bg-red-50 border-red-100 text-red-700{% endif %}">
+                <span class="material-symbols-outlined">{% if message.tags == 'success' %}check_circle{% else %}warning{% endif %}</span>
+                <p class="text-sm font-bold">{{ message }}</p>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        
+        <form method="POST" enctype="multipart/form-data" class="lg:col-span-8 space-y-8">
+            {% csrf_token %}
+
+            <div class="bg-white rounded-[2rem] border border-stone-200 p-8 shadow-sm">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center border border-amber-100">
+                        <span class="material-symbols-outlined">sell</span>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-stone-900">Financial Configuration</h3>
+                        <p class="text-xs text-stone-400 font-medium">Define your margins and tax structure.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-stone-400">Cost Price (Buy Price)</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 font-bold">₹</span>
+                            <input type="number" name="cost" step="0.01" required placeholder="0.00"
+                                   class="w-full pl-8 pr-4 py-4 bg-stone-50 border-stone-100 rounded-2xl focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all font-bold">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-stone-400">Tax Percentage (%)</label>
+                        <input type="number" name="tax" step="0.1" required placeholder="18"
+                               class="w-full px-4 py-4 bg-stone-50 border-stone-100 rounded-2xl focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all font-bold">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-stone-400">MRP</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 font-bold">₹</span>
+                            <input type="number" name="mrp" step="0.01" required placeholder="0.00"
+                                   class="w-full pl-8 pr-4 py-4 bg-stone-50 border-stone-100 rounded-2xl focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all font-bold">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-emerald-600">Selling Price *</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400 font-bold">₹</span>
+                            <input type="number" name="price" step="0.01" required placeholder="0.00"
+                                   class="w-full pl-8 pr-4 py-4 bg-emerald-50 border-emerald-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold text-emerald-700 text-lg">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[2rem] border border-stone-200 p-8 shadow-sm">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center border border-blue-100">
+                        <span class="material-symbols-outlined">local_shipping</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-stone-900">Inventory & Physicals</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-stone-400">In-Stock Quantity</label>
+                        <input type="number" name="stock" required placeholder="100"
+                               class="w-full px-4 py-4 bg-stone-50 border-stone-100 rounded-2xl focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all font-bold">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-stone-400">Weight (kg)</label>
+                        <input type="number" name="weight" step="0.001" placeholder="0.500"
+                               class="w-full px-4 py-4 bg-stone-50 border-stone-100 rounded-2xl focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all font-bold">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-6 p-6 bg-stone-50 rounded-3xl border border-stone-100">
+                    <div class="text-center">
+                        <label class="block text-[10px] font-black uppercase tracking-tighter text-stone-400 mb-2">L (cm)</label>
+                        <input type="number" name="length" step="0.1" class="w-full bg-white border-stone-200 rounded-xl p-3 text-center font-bold">
+                    </div>
+                    <div class="text-center">
+                        <label class="block text-[10px] font-black uppercase tracking-tighter text-stone-400 mb-2">W (cm)</label>
+                        <input type="number" name="width" step="0.1" class="w-full bg-white border-stone-200 rounded-xl p-3 text-center font-bold">
+                    </div>
+                    <div class="text-center">
+                        <label class="block text-[10px] font-black uppercase tracking-tighter text-stone-400 mb-2">H (cm)</label>
+                        <input type="number" name="height" step="0.1" class="w-full bg-white border-stone-200 rounded-xl p-3 text-center font-bold">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[2rem] border border-stone-200 p-8 shadow-sm">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center border border-purple-100">
+                        <span class="material-symbols-outlined">collections</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-stone-900">Variant Media</h3>
+                </div>
+
+                <div class="relative border-2 border-dashed border-stone-200 rounded-3xl p-12 hover:border-stone-900 hover:bg-stone-50 transition-all group text-center">
+                    <input type="file" name="images" id="imageInput" multiple accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mx-auto mb-4 border border-stone-100 group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-stone-400 group-hover:text-stone-900 transition-colors">upload</span>
+                    </div>
+                    <p class="text-sm font-black text-stone-900">Click to upload or drag & drop</p>
+                    <p class="text-xs text-stone-400 mt-1 font-medium italic">At least one primary image required. Max 5MB per file.</p>
+                </div>
+
+                <div id="previewGrid" class="grid grid-cols-4 sm:grid-cols-5 gap-4 mt-8"></div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center justify-end gap-4 pt-6">
+                <button type="submit" name="add_another" class="w-full sm:w-auto px-8 py-4 rounded-2xl border-2 border-stone-900 font-black hover:bg-stone-900 hover:text-white transition-all">
+                    Add & Continue
+                </button>
+                <button type="submit" name="finish" class="w-full sm:w-auto px-12 py-4 bg-stone-900 text-white rounded-2xl font-black shadow-2xl shadow-stone-200 hover:-translate-y-1 active:translate-y-0 transition-all">
+                    Complete Listing
+                </button>
+            </div>
+        </form>
+
+        <div class="lg:col-span-4">
+            <div class="bg-stone-900 rounded-[2.5rem] p-8 text-white sticky top-8 shadow-2xl shadow-stone-200">
+                <div class="flex items-center justify-between mb-10">
+                    <h3 class="text-lg font-black tracking-tight flex items-center gap-3">
+                        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                        Active Variants
+                    </h3>
+                    <span class="text-[10px] font-black px-3 py-1 bg-white/10 rounded-full border border-white/5">{{ variants|length }} TOTAL</span>
+                </div>
+
+                <div class="space-y-4 max-h-[600px] overflow-y-auto pr-3" id="v-scroll">
+                    {% for v in variants %}
+                    <div class="group flex items-center gap-5 p-4 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
+                        <div class="w-14 h-14 rounded-2xl bg-white/10 flex-shrink-0 overflow-hidden border border-white/10">
+                            {% if v.images.first %}
+                            <img src="{{ v.images.first.image.url }}" class="w-full h-full object-cover">
+                            {% endif %}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1">{{ v.sku_code }}</p>
+                            <p class="font-bold text-base">₹{{ v.selling_price }}</p>
+                            <p class="text-[10px] text-stone-500 font-bold uppercase">STOCK: {{ v.stock_quantity }}</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-16 opacity-20 border-2 border-dashed border-white/10 rounded-[2rem]">
+                        <span class="material-symbols-outlined text-5xl mb-4">inventory_2</span>
+                        <p class="text-[10px] font-black uppercase tracking-widest">No variants yet</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Professional Image Preview Script
+    const imageInput = document.getElementById('imageInput');
+    const previewGrid = document.getElementById('previewGrid');
+
+    imageInput.addEventListener('change', function() {
+        previewGrid.innerHTML = '';
+        const files = Array.from(this.files);
+
+        files.forEach((file, index) => {
+            if (file.size > 5 * 1024 * 1024) return; // Prevent preview of oversized files
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = "relative group aspect-square rounded-2xl overflow-hidden border-2 border-stone-100 bg-white shadow-sm";
+                wrapper.innerHTML = `
+                    <img src="${e.target.result}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                    ${index === 0 ? '<div class="absolute top-2 left-2 bg-stone-900 text-white text-[8px] font-black px-2 py-1 rounded shadow-lg uppercase">Primary</div>' : ''}
+                `;
+                previewGrid.appendChild(wrapper);
+            };
+            reader.readAsDataURL(file);
+        });
+    });
+</script>
+
+<style>
+    #v-scroll::-webkit-scrollbar { width: 4px; }
+    #v-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    #v-scroll::-webkit-scrollbar-track { background: transparent; }
+</style>
+{% endblock %}
