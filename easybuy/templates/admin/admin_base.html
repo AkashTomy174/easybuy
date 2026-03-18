@@ -93,9 +93,14 @@
                 <span class="text-sm font-{% if active_menu == 'rejected_sellers' %}semibold{% else %}medium{% endif %}">Rejected Sellers</span>
             </a>
 
-               <a href="{% url 'add_category' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'verification' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">gavel</span>
-                <span class="text-sm font-{% if active_menu == 'verification' %}semibold{% else %}medium{% endif %}">Category</span>
+<a href="{% url 'add_category' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors">
+                <span class="material-symbols-outlined">category</span>
+                <span class="text-sm font-medium">Categories</span>
+            </a>
+
+            <a href="{% url 'add_subcategory' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors">
+                <span class="material-symbols-outlined">tune</span>
+                <span class="text-sm font-medium">Add Subcategory</span>
             </a>
 
             <div class="pt-4 pb-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">System</div>

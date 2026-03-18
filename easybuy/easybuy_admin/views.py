@@ -222,6 +222,24 @@ def add_category(request):
     return render(request, "admin/add_category.html")
 
 
+@login_required
+@role_required(allowed_roles=["ADMIN"])
+def add_subcategory(request):
+    from easybuy.core.models import Category, SubCategory
+
+    if request.method == "POST":
+        category_id = request.POST.get("category")
+        name = request.POST.get("name")
+        if category_id and name:
+            category = Category.objects.get(id=category_id)
+            SubCategory.objects.create(category=category, name=name)
+            messages.success(request, f"Subcategory '{name}' added successfully!")
+            return redirect("admin_all_categories")
+        else:
+            messages.error(request, "Category and name are required.")
+    categories = Category.objects.all()
+    return render(request, "admin/add_subcategory.html", {"categories": categories})
+
 
 @login_required
 @role_required(allowed_roles=["ADMIN"])

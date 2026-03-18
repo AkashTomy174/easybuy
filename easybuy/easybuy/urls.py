@@ -8,9 +8,9 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("seller/", include("easybuy.seller.urls")),
     path("easy_admin/", include("easybuy.easybuy_admin.urls")),
-    path("user/", include("easybuy.user.urls")),  # <= move up
+    path("user/", include("easybuy.user.urls")),
     path("login/", all_login, name="login"),
-    path("", include("easybuy.core.urls")),       # <= root last
+    path("", include("easybuy.core.urls")),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
