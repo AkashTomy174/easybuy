@@ -4,151 +4,176 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>{% block title %}Admin | EasyBuy{% endblock %}</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=block" rel="stylesheet"/>
-    <script id="tailwind-config">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
+    <script>
         tailwind.config = {
             darkMode: "class",
             theme: {
                 extend: {
                     colors: {
                         "primary": "#137fec",
-                        "background-light": "#f6f7f8",
-                        "background-dark": "#0f172a",
-                        "sidebar-dark": "#1e293b",
+                        "sidebar-dark": "#0f172a",
+                        "surface-dark": "#1e293b",
                     },
                     fontFamily: { "display": ["Inter", "sans-serif"] },
                 },
             },
         }
     </script>
+    
     <style type="text/tailwindcss">
-        @layer base {
-            .material-symbols-outlined {
-                font-family: 'Material Symbols Outlined' !important;
-                font-weight: normal;
-                font-style: normal;
-                font-size: 24px;
-                line-height: 1;
-                display: inline-block;
-                white-space: nowrap;
-                direction: ltr;
-                -webkit-font-smoothing: antialiased;
-            }
-        }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .nav-link-active { @apply text-white bg-primary/20 border-r-4 border-primary; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-background-light text-slate-900 min-h-screen font-display">
+<body class="bg-slate-50 text-slate-900 min-h-screen font-display">
 
 <div class="flex h-screen overflow-hidden">
-    <!-- Sidebar -->
-    <aside class="w-64 bg-sidebar-dark text-slate-300 flex flex-col shrink-0">
+    <aside class="w-64 bg-sidebar-dark text-slate-400 flex flex-col shrink-0">
         <div class="p-6 flex items-center gap-3">
-            <div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white shrink-0">
+            <div class="size-9 bg-primary rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-primary/30">
                 <span class="material-symbols-outlined">admin_panel_settings</span>
             </div>
-            <h1 class="font-bold text-white text-lg tracking-tight">Admin</h1>
+            <div>
+                <h1 class="font-black text-white text-sm tracking-widest uppercase">EasyBuy</h1>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Control Center</p>
+            </div>
         </div>
         
-        <nav class="flex-1 px-4 space-y-1 mt-4">
-            <!-- Dashboard -->
-            <a href="{%url 'admin_dashboard' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'dashboard' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">dashboard</span>
-                <span class="text-sm font-{% if active_menu == 'dashboard' %}semibold{% else %}medium{% endif %}">Dashboard</span>
-            </a>
-            <!-- Users -->
-            <a href="{% url 'all_users' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'users' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">group</span>
-                <span class="text-sm font-{% if active_menu == 'users' %}semibold{% else %}medium{% endif %}">Users</span>
-            </a>
-            <!-- Sellers -->
-            <a href="{% url 'all_sellers'%}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'sellers' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">storefront</span>
-                <span class="text-sm font-{% if active_menu == 'sellers' %}semibold{% else %}medium{% endif %}">Sellers</span>
-            <!-- </a>
-            < Orders -->
-            <!-- <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'orders' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">shopping_cart</span>
-                <span class="text-sm font-{% if active_menu == 'orders' %}semibold{% else %}medium{% endif %}">Orders</span>
-            </a> -->
-            <!-- Seller Verification -->
-            <a href="{% url 'seller_veri' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'verification' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">gavel</span>
-                <span class="text-sm font-{% if active_menu == 'verification' %}semibold{% else %}medium{% endif %}">Seller Verification</span>
-            </a>
-            <!-- Product Approval -->
-            <a href="{% url 'approve_products' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'approve_product' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">verified</span>
-                <span class="text-sm font-{% if active_menu == 'approve_product' %}semibold{% else %}medium{% endif %}">Product Approval</span>
-            </a>
-            <!-- Rejected Products -->
-            <a href="{% url 'rejectedproducts' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'rejected_products' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">cancel</span>
-                <span class="text-sm font-{% if active_menu == 'rejected_products' %}semibold{% else %}medium{% endif %}">Rejected Products</span>
-            </a>
-            <!-- Rejected Sellers -->
-            <a href="{% url 'rejectedsellers' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'rejected_sellers' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">person_off</span>
-                <span class="text-sm font-{% if active_menu == 'rejected_sellers' %}semibold{% else %}medium{% endif %}">Rejected Sellers</span>
+        <nav class="flex-1 px-4 space-y-1 mt-4 overflow-y-auto custom-scroll">
+            
+            <a href="{% url 'admin_dashboard' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors {% if active_menu == 'dashboard' %}nav-link-active{% else %}hover:bg-slate-800/50 hover:text-white{% endif %}">
+                <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                <span class="text-sm font-medium">Dashboard</span>
             </a>
 
-<a href="{% url 'add_category' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors">
-                <span class="material-symbols-outlined">category</span>
-                <span class="text-sm font-medium">Categories</span>
-            </a>
+            <div class="pt-2">
+                <button onclick="toggleDrop('mgmt')" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-800/50 transition-all">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-[20px]">group</span>
+                        <span class="text-sm font-medium">Users & Roles</span>
+                    </div>
+                    <span id="mgmt-arrow" class="material-symbols-outlined text-xs transition-transform {% if active_menu in 'users,sellers' %}rotate-180{% endif %}">expand_more</span>
+                </button>
+                <div id="mgmt-menu" class="{% if active_menu not in 'users,sellers' %}hidden{% endif %} pl-11 space-y-1 mt-1">
+                    <a href="{% url 'all_users' %}" class="block py-2 text-xs {% if active_menu == 'users' %}text-primary font-bold{% else %}hover:text-white{% endif %}">Customer Base</a>
+                    <a href="{% url 'all_sellers' %}" class="block py-2 text-xs {% if active_menu == 'sellers' %}text-primary font-bold{% else %}hover:text-white{% endif %}">Active Sellers</a>
+                </div>
+            </div>
 
-            <a href="{% url 'add_subcategory' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors">
-                <span class="material-symbols-outlined">tune</span>
-                <span class="text-sm font-medium">Add Subcategory</span>
-            </a>
+            <div>
+                <button onclick="toggleDrop('approvals')" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-800/50 transition-all">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-[20px]">verified_user</span>
+                        <span class="text-sm font-medium">Approval Queue</span>
+                    </div>
+                    <span id="approvals-arrow" class="material-symbols-outlined text-xs transition-transform {% if active_menu in 'verification,approve_product,rejected_products,rejected_sellers' %}rotate-180{% endif %}">expand_more</span>
+                </button>
+                <div id="approvals-menu" class="{% if active_menu not in 'verification,approve_product,rejected_products,rejected_sellers' %}hidden{% endif %} pl-11 space-y-1 mt-1">
+                    <a href="{% url 'seller_veri' %}" class="block py-2 text-xs {% if active_menu == 'verification' %}text-primary font-bold{% else %}hover:text-white{% endif %}">Seller Requests</a>
+                    <a href="{% url 'approve_products' %}" class="block py-2 text-xs {% if active_menu == 'approve_product' %}text-primary font-bold{% else %}hover:text-white{% endif %}">Product Submissions</a>
+                    <div class="h-px bg-slate-800 my-1 mr-4"></div>
+                    <a href="{% url 'rejectedsellers' %}" class="block py-2 text-xs hover:text-white">Rejected Sellers</a>
+                    <a href="{% url 'rejectedproducts' %}" class="block py-2 text-xs hover:text-white">Rejected Products</a>
+                </div>
+            </div>
 
-            <div class="pt-4 pb-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">System</div>
-            <!-- Settings -->
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg {% if active_menu == 'settings' %}text-white bg-primary/20 border-r-4 border-primary{% else %}hover:bg-slate-800 transition-colors{% endif %}">
-                <span class="material-symbols-outlined">settings</span>
-                <span class="text-sm font-{% if active_menu == 'settings' %}semibold{% else %}medium{% endif %}">Settings</span>
+            <div>
+                <button onclick="toggleDrop('catalog')" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-800/50 transition-all">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-[20px]">category</span>
+                        <span class="text-sm font-medium">Store Catalog</span>
+                    </div>
+                    <span id="catalog-arrow" class="material-symbols-outlined text-xs transition-transform {% if active_menu in 'category,subcategory' %}rotate-180{% endif %}">expand_more</span>
+                </button>
+                <div id="catalog-menu" class="{% if active_menu not in 'category,subcategory' %}hidden{% endif %} pl-11 space-y-1 mt-1">
+                    <a href="{% url 'admin_all_categories' %}" class="block py-2 text-xs {% if active_menu == 'category' %}text-primary font-bold{% else %}hover:text-white{% endif %}">Manage Categories</a>
+                    <a href="{% url 'add_category' %}" class="block py-2 text-xs hover:text-white">Add Main Category</a>
+                    <a href="{% url 'add_subcategory' %}" class="block py-2 text-xs hover:text-white">Add Subcategory</a>
+                </div>
+            </div>
+
+            <div class="pt-6 pb-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-600">System</div>
+            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors">
+                <span class="material-symbols-outlined text-[20px]">settings</span>
+                <span class="text-sm font-medium">Site Config</span>
             </a>
         </nav>
 
-        <div class="p-4 border-t border-slate-700/50">
-            <div class="flex items-center gap-3 px-2">
-                <div class="size-8 rounded-full bg-slate-700 bg-center bg-cover border border-slate-600"></div>
+        <div class="p-4 border-t border-slate-800 bg-slate-900/40">
+            <div class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl border border-white/5">
+                <div class="size-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary font-black text-xs">A</div>
                 <div class="flex-1 overflow-hidden">
-                    <p class="text-sm font-bold text-white truncate">Admin</p>
-                    <p class="text-xs text-slate-500 truncate">System Owner</p>
+                    <p class="text-xs font-black text-white truncate uppercase">{{ user.username }}</p>
+                    <p class="text-[9px] text-slate-500 font-bold uppercase tracking-tight">System Administrator</p>
                 </div>
             </div>
         </div>
     </aside>
 
-    <!-- Main Content -->
     <div class="flex-1 flex flex-col overflow-hidden">
         <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
-            <div class="flex items-center gap-2 text-sm">
+            <div class="flex items-center gap-2">
                 {% block header_title %}
-                <span class="text-slate-900 font-bold">Dashboard</span>
+                <span class="text-slate-400 text-xs font-bold uppercase tracking-widest">Core /</span>
+                <span class="text-slate-900 font-black text-sm uppercase tracking-tight">Dashboard</span>
                 {% endblock %}
             </div>
-            <div class="flex items-center gap-4">
-                <button class="relative p-2 text-slate-500 hover:bg-slate-100 rounded-lg">
+            
+            <div class="flex items-center gap-6">
+                <button class="relative p-2 text-slate-400 hover:text-primary transition-colors">
                     <span class="material-symbols-outlined">notifications</span>
+                    <span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white"></span>
                 </button>
-                <form method="POST" action="{% url 'logout' %}" class="inline">
+                
+                <div class="h-6 w-px bg-slate-200"></div>
+
+                <form method="POST" action="{% url 'logout' %}">
                     {% csrf_token %}
-                    <button type="submit" class="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors" title="Logout" aria-label="Logout">
-                        <span class="material-symbols-outlined">logout</span>
+                    <button type="submit" class="flex items-center gap-2 px-4 py-2 text-xs font-black text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                        <span class="material-symbols-outlined text-sm">logout</span>
+                        LOGOUT
                     </button>
                 </form>
             </div>
         </header>
 
-        <main class="flex-1 overflow-y-auto p-8 bg-slate-50">
+        <main class="flex-1 overflow-y-auto p-8 custom-scroll">
             {% block content %}{% endblock %}
         </main>
     </div>
 </div>
 
+<script>
+    function toggleDrop(menuId) {
+        const menu = document.getElementById(menuId + '-menu');
+        const arrow = document.getElementById(menuId + '-arrow');
+        menu.classList.toggle('hidden');
+        arrow.classList.toggle('rotate-180');
+    }
+</script>
 {% block extra_js %}{% endblock %}
+ <div class="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="pointer-events-auto min-w-[300px] flex items-center justify-between gap-4 px-6 py-4 rounded-2xl bg-white border border-slate-200 shadow-2xl shadow-slate-200/50 animate-in fade-in slide-in-from-right-8 duration-300">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined {% if message.tags == 'success' %}text-emerald-500{% else %}text-amber-500{% endif %}">
+                        {% if message.tags == 'success' %}check_circle{% else %}info{% endif %}
+                    </span>
+                    <p class="text-[11px] font-black text-slate-900 uppercase tracking-tight">{{ message }}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-slate-300 hover:text-slate-500 transition-colors">
+                    <span class="material-symbols-outlined text-sm">close</span>
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
 </body>
 </html>

@@ -6,7 +6,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from easybuy.core.decorators import role_required
-from easybuy.core.models import Category, User
+from easybuy.core.models import Category, User,SubCategory
 from easybuy.seller.models import SellerProfile, Product
 from easybuy.user.models import OrderItem
 from django.db.models import Sum, F
@@ -15,6 +15,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
 import json
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -218,8 +219,62 @@ def add_category(request):
             description=description,
         )
         messages.success(request, f"Category '{name}' added successfully!")
-        return redirect("all_categories")
+        return redirect("admin_all_categories")
     return render(request, "admin/add_category.html")
+@login_required
+@role_required(allowed_roles=["ADMIN"])
+def admin_all_categories(request):
+    search_query = request.GET.get('search', '')
+
+    categories = Category.objects.prefetch_related("subcategories").order_by("name")
+
+    if search_query:
+        categories = categories.filter(
+            Q(name__icontains=search_query) |
+            Q(subcategories__name__icontains=search_query)
+        ).distinct()
+
+    return render(request, "admin/all_category.html", {
+        "categories": categories,
+        "active_menu": "category",
+        "search_query": search_query
+    })
+
+@login_required
+@role_required(allowed_roles=["ADMIN"])
+def toggle_category_status(request, id):
+    category = get_object_or_404(Category, id=id)
+    category.is_active = not category.is_active
+    category.save()
+    status_text = "activated" if category.is_active else "deactivated"
+    messages.success(request, f"Category '{category.name}' has been {status_text}!")
+    return redirect("admin_all_categories")
+
+@login_required
+@role_required(allowed_roles=["ADMIN"])
+def toggle_subcategory_status(request, id):
+    sub = get_object_or_404(SubCategory, id=id)
+
+    sub.is_active = not sub.is_active
+    sub.save()
+    status = "activated" if sub.is_active else "deactivated"
+    messages.success(request, f"Subcategory '{sub.name}' has been {status}!")
+    return redirect("admin_all_categories")
+
+
+@login_required
+@role_required(allowed_roles=["ADMIN"])
+def toggle_subcategory_status(request, id):
+    from easybuy.core.models import SubCategory
+
+    subcategory = get_object_or_404(SubCategory, id=id)
+    subcategory.is_active = not subcategory.is_active
+    subcategory.save()
+    status_text = "activated" if subcategory.is_active else "deactivated"
+    messages.success(
+        request, f"Subcategory '{subcategory.name}' has been {status_text}!"
+    )
+    return redirect("admin_all_categories")
 
 
 @login_required

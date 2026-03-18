@@ -1,0 +1,10 @@
+<form action="{% url 'toggle_subcategory_status' sub.id %}" method="POST" class="inline">
+    {% csrf_token %}
+    <button type="submit" 
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-tight transition-all active:scale-95 
+            {% if sub.is_active %} border-emerald-100 bg-emerald-50 text-emerald-600 {% else %} border-slate-200 bg-slate-100 text-slate-400 {% endif %}
+            {% if search_query and search_query|lower in sub.name|lower %} search-match {% endif %}">
+        <span class="size-1.5 rounded-full {% if sub.is_active %}bg-emerald-500{% else %}bg-slate-300{% endif %}"></span>
+        {{ sub.name }}
+    </button>
+</form>

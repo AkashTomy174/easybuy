@@ -9,7 +9,7 @@ urlpatterns = [
     path("home/approve_seller/<int:id>/", views.approve_seller, name="approve_seller"),
     path("home/reject_seller/<int:id>/", views.reject_seller, name="reject_seller"),
     path("home/seller_details/<int:id>/", views.detailed_view, name="seller_details"),
-    path("categories/", all_categories, name="admin_all_categories"),
+    path("categories/", views.admin_all_categories, name="admin_all_categories"),
     path("add_category/", views.add_category, name="add_category"),
     path("add_subcategory/", views.add_subcategory, name="add_subcategory"),
     path("users/", views.all_users, name="all_users"),
@@ -28,4 +28,6 @@ urlpatterns = [
     ),
     path("rejectedseller/", views.rejected_sellers, name="rejectedsellers"),
     path("rejectedproduct/", views.rejected_products, name="rejectedproducts"),
+    path('admin/category/toggle/<int:id>/', views.toggle_category_status, name='toggle_category_status'),
+    path('admin/subcategory/toggle/<int:id>/', views.toggle_subcategory_status, name='toggle_subcategory_status'),
 ]

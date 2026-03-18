@@ -14,21 +14,21 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# 1. Load environment variables from .env file
 load_dotenv()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# 2. Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# 2. Build paths inside the project
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# 3. Pull variables from .env with fallbacks
+# Note: os.getenv('KEY', 'default_value') prevents the app from crashing if a key is missing
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-fallback-key")
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-^)u*jj7fz&x=wuyqi4t_#8z%94go$-g32m4r7m=b$ck21sr04t"
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG needs to be a boolean, but .env stores it as a string "True"
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
@@ -140,36 +140,34 @@ MEDIA_ROOT = BASE_DIR / "images"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
-EMAIL_HOST_USER = "easybuyadmin@gmail.com"
-EMAIL_HOST_PASSWORD = "nryveglvlttybnwn"
-
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+# Fetching your EasyBuy credentials safely
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 
 # Twilio WhatsApp Configuration
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
 TWILIO_WHATSAPP_FROM = os.getenv(
     "TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886"
-)  # Twilio Sandbox number
+)
 
-# WhatsApp Notifications - FIXED: Enable for order status notifications
+
 WHATSAPP_NOTIFICATIONS_ENABLED = os.getenv(
     "WHATSAPP_NOTIFICATIONS_ENABLED", "true"
 ).lower() in ("true", "1", "yes")
-print(f"WhatsApp Notifications Enabled: {WHATSAPP_NOTIFICATIONS_ENABLED}")
+
 
 # Razorpay Configuration
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
-print("Razorpay Key:", RAZORPAY_KEY_ID)  # Optional debug
-print("Razorpay Secret:", RAZORPAY_KEY_SECRET)
-RAZORPAY_TEST_MODE = True  # make sure your integration knows this is test
-# Validation
+RAZORPAY_TEST_MODE = True
+
 if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
     print(
         "WARNING: Razorpay keys missing! Copy .env.example to .env and add your test keys."
