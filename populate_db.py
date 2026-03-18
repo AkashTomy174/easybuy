@@ -166,7 +166,7 @@ def create_products(sellers, subcategories):
                 description=fake.text(),
                 brand=fake.company(),
                 model_number=fake.bothify("??-####"),
-                approval_status="APPROVED",
+                approval_status=random.choice(["APPROVED", "PENDING"]>,
             )
             products.append(prod)
             for v in range(2):  # 2 variants per product

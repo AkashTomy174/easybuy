@@ -34,6 +34,7 @@ class SellerProfile(models.Model):
     )
     status = models.CharField(max_length=20, choices=CHOICES, default="PENDING")
     rating = models.FloatField(default=0)
+    rejection_reason = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -55,12 +56,15 @@ class Product(models.Model):
     is_cancellable = models.BooleanField(default=True)
     is_returnable = models.BooleanField(default=True)
     return_days = models.IntegerField(default=7)
-    CHOICES=(
-        ("APPROVED","approved"),
-        ("PENDING","pending"),
-        ("REJECTED","rejected"),
+    CHOICES = (
+        ("APPROVED", "approved"),
+        ("PENDING", "pending"),
+        ("REJECTED", "rejected"),
     )
-    approval_status = models.CharField(max_length=20,choices=CHOICES, default="PENDING")
+    approval_status = models.CharField(
+        max_length=20, choices=CHOICES, default="PENDING"
+    )
+    rejection_reason = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -71,15 +71,41 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 text-right">
+                        <!-- Approve Form -->
+                        <form id="approveForm-{{ product.id }}" method="POST" action="{% url 'approve_single_product' product.id %}" style="display: inline;">
+                            {% csrf_token %}
+                        </form>
+                        
                         <div class="flex items-center justify-end gap-2">
-                            <a href="{% url 'approve_single_product' product.id %}" class="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-all">
+                            <button type="button" onclick="handleApprove({{ product.id }})" class="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-all">
                                 <span class="material-symbols-outlined text-sm">check_circle</span>
                                 Approve
-                            </a>
-                            <a href="{% url 'reject_single_product' product.id %}" class="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg text-xs font-bold hover:bg-rose-100 transition-all">
+                            </button>
+                            <button type="button" onclick="toggleModal('productRejectModal-{{ product.id }}')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg text-xs font-bold hover:bg-rose-100 transition-all">
                                 <span class="material-symbols-outlined text-sm">block</span>
                                 Reject
-                            </a>
+                            </button>
+                        </div>
+
+                        <!-- Product Reject Modal -->
+                        <div id="productRejectModal-{{ product.id }}" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                            <div class="bg-white w-full max-w-md rounded-xl border border-slate-200 shadow-2xl">
+                                <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                                    <h3 class="font-bold text-lg">Reject Product</h3>
+                                    <button type="button" onclick="toggleModal('productRejectModal-{{ product.id }}')" class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+                                </div>
+                                <form method="POST" action="{% url 'reject_single_product' product.id %}">
+                                    {% csrf_token %}
+                                    <div class="p-6">
+                                        <p class="text-sm text-slate-500 mb-4">Provide a reason for rejecting <strong>"{{ product.name }}"</strong> by {{ product.seller.store_name }}.</p>
+                                        <textarea name="reason" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none" rows="3" placeholder="Incomplete details, policy violation..." required></textarea>
+                                    </div>
+                                    <div class="p-4 bg-slate-50 flex gap-3">
+                                        <button type="button" onclick="toggleModal('productRejectModal-{{ product.id }}')" class="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold">Cancel</button>
+                                        <button type="submit" class="flex-1 px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700">Confirm Reject</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </td>
                 </tr>
@@ -138,5 +164,17 @@
     </div>
 </div>
 {% endif %}
+
+<script>
+    function toggleModal(id) {
+        document.getElementById(id).classList.toggle('hidden');
+    }
+
+    function handleApprove(productId) {
+        if (confirm("Are you sure you want to approve this product?")) {
+            document.getElementById('approveForm-' + productId).submit();
+        }
+    }
+</script>
 {% endblock %}
 

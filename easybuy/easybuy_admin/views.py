@@ -18,6 +18,7 @@ import json
 
 User = get_user_model()
 
+
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def admin_dashboard(request):
@@ -31,28 +32,28 @@ def admin_dashboard(request):
     total_sellers = User.objects.filter(role="SELLER").count()
     total_users = User.objects.filter(role="CUSTOMER").count()
 
-
     daily_revenue = []
     daily_labels = []
     now = timezone.now()
     for i in range(6, -1, -1):
         date = now - timedelta(days=i)
-        day_rev = OrderItem.objects.filter(
-            order__ordered_at__date=date.date()
-        ).aggregate(day_total=Sum(F("price_at_purchase") * F("quantity")))["day_total"] or 0
+        day_rev = (
+            OrderItem.objects.filter(order__ordered_at__date=date.date()).aggregate(
+                day_total=Sum(F("price_at_purchase") * F("quantity"))
+            )["day_total"]
+            or 0
+        )
         daily_revenue.append(round(day_rev, 2))
         daily_labels.append(date.strftime("%b %d"))
 
     cat_data = (
-    OrderItem.objects
-    .values('variant__product__subcategory__category__name')
-    .annotate(sales=Sum(F('price_at_purchase') * F('quantity')))
-    .order_by('-sales')
-)
-    cat_labels = [c['variant__product__subcategory__category__name'] for c in cat_data]
-    cat_values = [float(c['sales'] or 0) for c in cat_data]
+        OrderItem.objects.values("variant__product__subcategory__category__name")
+        .annotate(sales=Sum(F("price_at_purchase") * F("quantity")))
+        .order_by("-sales")
+    )
+    cat_labels = [c["variant__product__subcategory__category__name"] for c in cat_data]
+    cat_values = [float(c["sales"] or 0) for c in cat_data]
 
- 
     top_sellers = (
         User.objects.filter(role="SELLER")
         .annotate(
@@ -63,7 +64,7 @@ def admin_dashboard(request):
         )
         .order_by("-total_sales")[:5]
     )
-    
+
     daily_revenue = [float(x) for x in daily_revenue]
 
     cat_values = [float(x) for x in cat_values]
@@ -80,8 +81,7 @@ def admin_dashboard(request):
     return render(request, "admin/admin_dashboard.html", context)
 
 
-
-def admin_email(email, seller_name, status):
+def admin_email(email, seller_name, status, reason=None):
     if not email:
         return False
 
@@ -99,12 +99,36 @@ E-commerce Team"""
         subject = "Seller Account Rejected"
         message = f"""Hello {seller_name},
 
-We regret to inform you that your seller account application has been rejected.
+We regret to inform you that your seller account application has been rejected."""
+        if reason:
+            message += f"""
+
+**Rejection Reason:**
+{reason}
+
+Please address this issue and reapply if needed."""
+        message += f"""
+
 Please contact support for more information.
 
 Best Regards,
 E-commerce Team"""
+    elif status == "PRODUCT_REJECTED":
+        subject = "Product Listing Rejected"
+        message = f"""Hello {seller_name},
 
+Your product listing has been rejected."""
+        if reason:
+            message += f"""
+
+**Rejection Reason:**
+{reason}
+
+Please review and resubmit after corrections."""
+        message += f"""
+
+Best Regards,
+E-commerce Team"""
 
     else:
         return False
@@ -141,13 +165,19 @@ def approve_seller(request, id):
 @role_required(allowed_roles=["ADMIN"])
 def reject_seller(request, id):
     seller = get_object_or_404(SellerProfile, id=id)
+    reason = request.POST.get("reason") if request.method == "POST" else None
+    seller.rejection_reason = reason
     seller.status = "REJECTED"
     seller.save()
     seller_email = seller.user.email
     seller_name = seller.store_name
-    admin_email(seller_email, seller_name, "REJECTED")
+    admin_email(seller_email, seller_name, "REJECTED", reason)
 
-    messages.success(request, f"Seller '{seller.store_name}' has been rejected!")
+    messages.success(
+        request,
+        f"Seller '{seller.store_name}' has been rejected!"
+        + (f" Reason: {reason}" if reason else ""),
+    )
     return redirect("seller_veri")
 
 
@@ -189,7 +219,8 @@ def add_category(request):
         )
         messages.success(request, f"Category '{name}' added successfully!")
         return redirect("all_categories")
-    return render(request, "add_category.html")
+    return render(request, "admin/add_category.html")
+
 
 
 @login_required
@@ -248,9 +279,20 @@ def approve_single_product(request, id):
 @role_required(allowed_roles=["ADMIN"])
 def reject_single_product(request, id):
     product = get_object_or_404(Product, id=id)
+    reason = request.POST.get("reason") if request.method == "POST" else None
+    product.rejection_reason = reason
     product.approval_status = "REJECTED"
     product.save()
-    messages.success(request, f"Product '{product.name}' has been rejected!")
+    seller_email = product.seller.user.email
+    seller_name = product.seller.store_name
+    admin_email(
+        seller_email, f"Product '{product.name}' Rejected", "PRODUCT_REJECTED", reason
+    )
+    messages.success(
+        request,
+        f"Product '{product.name}' has been rejected!"
+        + (f" Reason: {reason}" if reason else ""),
+    )
     return redirect("approve_products")
 
 
