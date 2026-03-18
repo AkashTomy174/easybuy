@@ -29,6 +29,11 @@ INSTALLED_APPS = [
     "easybuy.user",
     "easybuy.easybuy_admin",
     "easybuy.seller",
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 ]
 
 MIDDLEWARE = [
@@ -39,6 +44,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "easybuy.easybuy.urls"
@@ -67,6 +73,12 @@ DATABASES = {
     }
 }
 
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -82,6 +94,7 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+
 
 
 LANGUAGE_CODE = "en-us"
@@ -112,6 +125,9 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
+SOCIALACCOUNT_QUERY_EMAIL = True
+
+
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 
@@ -136,3 +152,21 @@ if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
         "WARNING: Razorpay keys missing! Copy .env.example to .env and add your test keys."
     )
     print("Signup: https://dashboard.razorpay.com/app/keys")
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+    }
+}
+SOCIALACCOUNT_LOGIN_ON_GET = True
+
+ACCOUNT_LOGIN_METHODS = {'email', 'username'}
+
+# 2. This defines which fields appear on the SIGNUP form
+# The '*' means the field is REQUIRED.
+# (Replaces ACCOUNT_EMAIL_REQUIRED and ACCOUNT_USERNAME_REQUIRED)
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
+
+# 3. Tell allauth which field on your core.User model is the username
+ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'

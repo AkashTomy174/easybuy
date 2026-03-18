@@ -46,6 +46,11 @@ def all_login(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
+            if request.POST.get("remember"):
+                request.session["remember_me"] = True
+            else:
+                request.session["remember_me"] = False
+            messages.success(request, "Welcome back!")
             role = user.role
             if role == "CUSTOMER":
                 return redirect("home")
@@ -54,9 +59,9 @@ def all_login(request):
             elif role == "SELLER":
                 return redirect("seller_dashboard")
         else:
-            return render(
-                request, "core/login.html", {"error": "Invalid username or password"}
-            )
+            messages.error(request, "Invalid username or password.")
+            return render(request, "core/login.html")
+
     return render(request, "core/login.html")
 
 
@@ -195,4 +200,5 @@ def verify_otp(request):
 @login_required
 def logout_view(request):
     logout(request)
-    return render(request, "core/login.html", {"message": "Logged out successfully!"})
+    messages.success(request, "Logged out successfully!")
+    return redirect("home")
