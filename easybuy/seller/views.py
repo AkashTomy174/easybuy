@@ -171,7 +171,6 @@ def seller_dashboard(request):
             )
         )
 
-
     top_products = (
         all_order_items.values("variant__product__name")
         .annotate(
@@ -187,7 +186,6 @@ def seller_dashboard(request):
         "DELIVERED": all_order_items.filter(status="DELIVERED").count(),
         "CANCELLED": all_order_items.filter(status="CANCELLED").count(),
     }
-
 
     inv_labels = []
     inv_changes = []
@@ -289,7 +287,9 @@ def seller_inventory(request):
 
     context = {
         "page_obj": page_obj,
-        "total_products": Product.objects.filter(seller=seller).count() if seller else 0,
+        "total_products": (
+            Product.objects.filter(seller=seller).count() if seller else 0
+        ),
         "total_variants": variants.count() if seller else 0,
         "total_stock": total_stock,
         "total_inventory_value": total_inventory_value,
@@ -299,8 +299,6 @@ def seller_inventory(request):
     }
 
     return render(request, "seller/inventory.html", context)
-
-
 
 
 @login_required
@@ -356,10 +354,10 @@ def add_product(request):
             return_days = 0
 
         if Product.objects.filter(
-    seller=request.user.seller_profile,
-    name__iexact=name,
-    model_number__iexact=model
-).exists():
+            seller=request.user.seller_profile,
+            name__iexact=name,
+            model_number__iexact=model,
+        ).exists():
             messages.error(request, "Product already exists.")
             return redirect("add_product")
 
@@ -384,15 +382,14 @@ def add_product(request):
         messages.success(request, "Product created. Now add variants.")
         return redirect("add_variant", product_id=product.id)
 
-    subcategories = SubCategory.objects.filter(is_active=True).select_related("category")
+    subcategories = SubCategory.objects.filter(is_active=True).select_related(
+        "category"
+    )
 
     return render(
         request,
         "seller/add_product.html",
-        {
-            "subcategories": subcategories,
-            "active_menu": "add_product"
-        },
+        {"subcategories": subcategories, "active_menu": "add_product"},
     )
 
 
@@ -401,18 +398,12 @@ def add_product(request):
 def add_variant(request, product_id):
 
     product = get_object_or_404(
-        Product,
-        id=product_id,
-        seller=request.user.seller_profile
+        Product, id=product_id, seller=request.user.seller_profile
     )
 
     if request.method == "POST":
 
-        required_fields = {
-            "mrp": "MRP",
-            "price": "Selling price",
-            "stock": "Stock"
-        }
+        required_fields = {"mrp": "MRP", "price": "Selling price", "stock": "Stock"}
 
         for field, name in required_fields.items():
             if not request.POST.get(field):
@@ -479,7 +470,7 @@ def add_variant(request, product_id):
                 return redirect("add_variant", product_id=product.id)
 
         for img in images:
-            if img.size > 5 * 1024 * 1024: 
+            if img.size > 5 * 1024 * 1024:
                 messages.error(request, "Each image must be under 5MB.")
                 return redirect("add_variant", product_id=product.id)
         try:
@@ -487,7 +478,7 @@ def add_variant(request, product_id):
 
                 variant = ProductVariant.objects.create(
                     product=product,
-                    sku_code=generate_sku(), 
+                    sku_code=generate_sku(),
                     mrp=mrp,
                     selling_price=price,
                     cost_price=cost,
@@ -521,20 +512,24 @@ def add_variant(request, product_id):
         return redirect("add_variant", product_id=product.id)
     variants = product.variants.all()
 
-    return render(request, "seller/add_variant.html", {
-        "product": product,
-        "variants": variants
-    })
-    
+    return render(
+        request, "seller/add_variant.html", {"product": product, "variants": variants}
+    )
+
+
 @login_required
 @role_required(allowed_roles=["SELLER"])
 def select_product_for_variant(request):
-    products = Product.objects.filter(seller=request.user.seller_profile).order_by('-created_at')
-    
-    return render(request, "seller/select_product_variant.html", {
-        "products": products,
-        "active_menu": "manage_variants"
-    })
+    products = Product.objects.filter(seller=request.user.seller_profile).order_by(
+        "-created_at"
+    )
+
+    return render(
+        request,
+        "seller/select_product_variant.html",
+        {"products": products, "active_menu": "manage_variants"},
+    )
+
 
 @login_required
 @role_required(allowed_roles=["SELLER"])
@@ -679,7 +674,7 @@ def status(request, id):
     new_status = request.POST.get("status")
 
     if not new_status:
-        print("status illa")
+
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse(
                 {"success": False, "message": "No status provided"}, status=400
@@ -706,11 +701,11 @@ def status(request, id):
             logger.info(f"Client ready: {whatsapp_notifier.client is not None}")
             try:
                 if new_status == "SHIPPED":
-                    print("ship ayi ketto")
+
                     result = whatsapp_notifier.send_order_shipped(order_item.order)
                     logger.info(f"Shipped notification result: {result}")
                 elif new_status == "DELIVERED":
-                    print("deliver ayi ketto")
+
                     result = whatsapp_notifier.send_order_delivered(order_item.order)
                     logger.info(f"Delivered notification result: {result}")
                     feedback_result = whatsapp_notifier.send_feedback_request(
@@ -718,7 +713,7 @@ def status(request, id):
                     )
                     logger.info(f"Feedback notification result: {feedback_result}")
                 elif new_status == "CANCELLED":
-                    print("cancel ayi ketto")
+
                     result = whatsapp_notifier.send_order_cancelled(order_item.order)
                     logger.info(f"Cancelled notification result: {result}")
             except Exception as e:

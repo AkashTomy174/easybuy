@@ -52,8 +52,9 @@
                             data-price="{{ variant.selling_price }}"
                             data-mrp="{{ variant.mrp|default:0 }}"
                             data-stock="{{ variant.stock_quantity }}"
-                            onclick="selectVariant('{{ variant.id }}', '{{ variant.selling_price }}', '{{ variant.mrp }}', '{{ variant.stock_quantity }}')">
-                            {{ variant.name }}
+                            data-image="{% if variant.images.first %}{{ variant.images.first.image.url }}{% else %}/static/images/no-image.png{% endif %}"
+                            onclick="selectVariant('{{ variant.id }}', '{{ variant.selling_price }}', '{{ variant.mrp }}', '{{ variant.stock_quantity }}', '{% if variant.images.first %}{{ variant.images.first.image.url }}{% else %}/static/images/no-image.png{% endif %}')">
+                            {{ variant.sku_code|default:variant.id }}
                         </button>
                         {% endfor %}
                     </div>
@@ -72,9 +73,11 @@
                     <p class="text-stone-600 dark:text-stone-400">{{ product.description|safe }}</p>
                 </div>
             </div>
-        </div>
     </div>
-    {% endif %}
+</div>
+
+
+{% endif %}
 </div>
 
 <script>
@@ -82,7 +85,7 @@
     let selectedVariantId = null;
     let selectedVariantStock = 0;
 
-    function selectVariant(id, price, mrp, stock) {
+function selectVariant(id, price, mrp, stock, imageUrl) {
         selectedVariantId = id;
         selectedVariantStock = parseInt(stock) || 0;
 
@@ -97,7 +100,7 @@
         // 2. Update Price
         document.getElementById('current-price').innerText = '₹' + price;
         const origPrice = document.getElementById('original-price');
-        if (mrp > price) {
+        if (parseFloat(mrp) > parseFloat(price)) {
             origPrice.innerText = '₹' + mrp;
             origPrice.classList.remove('hidden');
         } else {
@@ -110,6 +113,14 @@
             status.innerHTML = `<span class="text-green-600">✓ In Stock (${selectedVariantStock} available)</span>`;
         } else {
             status.innerHTML = `<span class="text-red-600">✕ Out of Stock</span>`;
+        }
+
+        // 4. Update Main Image
+        const mainImage = document.getElementById('main-product-image');
+        if (mainImage && imageUrl) {
+            mainImage.src = imageUrl;
+            mainImage.classList.add('animate-pulse');
+            mainImage.onload = () => mainImage.classList.remove('animate-pulse');
         }
     }
 

@@ -8,11 +8,15 @@ from django.core.mail import send_mail
 from datetime import timedelta
 import random
 import string
+import logging
 from .models import Category, User, Otp
 
 
 def generate_otp():
     return "".join(random.choices(string.digits, k=6))
+
+
+logger = logging.getLogger(__name__)
 
 
 def send_otp_email(email, otp):
@@ -35,7 +39,7 @@ def send_otp_email(email, otp):
         )
         return True
     except Exception as e:
-        print(f"Error sending email: {e}")
+        logger.error(f"Error sending email: {e}")
         return False
 
 

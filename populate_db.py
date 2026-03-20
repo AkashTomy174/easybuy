@@ -182,14 +182,7 @@ def create_products(sellers, subcategories):
                 variants.append(variant)
                 # Create 3 images per variant
                 for img_num in range(1, 4):
-                    img_path = PRODUCT_IMAGE_DIR / f"product_{prod.id}_variant_{variant.id}_img_{img_num}.jpg"
-                    img_path.touch()  # create empty placeholder file
-                    ProductImage.objects.create(
-                        variant=variant,
-                        image=str(img_path),
-                        alt_text=f"{prod.name} image {img_num}",
-                        is_primary=(img_num == 1),
-                    )
+                    # Use existing generic image randomly\n                    generic_name = random.choice(['iphone.jpg', 'laptop.jpg', 'shoes.jpg', 'tshirt.jpg', 'bag.jpg', 'headphones.jpg'])\n                    ProductImage.objects.create(\n                        variant=variant,\n                        image=f"products/variants/{generic_name}",\n                        alt_text=f"{prod.name} image {img_num}",\n                        is_primary=(img_num == 1),\n                    )
     print("Products, variants, and images created.")
     return products, variants
 
