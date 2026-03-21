@@ -1473,9 +1473,36 @@ def toggle_wishlist(request, variant_id, wishlist_id=None):
 @role_required(allowed_roles=["CUSTOMER"])
 def wishlist_view(request):
     user = request.user
-    wishlist = Wishlist.objects.filter(user=user, wishlist_name="My Wishlist").first()
+    wishlist_id = request.GET.get('wishlist_id')
+    if wishlist_id:
+        wishlist = get_object_or_404(Wishlist, id=wishlist_id, user=user)
+    else:
+        wishlist = Wishlist.objects.filter(user=user, wishlist_name="My Wishlist").first()
     if not wishlist:
         return render(request, "user/wishlist.html", {"page_obj": None})
+    items = (
+        WishlistItem.objects.filter(wishlist=wishlist)
+        .select_related("variant__product", "variant__product__seller")
+        .prefetch_related("variant__images")
+        .order_by("-added_at")
+    )
+
+    paginator = Paginator(items, 12)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+    return render(
+        request, "user/wishlist.html", {"page_obj": page_obj, "wishlist": wishlist}
+    )
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def specific_wishlist_view(request, wishlist_id):
+    """
+    View specific wishlist by ID
+    """
+    user = request.user
+    wishlist = get_object_or_404(Wishlist, id=wishlist_id, user=user)
     items = (
         WishlistItem.objects.filter(wishlist=wishlist)
         .select_related("variant__product", "variant__product__seller")

@@ -34,7 +34,7 @@
 
             <div class="flex flex-col space-y-6">
                 <div>
-                    <h1 class="text-3xl font-black text-stone-900 dark:text-white mb-2">{{ product.name }}</h1>
+                    <h1 class="text-3xl font-bold text-stone-900 dark:text-white mb-2">{{ product.name }}</h1>
                     <div class="flex items-center gap-4">
                         <span class="text-4xl font-black text-primary" id="current-price">₹0</span>
                         <span class="text-xl text-stone-400 line-through hidden" id="original-price"></span>
@@ -60,6 +60,13 @@
                     </div>
                 </div>
 
+                <!-- Wishlist Selector - Only for authenticated users -->
+                {% if request.user.is_authenticated %}
+                <div class="wishlist-section">
+                    {% include "user/wishlist_selector.html" with selected_variant_id=selectedVariantId %}
+                </div>
+                {% endif %}
+
                 <div class="flex flex-col sm:flex-row gap-4">
                     <button id="add-to-cart-btn" class="flex-1 h-16 bg-stone-900 dark:bg-white dark:text-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90">
                         <span class="material-symbols-outlined">shopping_cart</span> Add to Cart
@@ -73,21 +80,21 @@
                     <p class="text-stone-600 dark:text-stone-400">{{ product.description|safe }}</p>
                 </div>
             </div>
+        </div>
     </div>
-</div>
-
-
-{% endif %}
+    {% endif %}
 </div>
 
 <script>
     // Global State
     let selectedVariantId = null;
     let selectedVariantStock = 0;
+    window.selectedVariantId = null; // Global for wishlist selector
 
-function selectVariant(id, price, mrp, stock, imageUrl) {
+    function selectVariant(id, price, mrp, stock, imageUrl) {
         selectedVariantId = id;
         selectedVariantStock = parseInt(stock) || 0;
+        window.selectedVariantId = id; // Update global for wishlist
 
         // 1. Highlight Button
         document.querySelectorAll('.variant-btn').forEach(btn => {
@@ -130,7 +137,6 @@ function selectVariant(id, price, mrp, stock, imageUrl) {
 
         const url = "{% url 'add_to_cart' 0 %}".replace('0', selectedVariantId);
         
-        // We use a POST request to avoid 400 Bad Request errors
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -151,13 +157,11 @@ function selectVariant(id, price, mrp, stock, imageUrl) {
         if (!selectedVariantId) { alert("Please select a variant"); return; }
         if (selectedVariantStock <= 0) { alert("Out of stock"); return; }
 
-        // Redirect to Buy Now view
         const url = "{% url 'buy_now' 0 %}".replace('0', selectedVariantId);
         window.location.href = url;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Auto-select first variant
         const firstBtn = document.querySelector('.variant-btn');
         if (firstBtn) {
             selectVariant(
@@ -168,7 +172,6 @@ function selectVariant(id, price, mrp, stock, imageUrl) {
             );
         }
 
-        // Attach Event Listeners
         document.getElementById('add-to-cart-btn').addEventListener('click', handleAddToCart);
         document.getElementById('buynow-btn').addEventListener('click', handleBuyNow);
     });

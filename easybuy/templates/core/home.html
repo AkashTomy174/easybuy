@@ -90,11 +90,15 @@
                     </div>
                     {% endif %}
                     
+                    {% if request.user.is_authenticated %}
+                    {% include "user/wishlist_selector.html" %}
+                    {% else %}
                     <button onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ item.variant.id }}, this); return false;" 
                             class="wishlist-btn absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 {% if item.in_wishlist %}text-red-500{% else %}text-stone-400 hover:text-accent-terracotta{% endif %} backdrop-blur-sm transition-all duration-300 hover:bg-white hover:scale-110 dark:bg-black/50"
                             data-variant-id="{{ item.variant.id }}">
                         <span class="material-symbols-outlined text-[20px]">{% if item.in_wishlist %}favorite{% else %}favorite_border{% endif %}</span>
                     </button>
+                    {% endif %}
                 </div>
 
                 <div class="flex flex-1 flex-col px-2">

@@ -48,6 +48,22 @@
 
 <script>
 
+function toggleWishlistDetail() {
+    const dropdown = document.getElementById('wishlist-dropdown');
+    dropdown.classList.toggle('hidden');
+    if (dropdown.classList.contains('hidden')) return;
+    
+    // Update counts for current wishlists
+    fetch('/user/wishlist/manage/', {credentials: 'same-origin'})
+    .then(res => res.text())
+    .then(html => {
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        const counts = temp.querySelectorAll('.wishlist-option span:last-child');
+        // Refresh counts if needed
+    });
+}
+
 // Helper to read a cookie by name (needed to fetch the CSRF token)
 function getCookie(name) {
     let cookieValue = null;
@@ -68,39 +84,35 @@ function addToSpecificWishlist(wishlistId, event) {
     event.preventDefault();
     event.stopPropagation();
 
-    if (!selectedVariantId) {
-        showToast('Please select a variant first', 'error');
+    const variantId = window.selectedVariantIdForWishlist || selectedVariantId;
+    console.log("Clicked wishlist:", wishlistId, "Variant:", variantId); // DEBUG
+
+    if (!variantId) {
+        showToast('Variant not available. Please refresh.', 'error');
         return;
     }
 
-    // Read CSRF token from cookie and include it in the header
     const csrftoken = getCookie('csrftoken');
 
-    fetch(`/user/wishlist/toggle/${selectedVariantId}/`, {
+    fetch(`/user/wishlist/toggle/${selectedVariantId}/${wishlistId}/`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': csrftoken,  // REQUIRED for Django CSRF
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ wishlist_id: wishlistId })
+            'X-CSRFToken': csrftoken
+        }
     })
     .then(res => res.json())
     .then(data => {
+        console.log('Add response:', data);
         if (data.success) {
-            showToast(data.message || 'Added to wishlist!', 'success');
-
-            // Optionally update UI count
-            // document.querySelector(`#wishlist-count-${wishlistId}`).textContent = data.new_count;
-
-            // Close dropdown
-            document.getElementById('wishlist-dropdown').style.display = 'none';
+            showToast(data.message || `Added to wishlist #${wishlistId}`, 'success');
+            document.getElementById('wishlist-dropdown').classList.add('hidden');
         } else {
-            showToast(data.message || 'Error adding to wishlist', 'error');
+            showToast(data.message || 'Error adding', 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showToast('Error adding to wishlist', 'error');
+        showToast('Failed to add to wishlist', 'error');
     });
 }
 </script>

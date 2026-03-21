@@ -348,11 +348,15 @@
                         </div>
                         {% endif %}
                         
+                        {% if request.user.is_authenticated %}
+                        {% include "user/wishlist_selector.html" %}
+                        {% else %}
                         <button onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ item.variant.id }}, this); return false;" 
                                 class="wishlist-btn absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center {% if item.in_wishlist %}text-red-500{% else %}text-stone-400 hover:text-accent-terracotta{% endif %} transition-colors shadow-sm"
                                 data-variant-id="{{ item.variant.id }}">
                             <span class="material-symbols-outlined text-[20px]">{% if item.in_wishlist %}favorite{% else %}favorite_border{% endif %}</span>
                         </button>
+                        {% endif %}
                     </a>
 
                     <!-- Product Info -->

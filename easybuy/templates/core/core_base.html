@@ -692,6 +692,7 @@ function getCookie(name) {
 // Wishlist Toggle Function
 function toggleWishlist(variantId, buttonElement) {
     if (!variantId) return;
+    if (!confirm("Add to default 'My Wishlist'? Use selector for other wishlists.")) return;
     
     const icon = buttonElement.querySelector('.material-symbols-outlined');
     const isInWishlist = icon.textContent.trim() === 'favorite';
@@ -710,7 +711,7 @@ function toggleWishlist(variantId, buttonElement) {
                 icon.textContent = 'favorite';
                 icon.classList.add('text-red-500');
                 buttonElement.classList.add('text-red-500');
-                showToast('Added to wishlist!', 'success');
+                showToast('Added to My Wishlist!', 'success');
             } else {
                 icon.textContent = 'favorite_border';
                 icon.classList.remove('text-red-500');

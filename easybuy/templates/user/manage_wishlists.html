@@ -61,8 +61,8 @@
                     {% endfor %}
                 </div>
                 
-                <a href="{% url 'wishlist' %}?list={{ wishlist.id }}" class="w-full bg-stone-100 hover:bg-stone-200 dark:bg-stone-700 dark:hover:bg-stone-600 text-stone-900 dark:text-white font-bold py-3 px-4 rounded-2xl transition-all text-center block">
-                    View Items
+                <a href="{% url 'wishlist' %}?wishlist_id={{ wishlist.id }}" class="w-full bg-stone-100 hover:bg-stone-200 dark:bg-stone-700 dark:hover:bg-stone-600 text-stone-900 dark:text-white font-bold py-3 px-4 rounded-2xl transition-all text-center block">
+                    View Items ({{ wishlist.items.count }})
                 </a>
             </div>
             {% empty %}
