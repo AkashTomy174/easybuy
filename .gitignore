@@ -44,10 +44,19 @@ db.sqlite3-journal
 .DS_Store
 
 # Testing
+test_*.py
+*_test.py
+create_test_order.py
+reset_order_to_pending.py
+check_order_owner.py
 .coverage
 htmlcov/
 .pytest_cache/
 .tox/
+
+# Non-static images (keep static/)
+easybuy/images/
+images/
 
 # Backup files
 *.bak

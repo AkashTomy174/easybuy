@@ -67,59 +67,74 @@
                 <button class="rounded-2xl border border-stone-300 bg-gradient-to-r from-white to-stone-50 px-6 py-2.5 text-sm font-bold shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 dark:border-stone-600 dark:from-stone-800 dark:to-stone-700 dark:hover:shadow-primary/20">View All</button>
             </a>
         </div>
-            
-        <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {% for item in product_data %}
-                <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800 mb-4">
-                    {% if item.image %}
-                        <img src="{{ item.image.image.url }}" 
-                            alt="{{ item.variant.product.name }}" 
-                            class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110">
-                    {% else %}
-                        <div class="flex h-full w-full items-center justify-center bg-stone-100 dark:bg-stone-800">
-                            <span class="material-symbols-outlined text-stone-400 text-5xl">image</span>
-                        </div>
-                    {% endif %}
+                <div class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary/30 relative">
                     
-                    <!-- Sale Badge -->
+                    <!-- Badge (Optional: Sale) -->
                     {% if item.variant.mrp > item.variant.selling_price %}
-                    <div class="absolute left-3 top-3 z-10 flex items-center justify-center rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-3 py-1 text-xs font-bold text-white shadow-lg shadow-red-500/30">
-                        SALE
+                    <div class="absolute top-4 left-4 z-10">
+                        <span class="bg-red-500 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Sale</span>
                     </div>
                     {% endif %}
                     
-                    {% if request.user.is_authenticated %}
-                    {% include "user/wishlist_selector.html" %}
-                    {% else %}
-                    <button onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ item.variant.id }}, this); return false;" 
-                            class="wishlist-btn absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 {% if item.in_wishlist %}text-red-500{% else %}text-stone-400 hover:text-accent-terracotta{% endif %} backdrop-blur-sm transition-all duration-300 hover:bg-white hover:scale-110 dark:bg-black/50"
-                            data-variant-id="{{ item.variant.id }}">
-                        <span class="material-symbols-outlined text-[20px]">{% if item.in_wishlist %}favorite{% else %}favorite_border{% endif %}</span>
-                    </button>
-                    {% endif %}
-                </div>
-
-                <div class="flex flex-1 flex-col px-2">
-                    <p class="text-xs font-medium text-stone-400 uppercase tracking-wide">{{ item.variant.product.brand }}</p>
-                    <h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors duration-300">
-                        {{ item.variant.product.name }}
-                    </h3>
-                    
-                    <div class="mt-4 flex items-center justify-between">
-                        <div class="flex flex-col">
-                            {% if item.variant.mrp > item.variant.selling_price %}
-                            <span class="text-xs text-stone-400 line-through">₹{{ item.variant.mrp }}</span>
-                            {% endif %}
-                            <span class="text-xl font-black text-primary">₹{{ item.variant.selling_price }}</span>
+                    <!-- Product Image -->
+                    <a href="{% url 'product_detail_user' item.variant.product.slug %}" class="relative aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4 block">
+                        {% if item.image and item.image.image %}
+                        <img src="{{ item.image.image.url }}" alt="{{ item.variant.product.name }}" 
+                             class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
+                        {% else %}
+                        <div class="flex h-full w-full items-center justify-center">
+                            <span class="material-symbols-outlined text-5xl text-stone-300">image</span>
                         </div>
+                        {% endif %}
                         
+                        <!-- Wishlist Button -->
+                        {% if request.user.is_authenticated %}
+                        <button onclick="event.preventDefault(); event.stopPropagation(); openWishlistModal({{ item.variant.id }}, this); return false;" 
+                                class="wishlist-btn absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm {% if item.in_wishlist %}text-accent-terracotta{% endif %}"
+                                data-variant-id="{{ item.variant.id }}">
+                            <span class="material-symbols-outlined text-[20px]">{% if item.in_wishlist %}favorite{% else %}favorite_border{% endif %}</span>
+                        </button>
+                        {% endif %}
 
-                        <button data-addtocart-btn data-variant-id="{{ item.variant.id }}" data-product-image="{% if item.image %}{{ item.image.image.url }}{% endif %}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;" class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-primary/40">
-                            <span class="material-symbols-outlined add-cart-icon">add_shopping_cart</span>
+                        <!-- Stock Badge -->
+                        {% if item.variant.stock_quantity <= 0 %}
+                            <div class="absolute bottom-0 left-0 right-0 bg-red-500/90 text-white text-xs font-bold py-1 text-center backdrop-blur-sm">
+                                OUT OF STOCK
+                            </div>
+                        {% endif %}
+                    </a>
+
+                    <!-- Product Info -->
+                    <a href="{% url 'product_detail_user' item.variant.product.slug %}" class="flex flex-1 flex-col px-2 block">
+                        <span class="text-[10px] font-black text-stone-400 dark:text-stone-500 uppercase tracking-[0.2em] mb-1">{{ item.variant.product.brand }}</span>
+                        <h3 class="font-bold text-stone-900 dark:text-white text-lg leading-tight line-clamp-1 group-hover:text-primary transition-colors">
+                            {{ item.variant.product.name }}
+                        </h3>
+                    </a>
+
+                    <!-- Price & Add to Cart -->
+                    <div class="mt-4 flex items-center justify-between gap-2 px-2">
+                        <div class="flex flex-col">
+                            <span class="text-xl font-black text-primary">₹{{ item.variant.selling_price }}</span>
+                            {% if item.variant.mrp > item.variant.selling_price %}
+                            <span class="text-xs font-medium text-stone-400 line-through">₹{{ item.variant.mrp }}</span>
+                            {% endif %}
+                        </div>
+                        <button
+                            type="button"
+                            data-addtocart-btn
+                            data-variant-id="{{ item.variant.id }}"
+                            data-product-image="{% if item.image and item.image.image %}{{ item.image.image.url }}{% endif %}"
+                            onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;"
+                            class="h-10 px-4 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-all flex items-center gap-1">
+                            <span class="material-symbols-outlined add-cart-icon">shopping_cart</span>
+                            Add to Cart
                         </button>
                     </div>
                 </div>
-            </a>
             {% empty %}
             <div class="col-span-full py-10 text-center">
                 <p class="text-stone-500 italic">No products available at the moment.</p>
@@ -167,6 +182,162 @@
 </section>
 
 <!-- Add custom animations -->
+<!-- Wishlist Selection Modal -->
+<div id="wishlistModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true" onclick="if(event.target === this) closeWishlistModal()">
+    <div class="flex items-center justify-center min-h-screen px-4 text-center sm:p-0">
+        <div class="fixed inset-0 bg-black/50 transition-opacity" aria-hidden="true"></div>
+
+        <div class="relative bg-white dark:bg-surface-dark rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full border border-stone-200 dark:border-stone-700">
+            <div class="bg-white dark:bg-surface-dark px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg leading-6 font-bold text-stone-900 dark:text-white" id="modal-title">
+                        Add to Wishlist
+                    </h3>
+                    <button onclick="closeWishlistModal()" class="text-stone-400 hover:text-stone-500">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                
+                <div class="mt-2">
+                    <ul class="divide-y divide-stone-100 dark:divide-stone-700 max-h-60 overflow-y-auto custom-scrollbar">
+                        {% for wishlist in wishlists %}
+                        <li class="py-3 px-2 flex justify-between items-center hover:bg-stone-50 dark:hover:bg-stone-800 cursor-pointer rounded-lg transition-colors" onclick="addToSpecificWishlist('{{ wishlist.id }}')">
+                            <span class="font-medium text-stone-700 dark:text-stone-200">{{ wishlist.wishlist_name }}</span>
+                            <span class="text-xs text-stone-400">{{ wishlist.items.count }} items</span>
+                        </li>
+                        {% empty %}
+                        <li class="py-4 text-stone-500 italic text-center text-sm">No custom wishlists yet.</li>
+                        {% endfor %}
+                    </ul>
+                    
+                    <!-- Create New -->
+                    <div class="mt-4 pt-4 border-t border-stone-100 dark:border-stone-700">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">Create New</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="newWishlistName" class="flex-1 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-transparent px-3 py-2 text-sm focus:border-primary focus:ring-0 transition-colors dark:text-white" placeholder="e.g. Birthday List">
+                            <button onclick="createNewWishlistAndAdd()" class="px-4 py-2 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-xl text-sm font-bold hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-colors">
+                                Create
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    let currentVariantId = null;
+    let currentBtn = null;
+
+    function openWishlistModal(variantId, btn) {
+        currentVariantId = variantId;
+        currentBtn = btn;
+        document.getElementById('wishlistModal').classList.remove('hidden');
+    }
+
+    function closeWishlistModal() {
+        document.getElementById('wishlistModal').classList.add('hidden');
+        currentVariantId = null;
+        currentBtn = null;
+    }
+
+    function addToSpecificWishlist(wishlistId) {
+        if (!currentVariantId) return;
+        
+        fetch(`/user/wishlist/toggle/${currentVariantId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ wishlist_id: wishlistId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (currentBtn) {
+                    const icon = currentBtn.querySelector('span');
+                    if (data.action === 'added') {
+                        icon.textContent = 'favorite';
+                        icon.classList.add('text-accent-terracotta'); // Using accent color for active
+                    } else {
+                        if (!data.in_wishlist) { 
+                             icon.textContent = 'favorite_border';
+                             icon.classList.remove('text-accent-terracotta');
+                        }
+                    }
+                }
+                if (typeof showToast === 'function') showToast(data.message, 'success');
+                closeWishlistModal();
+            } else {
+                console.error(data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function createNewWishlistAndAdd() {
+        const name = document.getElementById('newWishlistName').value;
+        if(!name) return;
+        
+        const formData = new FormData();
+        formData.append('wishlist_name', name);
+
+        fetch('/user/wishlist/create/', {
+             method: 'POST',
+             headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                addToSpecificWishlist(data.wishlist_id);
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function addToCart(variantId, btn, image) {
+        fetch(`/user/cart/add/${variantId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (typeof showToast === 'function') showToast('Added to cart!', 'success');
+                else alert('Added to cart!');
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+</script>
+
 <style>
 @keyframes fadeInUp {
     from {
@@ -184,5 +355,11 @@
 .delay-100 { animation-delay: 0.1s; }
 .delay-200 { animation-delay: 0.2s; }
 .delay-300 { animation-delay: 0.3s; }
+
+.product-card-shadow { box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.08); }
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #525252; }
 </style>
 {% endblock %}
