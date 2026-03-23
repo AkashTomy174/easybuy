@@ -1,8 +1,10 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
+from django.core.mail import send_mail
 from easybuy.core.decorators import role_required
 from easybuy.seller.models import Product, ProductVariant, ProductImage
 from .models import (
@@ -17,8 +19,7 @@ from .models import (
     ReviewVideo,
     ReviewHelpful,
 )
-from easybuy.core.models import SubCategory, Category, Address
-from easybuy.core.whatsapp_utils import whatsapp_notifier
+from easybuy.core.models import SubCategory, Category, Address, Notification
 import json
 from django.http import Http404
 from django.db.models import Q, Avg
@@ -34,9 +35,11 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from decimal import Decimal as DzDecimal
+from easybuy.core.whatsapp_utils import WhatsAppNotifier
+from easybuy.core.services import create_notification
+
 
 logger = logging.getLogger(__name__)
-
 
 
 # home related diplaying mainly
@@ -66,6 +69,10 @@ def home_view(request):
         ).values_list("variant_id", flat=True)
         wishlist_variant_ids = set(wishlist_items)
 
+    user_wishlists = []
+    if request.user.is_authenticated:
+        user_wishlists = request.user.wishlists.all()
+
     product_data = []
     for variant in variants:
         primary_image = None
@@ -88,7 +95,7 @@ def home_view(request):
     return render(
         request,
         "core/home.html",
-        {"categories": categories, "product_data": product_data},
+        {"categories": categories, "product_data": product_data, "wishlists": user_wishlists},
     )
 
 
@@ -231,6 +238,10 @@ def all_products(request):
         ).values_list("variant_id", flat=True)
         wishlist_variant_ids = set(wishlist_items)
 
+    user_wishlists = []
+    if request.user.is_authenticated:
+        user_wishlists = request.user.wishlists.all()
+
     product_data = []
     for variant in variant_list:
         product_data.append(
@@ -259,6 +270,7 @@ def all_products(request):
         "selected_sort": sort,
         "selected_rating": min_rating or "",
         "selected_availability": availability or "",
+        "wishlists": user_wishlists,
     }
     return render(request, "user/all_products.html", context)
 
@@ -275,30 +287,41 @@ def new_arrival(request):
         .order_by("-id")
     )
 
+    variant_list = list(variants)
+    variant_ids = [v.id for v in variant_list]
+
     wishlist_variant_ids = set()
-    if request.user.is_authenticated:
-        variant_ids = [v.id for v in variants]
+    if request.user.is_authenticated and variant_ids:
         wishlist_items = WishlistItem.objects.filter(
             wishlist__user=request.user, variant_id__in=variant_ids
         ).values_list("variant_id", flat=True)
         wishlist_variant_ids = set(wishlist_items)
 
-    product_data = []
-    for variant in variants:
-        primary_image = None
-        for img in variant.images.filter(is_primary=True):
+    user_wishlists = []
+    if request.user.is_authenticated:
+        user_wishlists = request.user.wishlists.all()
+
+    primary_images = {}
+    if variant_ids:
+        for img in ProductImage.objects.filter(
+            variant_id__in=variant_ids, is_primary=True
+        ):
             if img.image:
-                primary_image = img
-                break
-        if not primary_image:
-            for img in variant.images.all():
-                if img.image:
-                    primary_image = img
-                    break
+                primary_images[img.variant_id] = img
+
+        missing_ids = [vid for vid in variant_ids if vid not in primary_images]
+        if missing_ids:
+            # Fallback to any image if no primary image
+            for img in ProductImage.objects.filter(variant_id__in=missing_ids):
+                if img.image and img.variant_id not in primary_images:
+                    primary_images[img.variant_id] = img
+
+    product_data = []
+    for variant in variant_list:
         product_data.append(
             {
                 "variant": variant,
-                "image": primary_image,
+                "image": primary_images.get(variant.id),
                 "in_wishlist": variant.id in wishlist_variant_ids,
             }
         )
@@ -307,7 +330,7 @@ def new_arrival(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    return render(request, "user/new_arrivals.html", {"page_obj": page_obj})
+    return render(request, "user/new_arrivals.html", {"page_obj": page_obj, "wishlists": user_wishlists})
 
 
 def category_products(request, slug=None, id=None):
@@ -877,6 +900,9 @@ def addtocart(request, id):
     cart.total_amount = total
     cart_count = cart.items.count()
     cart.save()
+    from easybuy.core.notifications import schedule_cart_reminder
+
+    schedule_cart_reminder(request.user)
 
     return JsonResponse(
         {
@@ -942,6 +968,10 @@ def update_cart_quantity(request, item_id):
     cart.save()
 
     cart_count = cart.items.count()
+    if cart_count > 0:
+        from easybuy.core.notifications import schedule_cart_reminder
+
+        schedule_cart_reminder(request.user)
 
     return JsonResponse(
         {
@@ -982,13 +1012,6 @@ def remove_from_cart(request, item_id):
 
 # filtering related
 def filtering(request):
-    products = (
-        Product.objects.filter(
-            is_active=True,
-        )
-        .select_related("subcategory__category")
-        .prefetch_related("variants__images")
-    )
     icategory = request.GET.get("category")
     isubCategory = request.GET.get("subcategory")
     ibrand = request.GET.getlist("brand")
@@ -997,29 +1020,62 @@ def filtering(request):
     iprod = request.GET.get("q") or request.GET.get("product")
     sort = request.GET.get("sort", "newest")
 
-    brand_query = Product.objects.filter(is_active=True)
+    variants = ProductVariant.objects.filter(
+        product__is_active=True,
+        product__approval_status="APPROVED",
+        product__seller__status="APPROVED",
+    ).select_related(
+        "product",
+        "product__seller",
+        "product__subcategory",
+        "product__subcategory__category",
+    )
+
+    brand_query = Product.objects.filter(
+        is_active=True, approval_status="APPROVED", seller__status="APPROVED"
+    )
+
     if icategory:
-        products = products.filter(subcategory__category__slug=icategory)
+        variants = variants.filter(product__subcategory__category__slug=icategory)
         brand_query = brand_query.filter(subcategory__category__slug=icategory)
     if isubCategory:
-        products = products.filter(subcategory__slug=isubCategory)
+        variants = variants.filter(product__subcategory__slug=isubCategory)
         brand_query = brand_query.filter(subcategory__slug=isubCategory)
 
     if ibrand:
-        products = products.filter(brand__in=ibrand)
+        variants = variants.filter(product__brand__in=ibrand)
 
     if iprod:
         search_query = iprod.strip()
-        products = products.filter(
-            Q(name__icontains=search_query)
-            | Q(description__icontains=search_query)
-            | Q(brand__icontains=search_query)
+        variants = variants.filter(
+            Q(product__name__icontains=search_query)
+            | Q(product__description__icontains=search_query)
+            | Q(product__brand__icontains=search_query)
         )
         brand_query = brand_query.filter(
             Q(name__icontains=search_query)
             | Q(description__icontains=search_query)
             | Q(brand__icontains=search_query)
         )
+
+    if min_price:
+        min_price = float(min_price)
+        variants = variants.filter(selling_price__gte=min_price)
+
+    if max_price:
+        max_price = float(max_price)
+        variants = variants.filter(selling_price__lte=max_price)
+
+    if sort == "price_low":
+        variants = variants.order_by("selling_price")
+    elif sort == "price_high":
+        variants = variants.order_by("-selling_price")
+    elif sort == "name_asc":
+        variants = variants.order_by("product__name")
+    elif sort == "name_desc":
+        variants = variants.order_by("-product__name")
+    else:
+        variants = variants.order_by("-id")
 
     all_brands = (
         brand_query.values_list("brand", flat=True)
@@ -1031,46 +1087,37 @@ def filtering(request):
     categories = Category.objects.filter(is_active=True)
     subcategories = SubCategory.objects.filter(is_active=True)
 
-    if min_price:
-        min_price = float(min_price)
-        products = products.filter(variants__selling_price__gte=min_price).distinct()
+    variant_list = list(variants)
+    variant_ids = [v.id for v in variant_list]
+    primary_images = {}
+    for img in ProductImage.objects.filter(variant_id__in=variant_ids, is_primary=True):
+        if img.image:
+            primary_images[img.variant_id] = img
 
-    if max_price:
-        max_price = float(max_price)
-        products = products.filter(variants__selling_price__lte=max_price).distinct()
-    if sort == "price_low":
-        products = products.order_by("variants__selling_price")
-    elif sort == "price_high":
-        products = products.order_by("-variants__selling_price")
-    elif sort == "name_asc":
-        products = products.order_by("name")
-    elif sort == "name_desc":
-        products = products.order_by("-name")
-    else:
-        products = products.order_by("-created_at")
+    for img in ProductImage.objects.filter(variant_id__in=variant_ids).exclude(
+        variant_id__in=primary_images.keys()
+    ):
+        if img.image and img.variant_id not in primary_images:
+            primary_images[img.variant_id] = img
+
+    wishlist_variant_ids = set()
+    if request.user.is_authenticated:
+        wishlist_items = WishlistItem.objects.filter(
+            wishlist__user=request.user, variant_id__in=variant_ids
+        ).values_list("variant_id", flat=True)
+        wishlist_variant_ids = set(wishlist_items)
+
+    user_wishlists = []
+    if request.user.is_authenticated:
+        user_wishlists = request.user.wishlists.all()
+
     product_data = []
-    for product in products:
-        lowest_variant = product.variants.all().order_by("selling_price").first()
-        primary_image = None
-        if product.variants.all().first():
-            first_variant = product.variants.all().first()
-            for img in first_variant.images.filter(is_primary=True):
-                if img.image:
-                    primary_image = img
-                    break
-            if not primary_image:
-                for img in first_variant.images.all():
-                    if img.image:
-                        primary_image = img
-                        break
-
+    for variant in variant_list:
         product_data.append(
             {
-                "product": product,
-                "lowest_price": lowest_variant.selling_price if lowest_variant else 0,
-                "mrp": lowest_variant.mrp if lowest_variant else 0,
-                "image": primary_image,
-                "in_stock": any(v.stock_quantity > 0 for v in product.variants.all()),
+                "variant": variant,
+                "image": primary_images.get(variant.id),
+                "in_wishlist": variant.id in wishlist_variant_ids,
             }
         )
 
@@ -1086,13 +1133,14 @@ def filtering(request):
         "selected_max_price": max_price or "",
         "selected_product": iprod or "",
         "selected_sort": sort,
+        "wishlists": user_wishlists,
     }
 
     return render(request, "user/filter.html", context)
 
 
 def best_seller(request):
-    best_selling_variants = (
+    variants = (
         ProductVariant.objects.filter(
             product__is_active=True,
             product__approval_status="APPROVED",
@@ -1101,47 +1149,55 @@ def best_seller(request):
         .annotate(total_sold=Sum("orderitem__quantity"))
         .filter(total_sold__gt=0)
         .select_related("product", "product__seller")
-        .prefetch_related("images")
         .order_by("-total_sold")
     )
 
+    variant_list = list(variants)
+    variant_ids = [v.id for v in variant_list]
+
+    primary_images = {}
+    if variant_ids:
+        for img in ProductImage.objects.filter(
+            variant_id__in=variant_ids, is_primary=True
+        ):
+            if img.image:
+                primary_images[img.variant_id] = img
+
+        missing_ids = [vid for vid in variant_ids if vid not in primary_images]
+        if missing_ids:
+            for img in ProductImage.objects.filter(variant_id__in=missing_ids):
+                if img.image and img.variant_id not in primary_images:
+                    primary_images[img.variant_id] = img
+
     wishlist_variant_ids = set()
-    if request.user.is_authenticated:
-        variant_ids = [v.id for v in best_selling_variants]
+    if request.user.is_authenticated and variant_ids:
         wishlist_items = WishlistItem.objects.filter(
             wishlist__user=request.user, variant_id__in=variant_ids
         ).values_list("variant_id", flat=True)
         wishlist_variant_ids = set(wishlist_items)
 
+    user_wishlists = []
+    if request.user.is_authenticated:
+        user_wishlists = request.user.wishlists.all()
+
     product_data = []
-    for variant in best_selling_variants:
-        primary_image = None
-        for img in variant.images.filter(is_primary=True):
-            if img.image:
-                primary_image = img
-                break
-        if not primary_image:
-            for img in variant.images.all():
-                if img.image:
-                    primary_image = img
-                    break
+    for variant in variant_list:
         product_data.append(
             {
                 "variant": variant,
-                "image": primary_image,
-                "total_sold": variant.total_sold,
+                "image": primary_images.get(variant.id),
                 "in_wishlist": variant.id in wishlist_variant_ids,
+                "total_sold": variant.total_sold,
             }
         )
 
     paginator = Paginator(product_data, 12)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
-    return render(request, "user/best_sellers.html", {"page_obj": page_obj})
+    return render(request, "user/best_sellers.html", {"page_obj": page_obj, "wishlists": user_wishlists})
 
 
 def get_brands_ajax(request):
-
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request method"}, status=400)
     category = request.GET.get("category")
@@ -1440,9 +1496,18 @@ def toggle_wishlist(request, variant_id, wishlist_id=None):
     if wishlist_id:
         wishlist = get_object_or_404(Wishlist, id=wishlist_id, user=user)
     else:
-        wishlist, _ = Wishlist.objects.get_or_create(
-            user=user, wishlist_name="My Wishlist"
-        )
+        # Try to get from body if not in args
+        try:
+            data = json.loads(request.body)
+            w_id = data.get('wishlist_id')
+            if w_id:
+                wishlist = get_object_or_404(Wishlist, id=w_id, user=user)
+            else:
+                wishlist, _ = Wishlist.objects.get_or_create(user=user, wishlist_name="My Wishlist")
+        except:
+            wishlist, _ = Wishlist.objects.get_or_create(
+                user=user, wishlist_name="My Wishlist"
+            )
 
     wishlist_item = WishlistItem.objects.filter(
         wishlist=wishlist, variant=variant
@@ -1473,11 +1538,13 @@ def toggle_wishlist(request, variant_id, wishlist_id=None):
 @role_required(allowed_roles=["CUSTOMER"])
 def wishlist_view(request):
     user = request.user
-    wishlist_id = request.GET.get('wishlist_id')
+    wishlist_id = request.GET.get("wishlist_id")
     if wishlist_id:
         wishlist = get_object_or_404(Wishlist, id=wishlist_id, user=user)
     else:
-        wishlist = Wishlist.objects.filter(user=user, wishlist_name="My Wishlist").first()
+        wishlist = Wishlist.objects.filter(
+            user=user, wishlist_name="My Wishlist"
+        ).first()
     if not wishlist:
         return render(request, "user/wishlist.html", {"page_obj": None})
     items = (
@@ -1560,8 +1627,8 @@ def create_wishlist(request):
             {"success": False, "message": "Wishlist with this name already exists"}
         )
 
-    Wishlist.objects.create(user=request.user, wishlist_name=wishlist_name)
-    return JsonResponse({"success": True, "message": "Wishlist created successfully"})
+    wishlist = Wishlist.objects.create(user=request.user, wishlist_name=wishlist_name)
+    return JsonResponse({"success": True, "message": "Wishlist created successfully", "wishlist_id": wishlist.id})
 
 
 @login_required
@@ -1694,6 +1761,45 @@ def toggle_review_helpful(request, review_id):
 
 client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
+def _send_order_confirmation(order):
+    """
+    Helper to send unified notifications (In-App, Email, WhatsApp) for order confirmation.
+    """
+    user = order.user
+
+    # 1. In-App Notification
+    try:
+        url = reverse("order_success", args=[order.id])
+        create_notification(
+            user=user,
+            type="order_success",
+            title="Order Confirmed!",
+            message=f"Your order {order.order_number} has been successfully placed.",
+            redirect_url=url
+        )
+    except Exception as e:
+        logger.error(f"In-App Notification Failed: {e}")
+
+    # 2. Email Notification
+    try:
+        send_mail(
+            subject=f"Order Confirmed: {order.order_number}",
+            message=f"Hi {user.first_name},\n\nYour order {order.order_number} has been confirmed successfully.\nTotal Amount: ₹{order.total_amount}\n\nThank you for shopping with EasyBuy!",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[user.email],
+            fail_silently=True
+        )
+    except Exception as e:
+        logger.error(f"Email Notification Failed: {e}")
+
+    # 3. WhatsApp Notification
+    if getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False):
+        try:
+            notifier = WhatsAppNotifier()
+            logger.info(f"Sending WhatsApp to {order.shipping_phone} for Order {order.order_number}")
+            notifier.send_order_confirmation(order)
+        except Exception as e:
+            logger.error(f"WhatsApp Notification Failed: {e}")
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
@@ -1833,50 +1939,69 @@ def verify_razorpay_payment(request):
         "razorpay_payment_id": request.POST.get("razorpay_payment_id"),
         "razorpay_signature": request.POST.get("razorpay_signature"),
     }
-    
+
     logger.info(f"Razorpay verification params: {params_dict}")
+
     try:
-        order = get_object_or_404(Order, razorpay_order_id=params_dict["razorpay_order_id"])
-        
-        # Always save payment_id first
+        order = get_object_or_404(
+            Order, razorpay_order_id=params_dict["razorpay_order_id"]
+        )
+
+        # Save payment_id first
         order.razorpay_payment_id = params_dict["razorpay_payment_id"]
         order.save()
-        
+
         # Verify signature
         client.utility.verify_payment_signature(params_dict)
-        
-        # Payment successful - update status
+
+        # Payment successful
         with transaction.atomic():
+            # 1. Update order status
             order.payment_status = "PAID"
             order.order_status = "CONFIRMED"
             order.save()
-            
-            # Update stock
+
+            # 2. Update stock
             for item in order.items.all():
                 item.variant.stock_quantity -= item.quantity
                 item.variant.save()
+
+            # 3. Clear cart if not buy-now
             if not request.session.get("buy_now_variant_id"):
                 Cart.objects.filter(user=request.user).delete()
+
+            # 4. Trigger notification
+            _send_order_confirmation(order)
+
+            # 5. Clear session
             request.session.pop("buy_now_variant_id", None)
             request.session.pop("buy_now_quantity", None)
             request.session.pop("pending_order_id", None)
+
         logger.info(f"Payment verified successfully for order {order.order_number}")
         return redirect("order_success", order_id=order.id)
+
     except Exception as e:
         logger.error(f"Razorpay verification FAILED: {str(e)}")
         logger.error(f"Params that failed: {params_dict}")
 
+        # Save partial payment if possible
         try:
-            order = Order.objects.get(razorpay_order_id=params_dict["razorpay_order_id"])
+            order = Order.objects.get(
+                razorpay_order_id=params_dict["razorpay_order_id"]
+            )
             order.razorpay_payment_id = params_dict["razorpay_payment_id"]
             order.payment_status = "PARTIAL"
             order.save()
             logger.info(f"Saved partial payment for {order.order_number}")
         except Order.DoesNotExist:
             logger.error("Order not found for razorpay_order_id")
-        messages.error(request, "Payment received but verification failed. Please contact support with payment ID.")
-        return redirect("user_orders")
 
+        messages.error(
+            request,
+            "Payment received but verification failed. Please contact support with payment ID.",
+        )
+        return redirect("user_orders")
 
 
 @login_required
@@ -1888,18 +2013,29 @@ def process_cod_order(request):
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
     with transaction.atomic():
+        # Check stock availability
+        for item in order.items.all():
+            if item.variant.stock_quantity < item.quantity:
+                messages.error(
+                    request, f"Insufficient stock for {item.variant.product.name}"
+                )
+                return redirect("checkout")
+
+        # Update stock
+        for item in order.items.all():
+            item.variant.stock_quantity -= item.quantity
+            item.variant.save()
+
+        # Confirm order
         order.payment_method = "COD"
         order.order_status = "CONFIRMED"
         order.save()
 
-        for item in order.items.all():
-            if item.variant.stock_quantity < item.quantity:
-                return redirect("checkout")
-            item.variant.stock_quantity -= item.quantity
-            item.variant.save()
-
         if not request.session.get("buy_now_variant_id"):
             Cart.objects.filter(user=request.user).delete()
+        
+        # Trigger unified notifications
+        _send_order_confirmation(order)
 
         request.session.pop("pending_order_id", None)
         request.session.pop("buy_now_variant_id", None)
@@ -1924,3 +2060,14 @@ def buy_now(request, variant_id):
 def order_success(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     return render(request, "user/order_success.html", {"order": order})
+
+@login_required
+def all_notifications(request):
+    """
+    View to list all notifications for the logged-in user with pagination.
+    """
+    notifications_list = Notification.objects.filter(user=request.user).order_by('-created_at')
+    paginator = Paginator(notifications_list, 15)  # Show 15 notifications per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'user/notifications.html', {'page_obj': page_obj})

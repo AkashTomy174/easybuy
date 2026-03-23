@@ -43,7 +43,7 @@
                 {% endif %}
                 
                 <!-- Wishlist Button -->
-                <button onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ variant.id }}, this); return false;" 
+                <button onclick="event.preventDefault(); event.stopPropagation(); openWishlistModal({{ variant.id }}, this); return false;" 
                         class="wishlist-btn absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm {% if product_item.in_wishlist %}text-accent-terracotta{% endif %}"
                         data-variant-id="{{ variant.id }}">
                     <span class="material-symbols-outlined text-[20px]">{% if product_item.in_wishlist %}favorite{% else %}favorite_border{% endif %}</span>

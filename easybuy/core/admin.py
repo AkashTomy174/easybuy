@@ -1,7 +1,7 @@
 # trunk-ignore-all(isort)
 from django.contrib import admin
 
-from .models import User, Banner, Category, SubCategory, Address, Notification, Otp
+from .models import User, Banner, Category, SubCategory, Address, Notification, Otp,NotificationConfig,NotificationDelivery
 
 
 # Register your models here.
@@ -12,3 +12,6 @@ admin.site.register(Category)
 admin.site.register(SubCategory)
 admin.site.register(Banner)
 admin.site.register(Otp)
+admin.site.register(NotificationDelivery)
+admin.site.register(NotificationConfig)
+

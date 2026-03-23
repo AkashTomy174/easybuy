@@ -10,6 +10,9 @@ import random
 import string
 import logging
 from .models import Category, User, Otp
+from celery import shared_task
+from django.utils import timezone
+from .models import Notification, NotificationDelivery, NotificationConfig
 
 
 def generate_otp():
@@ -206,3 +209,20 @@ def logout_view(request):
     logout(request)
     messages.success(request, "Logged out successfully!")
     return redirect("home")
+
+
+# notifcation related things
+
+from .services import create_notification
+
+
+def place_order_view(request):
+    user = request.user
+    # ... your order creation logic ...
+    create_notification(
+        user=user,
+        type="order_success",
+        title="Order Placed!",
+        message="Your order has been successfully placed.",
+    )
+    # return response immediately

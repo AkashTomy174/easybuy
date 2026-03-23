@@ -74,15 +74,46 @@ class Address(models.Model):
 
 
 class Notification(models.Model):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="notifications"
-    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    type = models.CharField(max_length=50)
     title = models.CharField(max_length=255)
     message = models.TextField()
     image_url = models.URLField(blank=True, null=True)
     redirect_url = models.URLField(blank=True, null=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    
+class NotificationDelivery(models.Model):
+    notification = models.ForeignKey(
+        Notification,
+        on_delete=models.CASCADE,
+        related_name="deliveries"
+    )
+    channel = models.CharField(
+        max_length=20,
+        choices=[
+            ("whatsapp", "WhatsApp"),
+            ("email", "Email"),
+            ("in_app", "In App"),
+        ]
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", "Pending"),
+            ("sent", "Sent"),
+            ("failed", "Failed"),
+        ],
+        default="pending"
+    )
+    sent_at = models.DateTimeField(null=True, blank=True)
+    
+class NotificationConfig(models.Model):
+    type = models.CharField(max_length=50, unique=True)
+
+    enable_email = models.BooleanField(default=True)
+    enable_whatsapp = models.BooleanField(default=False)
+    enable_in_app = models.BooleanField(default=True)
 
 
 class Category(models.Model):

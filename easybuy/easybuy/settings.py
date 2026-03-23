@@ -4,9 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Points to C:\Users\hp\OneDrive\Desktop\BESTBUY\project
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-fallback-key")
 
@@ -52,13 +51,15 @@ ROOT_URLCONF = "easybuy.easybuy.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        # Look in both project root templates and app-specific templates folder
+        "DIRS": [BASE_DIR / "easybuy" / "templates", BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "easybuy.user.context_processors.notifications",
             ],
         },
     },
@@ -69,7 +70,7 @@ WSGI_APPLICATION = "easybuy.easybuy.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": BASE_DIR / "easybuy" / "db.sqlite3",
     }
 }
 
@@ -110,18 +111,9 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-import os
-from pathlib import Path
-
-# This ensures we are at C:\Users\hp\OneDrive\Desktop\BESTBUY\project
-BASE_DIR = Path(__file__).resolve().parent.parent.parent 
-
-MEDIA_URL = '/media/'
+MEDIA_URL = "/media/"
 # Join them using os.path.join to handle Windows backslashes properly
-MEDIA_ROOT = os.path.join(BASE_DIR, 'easybuy', 'media')
-
-# Add this print to verify in your terminal on startup
-print(f"--- SERVER IS LOOKING HERE: {MEDIA_ROOT} ---")
+MEDIA_ROOT = os.path.join(BASE_DIR, "easybuy", "media")
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
@@ -168,12 +160,16 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 
 ACCOUNT_LOGIN_METHODS = {"email", "username"}
 
-# 2. This defines which fields appear on the SIGNUP form
-# The '*' means the field is REQUIRED.
-# (Replaces ACCOUNT_EMAIL_REQUIRED and ACCOUNT_USERNAME_REQUIRED)
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 
 # 3. Tell allauth which field on your core.User model is the username
 ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
 
-print(f"DEBUG: Media Root is actually: {MEDIA_ROOT}")
+
+CELERY_BROKER_URL = "memory://localhost/"  # explicitly add localhost
+CELERY_RESULT_BACKEND = "cache+memory://"
+
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "Asia/Kolkata"
