@@ -1,0 +1,209 @@
+{% extends 'seller/seller_base.html' %}
+{% block title %}Returns - EasyBuy Seller{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+    <div>
+        <h1 class="text-4xl font-black tracking-tight text-stone-900 dark:text-white">Returns</h1>
+        <p class="text-stone-500 mt-2 font-medium">Manage <span class="text-primary font-bold">{{ page_obj.paginator.count }}</span> return requests.</p>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm hover:shadow-md transition-shadow">
+        <div class="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-2xl">assignment_return</span>
+        </div>
+        <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Total Returns</p>
+        <h3 class="text-3xl font-black mt-2">{{ page_obj.paginator.count }}</h3>
+    </div>
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+        <div class="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200/50 dark:border-orange-800/30 rounded-xl mb-4 flex items-center gap-3">
+            <span class="material-symbols-outlined text-xl">pending</span>
+            <span class="font-bold text-orange-700 dark:text-orange-300 text-sm">Pending</span>
+        </div>
+        <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Pending</p>
+        <h3 class="text-3xl font-black mt-2 text-orange-600 dark:text-orange-400">{{ pending_count }}</h3>
+    </div>
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+        <div class="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/30 rounded-xl mb-4 flex items-center gap-3">
+            <span class="material-symbols-outlined text-xl">check_circle</span>
+            <span class="font-bold text-emerald-700 dark:text-emerald-300 text-sm">Approved</span>
+        </div>
+        <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Approved</p>
+        <h3 class="text-3xl font-black mt-2 text-emerald-600 dark:text-emerald-400">{{ approved_count }}</h3>
+    </div>
+    <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 p-6 shadow-sm">
+        <div class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/30 rounded-xl mb-4 flex items-center gap-3">
+            <span class="material-symbols-outlined text-xl">cancel</span>
+            <span class="font-bold text-red-700 dark:text-red-300 text-sm">Rejected</span>
+        </div>
+        <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Rejected</p>
+        <h3 class="text-3xl font-black mt-2 text-red-600 dark:text-red-400">{{ rejected_count }}</h3>
+    </div>
+</div>
+
+<!-- Returns Table -->
+<div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-stone-100 dark:border-stone-700 flex items-center justify-between">
+        <h4 class="text-xl font-bold">Return Requests</h4>
+        <span class="text-xs bg-stone-100 dark:bg-stone-800 px-3 py-1 rounded-full font-semibold text-stone-500">Updated just now</span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="text-[11px] font-bold text-stone-400 uppercase tracking-[0.15em]">
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Order #</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Product</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Qty/Total</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Reason</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Status</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Date</th>
+                    <th class="px-6 py-5 border-b border-stone-100 dark:border-stone-700">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-100 dark:divide-stone-700">
+                {% for return_request in page_obj %}
+                <tr class="group hover:bg-stone-50/50 dark:hover:bg-stone-800/30 transition-colors">
+                    <td class="px-6 py-5">
+                        <span class="font-mono text-xs font-bold text-stone-500 bg-stone-100 dark:bg-stone-800 px-2 py-1 rounded">
+                            {{ return_request.order_item.order.order_number }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex items-center gap-4">
+                            <div class="h-10 w-10 bg-stone-100 dark:bg-stone-800 rounded-lg overflow-hidden flex-shrink-0">
+                                {% with return_request.order_item.variant.images.first as img %}
+                                    {% if img and img.image %}
+                                        <img src="{{ img.image.url }}" alt="Product" class="h-full w-full object-cover">
+                                    {% else %}
+                                        <div class="h-full w-full flex items-center justify-center bg-gradient-to-br from-stone-200 to-stone-300">
+                                            <span class="material-symbols-outlined text-stone-400 text-sm">inventory_2</span>
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-bold text-stone-900 dark:text-white truncate">{{ return_request.order_item.variant.product.name }}</p>
+                                <p class="text-xs text-stone-500 truncate max-w-[200px]">{{ return_request.order_item.variant.sku_code }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div>
+                            <span class="text-sm font-bold text-stone-900 dark:text-white block">{{ return_request.order_item.quantity }} units</span>
+                            <span class="text-xs text-stone-500">${{ return_request.order_item.subtotal|floatformat:2 }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5 max-w-xs">
+                        <span class="text-sm text-stone-900 dark:text-white font-medium bg-stone-100 dark:bg-stone-800 px-3 py-1 rounded-full text-xs inline-block">
+                            {{ return_request.reason|default:"N/A" }}
+                        </span>
+                        {% if return_request.images.all %}
+                        <div class="flex gap-1 mt-2 flex-wrap">
+                            {% for img in return_request.images.all %}
+                            <a href="{{ img.image.url }}" target="_blank" class="block h-8 w-8 rounded-lg overflow-hidden border border-stone-200 dark:border-stone-700 hover:scale-110 transition-transform" title="View Image">
+                                <img src="{{ img.image.url }}" class="h-full w-full object-cover">
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-5">
+                        <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide
+                            {% if return_request.status == 'PENDING' %}bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200
+                            {% elif return_request.status == 'APPROVED' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200
+                            {% elif return_request.status == 'REJECTED' %}bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200
+                            {% else %}bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-200{% endif %}">
+                            {{ return_request.status }}
+                        </span>
+                        {% if return_request.approved_at %}
+                            <span class="text-xs text-stone-500 block mt-1">{{ return_request.approved_at|date:"M d, Y" }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-5">
+                        <span class="text-xs text-stone-500">{{ return_request.created_at|date:"M d, Y H:i" }}</span>
+                    </td>
+                    <td class="px-6 py-5">
+                        {% if return_request.status == 'PENDING' %}
+                            <div class="flex gap-2">
+                                <form method="POST" action="{% url 'process_return' return_request.id %}" class="inline-block">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="approve">
+                                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow-md transition-all">
+                                        Approve
+                                    </button>
+                                </form>
+                                <form method="POST" action="{% url 'process_return' return_request.id %}" class="inline-block">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="reject">
+                                    <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow-md transition-all">
+                                        Reject
+                                    </button>
+                                </form>
+                            </div>
+                        {% else %}
+                            <span class="text-xs text-stone-500 font-medium">Processed</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-20 text-center">
+                        <div class="flex flex-col items-center">
+                            <div class="w-20 h-20 bg-stone-100 dark:bg-stone-800 rounded-3xl flex items-center justify-center mb-4">
+                                <span class="material-symbols-outlined text-4xl text-stone-300">assignment_return</span>
+                            </div>
+                            <h5 class="text-lg font-bold text-stone-900 dark:text-white">No return requests</h5>
+                            <p class="text-stone-500 text-sm max-w-xs mx-auto mt-2">Return requests from customers will appear here.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="px-6 py-4 border-t border-stone-100 dark:border-stone-700 bg-white/60 dark:bg-surface-dark/60">
+            <nav class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-sm text-stone-500">
+                    Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} results
+                </div>
+                <div class="flex items-center gap-1">
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1" class="p-2 text-stone-400 hover:text-primary hover:bg-stone-100 rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-sm">first_page</span>
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}" class="p-2 text-stone-400 hover:text-primary hover:bg-stone-100 rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-sm">chevron_left</span>
+                        </a>
+                    {% endif %}
+                    
+                    <div class="flex items-center gap-1 px-3 py-2 bg-stone-100 dark:bg-stone-800 rounded-lg">
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <span class="font-bold text-primary px-2 py-1 rounded text-sm">{{ num }}</span>
+                            {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                                <a href="?page={{ num }}" class="text-stone-600 hover:text-primary px-2 py-1 rounded hover:bg-white text-sm transition-colors">{{ num }}</a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="p-2 text-stone-400 hover:text-primary hover:bg-stone-100 rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-sm">chevron_right</span>
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}" class="p-2 text-stone-400 hover:text-primary hover:bg-stone-100 rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-sm">last_page</span>
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+</div>
+{% endblock %}

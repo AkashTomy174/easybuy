@@ -18,10 +18,13 @@ import string
 from easybuy.core.decorators import role_required
 from .models import SellerProfile, Product, ProductVariant, ProductImage, InventoryLog
 from easybuy.core.models import SubCategory
-from easybuy.user.models import Order, OrderItem, Review
+from easybuy.user.models import Order, OrderItem, Review, ReturnRequest
 from easybuy.core.whatsapp_utils import whatsapp_notifier
 from django.db import transaction, IntegrityError
 from decimal import Decimal, InvalidOperation
+from django.core.mail import send_mail
+from django.urls import reverse
+from easybuy.core.notifications import send_status_change_notification
 
 
 User = get_user_model()
@@ -689,10 +692,16 @@ def status(request, id):
                 from django.utils import timezone
 
                 order_item.shipped_at = timezone.now()
+            elif new_status == "DELIVERED" and not order_item.delivered_at:
+                order_item.delivered_at = timezone.now()
             order_item.save()
             logger.info(
                 f"Status Change: Order {order_item.order.order_number} | {old_status} -> {new_status} by {request.user.username}"
             )
+
+        # Unified Notifications (In-App & Email) via Helper
+        send_status_change_notification(order_item.order.user, order_item, new_status)
+
         if getattr(settings, "WHATSAPP_NOTIFICATIONS_ENABLED", True):
             logger.info(
                 f"WhatsApp notifications enabled, sending for OrderItem {order_item.id} status {new_status}"
@@ -747,6 +756,7 @@ def seller_reviews(request):
     reviews = (
         Review.objects.filter(product__seller=seller)
         .select_related("user", "product")
+        .prefetch_related("images", "videos", "product__variants__images")
         .order_by("-created_at")
     )
 
@@ -822,3 +832,112 @@ def reply_to_review(request, review_id):
             "replied_at": review.replied_at.strftime("%B %d, %Y"),
         }
     )
+
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def seller_returns(request):
+    seller = request.user.seller_profile
+    status_filter = request.GET.get("status")
+    return_requests_qs = (
+        ReturnRequest.objects.filter(order_item__seller=seller)
+        .select_related(
+            "order_item",
+            "order_item__variant",
+            "order_item__variant__product",
+            "order_item__order",
+        )
+        .order_by("-created_at")
+    )
+
+    pending_count = return_requests_qs.filter(status="PENDING").count()
+    approved_count = return_requests_qs.filter(status="APPROVED").count()
+    rejected_count = return_requests_qs.filter(status="REJECTED").count()
+
+    if status_filter in ["PENDING", "APPROVED", "REJECTED"]:
+        return_requests = return_requests_qs.filter(status=status_filter)
+    else:
+        return_requests = return_requests_qs
+ 
+    paginator = Paginator(return_requests, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "page_obj": page_obj,
+        "total_requests": return_requests_qs.count(),
+        "active_menu": "returns",
+        "pending_count": pending_count,
+        "approved_count": approved_count,
+        "rejected_count": rejected_count,
+        "current_status_filter": status_filter,
+    }
+    return render(request, "seller/returns.html", context)
+
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def process_return(request, id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Invalid method"}, status=405)
+
+    seller = request.user.seller_profile
+    return_req = get_object_or_404(ReturnRequest, id=id, order_item__seller=seller)
+    action = request.POST.get("action")
+
+    if return_req.status != "PENDING":
+        messages.error(request, "Return request already processed")
+        return redirect("seller_returns")
+
+    try:
+        with transaction.atomic():
+            if action == "approve":
+                return_req.status = "APPROVED"
+                return_req.approved_at = timezone.now()
+                return_req.save()
+
+                # Update item status & Restock
+                item = return_req.order_item
+                item.status = "RETURNED"
+                item.save()
+
+                variant = item.variant
+                variant.stock_quantity += item.quantity
+                variant.save()
+
+                InventoryLog.objects.create(
+                    variant=variant,
+                    change_amount=item.quantity,
+                    reason=f"Return Restock: {item.order.order_number}",
+                    performed_by=request.user,
+                )
+                messages.success(request, "Return approved and item restocked.")
+                send_status_change_notification(
+                    return_req.order_item.order.user,
+                    return_req.order_item,
+                    "Approved",
+                    is_return=True,
+                )
+
+            elif action == "reject":
+                return_req.status = "REJECTED"
+                return_req.save()
+
+                # Revert item status to DELIVERED
+                item = return_req.order_item
+                item.status = "DELIVERED"
+                item.save()
+
+                messages.success(request, "Return request rejected.")
+                send_status_change_notification(
+                    return_req.order_item.order.user,
+                    return_req.order_item,
+                    "Rejected",
+                    is_return=True,
+                )
+
+    except Exception as e:
+        logger.error(f"Error processing return {id}: {e}")
+        messages.error(request, "An error occurred processing the return.")
+
+    return redirect("seller_returns")

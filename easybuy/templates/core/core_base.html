@@ -344,6 +344,12 @@
                                     <p class="text-sm font-bold text-stone-900 dark:text-white truncate">{{ request.user.get_full_name|default:request.user.username }}</p>
                                     <p class="text-xs text-stone-500 truncate">{{ request.user.email }}</p>
                                 </div>
+                                {% if request.user.role == 'SELLER' %}
+                                <a href="{% url 'seller_dashboard' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
+                                    <span class="material-symbols-outlined text-lg">store</span>
+                                    Seller Dashboard
+                                </a>
+                                {% endif %}
                                 <a href="{% url 'profile_settings' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
                                     <span class="material-symbols-outlined text-lg">person</span>
                                     Profile
@@ -355,6 +361,14 @@
                                 <a href="{% url 'manage_addresses' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
                                     <span class="material-symbols-outlined text-lg">location_on</span>
                                     Addresses
+                                </a>
+                                <a href="{% url 'payment_methods' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
+                                    <span class="material-symbols-outlined text-lg">credit_card</span>
+                                    Cards
+                                </a>
+                                <a href="{% url 'notification_settings' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
+                                    <span class="material-symbols-outlined text-lg">notifications_active</span>
+                                    Notifications
                                 </a>
                                 <div class="border-t border-stone-100 dark:border-stone-700 mt-2 pt-2">
                                     <form action="{% url 'logout' %}" method="post" class="m-0">
@@ -453,8 +467,39 @@
     </div>
 
     <!-- Main Content -->
-    <main class="flex-1 content-bg">
-        {% block content %}{% endblock %}
+    <main class="flex-1 content-bg flex justify-center overflow-x-hidden">
+        <!-- Left Ad Rail (Visible on extra large screens) -->
+        <aside class="hidden 2xl:block w-48 flex-shrink-0 sticky top-24 self-start px-2 py-6 z-30">
+            {% if global_left_ad %}
+            <a href="{{ global_left_ad.redirect_url }}" target="_blank" class="block w-full relative group rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+                <img src="{{ global_left_ad.image.url }}" alt="Ad" class="w-full h-auto object-cover">
+                {% if global_left_ad.status != 'ACTIVE' %}
+                    <div class="absolute top-2 right-2 px-2 py-0.5 bg-yellow-500/90 backdrop-blur-md rounded text-[8px] font-bold text-white uppercase tracking-wider">Preview</div>
+                {% else %}
+                    <div class="absolute top-2 right-2 px-2 py-0.5 bg-black/60 backdrop-blur-md rounded text-[8px] font-bold text-white uppercase tracking-wider">Sponsored</div>
+                {% endif %}
+            </a>
+            {% endif %}
+        </aside>
+
+        <!-- Main Page Content -->
+        <div class="flex-1 w-full max-w-[100vw] 2xl:max-w-7xl mx-auto">
+            {% block content %}{% endblock %}
+        </div>
+
+        <!-- Right Ad Rail (Visible on extra large screens) -->
+        <aside class="hidden 2xl:block w-48 flex-shrink-0 sticky top-24 self-start px-2 py-6 z-30">
+            {% if global_right_ad %}
+            <a href="{{ global_right_ad.redirect_url }}" target="_blank" class="block w-full relative group rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+                <img src="{{ global_right_ad.image.url }}" alt="Ad" class="w-full h-auto object-cover">
+                {% if global_right_ad.status != 'ACTIVE' %}
+                    <div class="absolute top-2 right-2 px-2 py-0.5 bg-yellow-500/90 backdrop-blur-md rounded text-[8px] font-bold text-white uppercase tracking-wider">Preview</div>
+                {% else %}
+                    <div class="absolute top-2 right-2 px-2 py-0.5 bg-black/60 backdrop-blur-md rounded text-[8px] font-bold text-white uppercase tracking-wider">Sponsored</div>
+                {% endif %}
+            </a>
+            {% endif %}
+        </aside>
     </main>
 
     <!-- Newsletter Section -->
@@ -542,6 +587,7 @@
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Seller Dashboard</a></li>
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Seller Policies</a></li>
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Success Stories</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'ad_space_list' %}">Advertise with Us</a></li>
                     </ul>
                 </div>
             </div>

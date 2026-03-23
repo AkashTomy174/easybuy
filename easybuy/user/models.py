@@ -117,6 +117,7 @@ class OrderItem(models.Model):
     status = models.CharField(max_length=20, default="PENDING")
     estimated_ship_date = models.DateTimeField(null=True, blank=True)
     shipped_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
     subtotal = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -168,6 +169,12 @@ class ReturnRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+class ReturnRequestImage(models.Model):
+    return_request = models.ForeignKey(ReturnRequest, on_delete=models.CASCADE, related_name="images")
+    image = models.ImageField(upload_to="returns/images/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+
 class Shipment(models.Model):
     order = models.ForeignKey(
         "Order", on_delete=models.CASCADE, related_name="shipments"
@@ -177,3 +184,29 @@ class Shipment(models.Model):
     shipped_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=50)
+
+
+class NotificationPreference(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_preferences')
+    email_order_updates = models.BooleanField(default=True, verbose_name="Email Order Updates")
+    whatsapp_order_updates = models.BooleanField(default=True, verbose_name="WhatsApp Order Updates")
+    email_promotions = models.BooleanField(default=True, verbose_name="Email Promotions")
+    whatsapp_promotions = models.BooleanField(default=False, verbose_name="WhatsApp Promotions")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Preferences for {self.user.username}"
+
+
+class SavedCard(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_cards')
+    card_holder_name = models.CharField(max_length=100)
+    card_number = models.CharField(max_length=4) # Last 4 digits
+    expiry_month = models.CharField(max_length=2)
+    expiry_year = models.CharField(max_length=4)
+    card_brand = models.CharField(max_length=20) # Visa, Mastercard, etc.
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.card_brand} ending in {self.card_number}"

@@ -1,0 +1,21 @@
+{% extends 'core/core_base.html' %}
+{% block title %}Ad Spaces | EasyBuy{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-12">
+    <h1 class="text-3xl font-black text-stone-900 dark:text-white mb-8">Advertise with Us</h1>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for space in spaces %}
+        <div class="bg-white dark:bg-surface-dark rounded-3xl p-6 border border-stone-200 dark:border-stone-700 shadow-sm hover:shadow-lg transition-all">
+            <h2 class="text-xl font-bold text-stone-900 dark:text-white mb-2">{{ space.name }}</h2>
+            <p class="text-stone-500 mb-4">{{ space.description }}</p>
+            <div class="flex items-center justify-between mt-4">
+                <span class="text-2xl font-black text-primary">₹{{ space.price_per_day }}<span class="text-sm font-medium text-stone-400">/day</span></span>
+                <a href="{% url 'book_ad' space.id %}" class="px-6 py-2 bg-stone-900 text-white rounded-xl font-bold hover:bg-stone-700 transition-colors">Book Now</a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full py-12 text-center text-stone-500">No ad spaces available at the moment.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
@@ -9,11 +9,12 @@ from datetime import timedelta
 import random
 import string
 import logging
-from .models import Category, User, Otp
+from .models import Category, User, Otp, AdSpace, AdBooking
 from celery import shared_task
 from django.utils import timezone
 from .models import Notification, NotificationDelivery, NotificationConfig
-
+from .forms import AdBookingForm
+from django.db.models import Q
 
 def generate_otp():
     return "".join(random.choices(string.digits, k=6))
@@ -226,3 +227,58 @@ def place_order_view(request):
         message="Your order has been successfully placed.",
     )
     # return response immediately
+
+
+@login_required
+def ad_space_list(request):
+    spaces = AdSpace.objects.filter(is_active=True)
+
+    # Fetch active ads for sidebars
+    today = timezone.now().date()
+    
+    # Show ACTIVE ads to everyone, plus YOUR own ads (Pending/Active) for preview
+    filter_query = Q(status="ACTIVE", start_date__lte=today, end_date__gte=today)
+    if request.user.is_authenticated:
+        filter_query |= Q(user=request.user, end_date__gte=today)
+
+    active_ads = AdBooking.objects.filter(filter_query).select_related("ad_space").distinct().order_by('-created_at')
+
+    left_ad = active_ads.filter(ad_space__name__icontains="left").first()
+    if not left_ad:
+        left_ad = active_ads.first()
+
+    right_ad = active_ads.filter(ad_space__name__icontains="right").first()
+    if not right_ad:
+        if left_ad:
+            right_ad = active_ads.exclude(id=left_ad.id).first()
+        else:
+            right_ad = active_ads.last()
+
+    return render(
+        request,
+        "core/ad_space_list.html",
+        {"spaces": spaces, "left_ad": left_ad, "right_ad": right_ad},
+    )
+
+
+@login_required
+def book_ad(request, space_id):
+    space = get_object_or_404(AdSpace, id=space_id, is_active=True)
+
+    if request.method == "POST":
+        form = AdBookingForm(request.POST, request.FILES)
+        if form.is_valid():
+            booking = form.save(commit=False)
+            booking.user = request.user
+            booking.ad_space = space
+            # Trigger calculation in save method
+            booking.save()
+            messages.success(
+                request,
+                f"Ad booking request submitted for {space.name}. Total cost: ₹{booking.total_cost}",
+            )
+            return redirect("ad_space_list")
+    else:
+        form = AdBookingForm()
+
+    return render(request, "core/book_ad.html", {"form": form, "space": space})

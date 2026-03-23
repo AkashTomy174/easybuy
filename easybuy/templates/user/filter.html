@@ -204,12 +204,12 @@
             {% if products %}
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {% for item in products %}
-                <a href="{% url 'product_detail' item.product.slug %}" class="group relative flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 shadow-sm transition-all hover:shadow-2xl hover:-translate-y-1">
+                <div class="group relative flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 shadow-sm transition-all hover:shadow-2xl hover:-translate-y-1">
                     
-                    <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800 mb-4">
-                        {% if item.image %}
+                    <a href="{% url 'product_detail_user' item.variant.product.slug %}" class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800 mb-4 block">
+                        {% if item.image and item.image.image %}
                             <img src="{{ item.image.image.url }}" 
-                                alt="{{ item.product.name }}" 
+                                alt="{{ item.variant.product.name }}" 
                                 class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110">
                         {% else %}
                             <div class="flex h-full w-full items-center justify-center bg-stone-100 dark:bg-stone-800">
@@ -217,42 +217,47 @@
                             </div>
                         {% endif %}
                         
-                        {% if not item.in_stock %}
+                        {% if item.variant.stock_quantity <= 0 %}
                         <div class="absolute inset-0 bg-stone-900/60 flex items-center justify-center">
                             <span class="px-4 py-2 bg-stone-800 text-white text-sm font-bold rounded-xl">Out of Stock</span>
                         </div>
                         {% endif %}
                         
-                        <button class="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all hover:bg-white hover:text-accent-terracotta dark:bg-black/50">
-                            <span class="material-symbols-outlined text-[20px]">favorite_border</span>
+                        <button onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ item.variant.id }}, this); return false;" 
+                                class="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 backdrop-blur-sm transition-all hover:bg-white hover:text-accent-terracotta dark:bg-black/50 {% if item.in_wishlist %}text-accent-terracotta{% else %}text-stone-400{% endif %}">
+                            <span class="material-symbols-outlined text-[20px]">{% if item.in_wishlist %}favorite{% else %}favorite_border{% endif %}</span>
                         </button>
-                    </div>
+                    </a>
 
                     <div class="flex flex-1 flex-col px-2">
-                        <p class="text-xs font-medium text-stone-400 uppercase tracking-wide">{{ item.product.brand }}</p>
-                        <h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors">
-                            {{ item.product.name }}
-                        </h3>
+                        <p class="text-xs font-medium text-stone-400 uppercase tracking-wide">{{ item.variant.product.brand }}</p>
+                        <a href="{% url 'product_detail_user' item.variant.product.slug %}">
+                            <h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors">
+                                {{ item.variant.product.name }}
+                            </h3>
+                        </a>
                         
                         <div class="mt-4 flex items-center justify-between">
                             <div class="flex flex-col">
-                                <span class="text-xs text-stone-400 line-through">₹{{ item.mrp }}</span>
-                                <span class="text-xl font-black text-primary">₹{{ item.lowest_price }}</span>
+                                <span class="text-xl font-black text-primary">₹{{ item.variant.selling_price }}</span>
+                                {% if item.variant.mrp > item.variant.selling_price %}
+                                <span class="text-xs text-stone-400 line-through">₹{{ item.variant.mrp }}</span>
+                                {% endif %}
                             </div>
                             
 
-                            {% if item.in_stock %}
-                            <button data-addtocart-btn data-variant-id="{{ item.product.variants.first.id }}" data-product-image="{% if item.image %}{{ item.image.image.url }}{% endif %}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;" class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
-                                <span class="material-symbols-outlined">add_shopping_cart</span>
+                            {% if item.variant.stock_quantity > 0 %}
+                            <button type="button" data-addtocart-btn data-variant-id="{{ item.variant.id }}" data-product-image="{% if item.image and item.image.image %}{{ item.image.image.url }}{% endif %}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
+                                <span class="material-symbols-outlined text-lg">shopping_cart</span>
                             </button>
                             {% else %}
-                            <button disabled class="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-300 text-stone-500 cursor-not-allowed">
-                                <span class="material-symbols-outlined">add_shopping_cart</span>
+                            <button disabled class="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-300 text-stone-500 cursor-not-allowed">
+                                <span class="material-symbols-outlined text-lg">remove_shopping_cart</span>
                             </button>
                             {% endif %}
                         </div>
                     </div>
-                </a>
+                </div>
                 {% endfor %}
             </div>
             {% else %}
@@ -289,4 +294,3 @@
 }
 </style>
 {% endblock %}
-

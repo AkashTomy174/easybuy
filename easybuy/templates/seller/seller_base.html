@@ -76,6 +76,12 @@
             <span>Orders</span>
         </a>
 
+        <a href="{% url 'seller_returns' %}" class="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all {% if active_menu == 'returns' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800{% endif %}">
+            <span class="material-symbols-outlined">assignment_return</span>
+            <span class="font-bold">Returns</span>
+        </a>
+
+
         <a href="{% url 'seller_reviews' %}"
            class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'reviews' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
             <span class="material-symbols-outlined">rate_review</span>

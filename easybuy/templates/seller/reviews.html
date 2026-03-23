@@ -52,17 +52,49 @@
                     </div>
 
                     <!-- Product Name -->
-                    <div class="mb-4 pb-4 border-b border-stone-100 dark:border-stone-700">
-                        <p class="text-sm text-stone-500 dark:text-stone-400">
-                            <span class="font-bold text-stone-700 dark:text-stone-300">Product:</span> 
-                            <span class="text-primary font-bold">{{ review.product.name }}</span>
-                        </p>
+                    <div class="mb-4 pb-4 border-b border-stone-100 dark:border-stone-700 flex items-center gap-4">
+                        <div class="h-12 w-12 bg-stone-100 dark:bg-stone-800 rounded-lg overflow-hidden flex-shrink-0 border border-stone-200 dark:border-stone-700">
+                            {% with review.product.variants.first.images.first as img %}
+                                {% if img and img.image %}
+                                    <img src="{{ img.image.url }}" alt="{{ review.product.name }}" class="h-full w-full object-cover">
+                                {% else %}
+                                    <div class="h-full w-full flex items-center justify-center text-stone-400">
+                                        <span class="material-symbols-outlined text-sm">image</span>
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                        <div>
+                            <span class="text-xs font-bold text-stone-400 uppercase tracking-wider block">Product</span>
+                            <a href="{% url 'product_detail_user' review.product.slug %}" target="_blank" class="text-sm font-bold text-stone-900 dark:text-white hover:text-primary transition-colors">{{ review.product.name }}</a>
+                        </div>
                     </div>
 
                     <!-- Review Comment -->
                     <div class="mb-6">
                         <p class="text-base leading-relaxed text-stone-700 dark:text-stone-300">{{ review.comment }}</p>
                     </div>
+
+                    <!-- Review Media -->
+                    {% if review.images.all or review.videos.all %}
+                    <div class="mb-6">
+                        <p class="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3">Attached Media</p>
+                        <div class="flex flex-wrap gap-3">
+                            {% for img in review.images.all %}
+                            <a href="{{ img.image.url }}" target="_blank" class="block h-20 w-20 rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700 hover:scale-105 transition-transform shadow-sm relative group">
+                                <img src="{{ img.image.url }}" class="h-full w-full object-cover">
+                                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+                            </a>
+                            {% endfor %}
+                            
+                            {% for vid in review.videos.all %}
+                            <a href="{{ vid.video.url }}" target="_blank" class="block h-20 w-20 rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700 bg-stone-100 dark:bg-stone-800 flex items-center justify-center hover:scale-105 transition-transform shadow-sm group">
+                                <span class="material-symbols-outlined text-3xl text-stone-400 group-hover:text-primary transition-colors">play_circle</span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
 
                     <!-- Seller Reply Section -->
                     {% if review.seller_reply %}

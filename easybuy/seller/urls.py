@@ -23,4 +23,6 @@ urlpatterns = [
     path("status/<int:id>/", views.status, name="status"),
     path("reviews/", views.seller_reviews, name="seller_reviews"),
     path("reviews/reply/<int:review_id>/", views.reply_review, name="reply_review"),
+    path("returns/", views.seller_returns, name="seller_returns"),
+    path("returns/process/<int:id>/", views.process_return, name="process_return"),
 ]

@@ -48,6 +48,15 @@
                             Cancel Item
                         </button>
                         {% endif %}
+                        {% if item.can_return %}
+                        <button type="button" onclick="openReturnModal('{{ item.id }}', '{{ item.variant.product.name|escapejs }}')" class="px-4 py-2 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-700 dark:text-stone-300 dark:hover:bg-stone-600 font-bold text-xs rounded-xl transition-colors cursor-pointer">
+                            Return Item
+                        </button>
+                        {% elif item.return_expired %}
+                        <span class="px-3 py-2 bg-stone-50 text-stone-400 dark:bg-stone-800/50 dark:text-stone-500 font-bold text-xs rounded-xl border border-stone-100 dark:border-stone-700 cursor-not-allowed">
+                            Return Closed
+                        </span>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -149,6 +158,36 @@
         </div>
     {% endif %}
 </div>
+
+<!-- Return Modal -->
+<div id="returnModal" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-surface-dark rounded-3xl w-full max-w-md p-8 shadow-2xl border border-stone-200 dark:border-stone-700 relative">
+        <button onclick="closeReturnModal()" class="absolute top-4 right-4 text-stone-400 hover:text-stone-600 dark:hover:text-stone-300">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+        
+        <h3 class="text-xl font-black text-stone-900 dark:text-white mb-2">Request Return</h3>
+        <p class="text-sm text-stone-500 mb-6" id="returnItemName"></p>
+        
+        <form id="returnForm" method="POST" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-6">
+                <label class="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">Reason for Return</label>
+                <textarea name="reason" required rows="4" class="w-full rounded-xl border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-3 text-sm font-medium dark:text-white focus:ring-primary focus:border-primary resize-none" placeholder="Please describe why you are returning this item..."></textarea>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">Upload Images (Optional)</label>
+                <input type="file" name="images" multiple accept="image/*" onchange="previewReturnImages(this)" class="w-full text-sm text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 dark:file:bg-primary/20 dark:file:text-primary">
+                <div id="returnImagePreview" class="flex gap-2 mt-3 flex-wrap"></div>
+            </div>
+            
+            <button type="submit" class="w-full bg-primary text-white font-bold py-3.5 rounded-xl hover:bg-primary-dark transition-all">
+                Submit Request
+            </button>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -173,6 +212,41 @@ function cancelItem(itemId) {
         }
     })
     .catch(() => showToast('Network error', 'error'));
+}
+
+function openReturnModal(itemId, itemName) {
+    const modal = document.getElementById('returnModal');
+    const form = document.getElementById('returnForm');
+    const nameEl = document.getElementById('returnItemName');
+    const previewDiv = document.getElementById('returnImagePreview');
+    
+    form.reset();
+    previewDiv.innerHTML = '';
+    form.action = `/user/orders/return/${itemId}/`;
+    nameEl.textContent = `Returning: ${itemName}`;
+    modal.classList.remove('hidden');
+}
+
+function closeReturnModal() {
+    document.getElementById('returnModal').classList.add('hidden');
+}
+
+function previewReturnImages(input) {
+    const previewDiv = document.getElementById('returnImagePreview');
+    previewDiv.innerHTML = '';
+    
+    if (input.files) {
+        Array.from(input.files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'h-16 w-16 object-cover rounded-lg border border-stone-200 dark:border-stone-700';
+                previewDiv.appendChild(img);
+            }
+            reader.readAsDataURL(file);
+        });
+    }
 }
 </script>
 {% endblock %}

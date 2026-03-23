@@ -18,6 +18,10 @@ from .models import (
     ReviewImage,
     ReviewVideo,
     ReviewHelpful,
+    NotificationPreference,
+    SavedCard,
+    ReturnRequest,
+    ReturnRequestImage,
 )
 from easybuy.core.models import SubCategory, Category, Address, Notification
 import json
@@ -95,7 +99,11 @@ def home_view(request):
     return render(
         request,
         "core/home.html",
-        {"categories": categories, "product_data": product_data, "wishlists": user_wishlists},
+        {
+            "categories": categories,
+            "product_data": product_data,
+            "wishlists": user_wishlists,
+        },
     )
 
 
@@ -330,7 +338,11 @@ def new_arrival(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    return render(request, "user/new_arrivals.html", {"page_obj": page_obj, "wishlists": user_wishlists})
+    return render(
+        request,
+        "user/new_arrivals.html",
+        {"page_obj": page_obj, "wishlists": user_wishlists},
+    )
 
 
 def category_products(request, slug=None, id=None):
@@ -1194,7 +1206,11 @@ def best_seller(request):
     paginator = Paginator(product_data, 12)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
-    return render(request, "user/best_sellers.html", {"page_obj": page_obj, "wishlists": user_wishlists})
+    return render(
+        request,
+        "user/best_sellers.html",
+        {"page_obj": page_obj, "wishlists": user_wishlists},
+    )
 
 
 def get_brands_ajax(request):
@@ -1336,6 +1352,25 @@ def display_order(request):
         else:
             item.shipment_display = None
 
+        # Return eligibility check
+        item.can_return = False
+        item.return_expired = False
+        if (
+            item.status == "DELIVERED"
+            and not ReturnRequest.objects.filter(order_item=item).exists()
+        ):
+            # Check return window (30 days)
+            ref_date = item.delivered_at or item.order.ordered_at
+            if ref_date:
+                days_passed = (timezone.now() - ref_date).days
+                # Check if product is returnable based on product settings
+                product = item.variant.product
+                if product.is_returnable:
+                    if days_passed <= product.return_days:
+                        item.can_return = True
+                    else:
+                        item.return_expired = True
+
     paginator = Paginator(order_items, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -1387,6 +1422,41 @@ def order_item_cancel(request, item_id):
         order_item.variant.save()
 
     return JsonResponse({"success": True, "message": "Item cancelled successfully"})
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def request_return(request, item_id):
+    if request.method != "POST":
+        return JsonResponse({"message": "Invalid request"}, status=400)
+
+    item = get_object_or_404(OrderItem, id=item_id, order__user=request.user)
+
+    if item.status != "DELIVERED":
+        messages.error(request, "Item must be delivered to be returned.")
+        return redirect("user_orders")
+
+    # Check return request existence
+    if ReturnRequest.objects.filter(order_item=item).exists():
+        messages.error(request, "Return already requested.")
+        return redirect("user_orders")
+
+    reason = request.POST.get("reason")
+    if not reason:
+        messages.error(request, "Return reason is required.")
+        return redirect("user_orders")
+
+    with transaction.atomic():
+        return_req = ReturnRequest.objects.create(order_item=item, reason=reason, status="PENDING")
+        
+        for image in request.FILES.getlist('images'):
+            ReturnRequestImage.objects.create(return_request=return_req, image=image)
+            
+        item.status = "RETURN_REQUESTED"
+        item.save()
+
+    messages.success(request, "Return requested successfully.")
+    return redirect("user_orders")
 
 
 # profile and adress
@@ -1499,11 +1569,13 @@ def toggle_wishlist(request, variant_id, wishlist_id=None):
         # Try to get from body if not in args
         try:
             data = json.loads(request.body)
-            w_id = data.get('wishlist_id')
+            w_id = data.get("wishlist_id")
             if w_id:
                 wishlist = get_object_or_404(Wishlist, id=w_id, user=user)
             else:
-                wishlist, _ = Wishlist.objects.get_or_create(user=user, wishlist_name="My Wishlist")
+                wishlist, _ = Wishlist.objects.get_or_create(
+                    user=user, wishlist_name="My Wishlist"
+                )
         except:
             wishlist, _ = Wishlist.objects.get_or_create(
                 user=user, wishlist_name="My Wishlist"
@@ -1628,7 +1700,13 @@ def create_wishlist(request):
         )
 
     wishlist = Wishlist.objects.create(user=request.user, wishlist_name=wishlist_name)
-    return JsonResponse({"success": True, "message": "Wishlist created successfully", "wishlist_id": wishlist.id})
+    return JsonResponse(
+        {
+            "success": True,
+            "message": "Wishlist created successfully",
+            "wishlist_id": wishlist.id,
+        }
+    )
 
 
 @login_required
@@ -1761,6 +1839,7 @@ def toggle_review_helpful(request, review_id):
 
 client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
+
 def _send_order_confirmation(order):
     """
     Helper to send unified notifications (In-App, Email, WhatsApp) for order confirmation.
@@ -1775,7 +1854,7 @@ def _send_order_confirmation(order):
             type="order_success",
             title="Order Confirmed!",
             message=f"Your order {order.order_number} has been successfully placed.",
-            redirect_url=url
+            redirect_url=url,
         )
     except Exception as e:
         logger.error(f"In-App Notification Failed: {e}")
@@ -1787,19 +1866,22 @@ def _send_order_confirmation(order):
             message=f"Hi {user.first_name},\n\nYour order {order.order_number} has been confirmed successfully.\nTotal Amount: ₹{order.total_amount}\n\nThank you for shopping with EasyBuy!",
             from_email=settings.EMAIL_HOST_USER,
             recipient_list=[user.email],
-            fail_silently=True
+            fail_silently=True,
         )
     except Exception as e:
         logger.error(f"Email Notification Failed: {e}")
 
     # 3. WhatsApp Notification
-    if getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False):
+    if getattr(settings, "WHATSAPP_NOTIFICATIONS_ENABLED", False):
         try:
             notifier = WhatsAppNotifier()
-            logger.info(f"Sending WhatsApp to {order.shipping_phone} for Order {order.order_number}")
+            logger.info(
+                f"Sending WhatsApp to {order.shipping_phone} for Order {order.order_number}"
+            )
             notifier.send_order_confirmation(order)
         except Exception as e:
             logger.error(f"WhatsApp Notification Failed: {e}")
+
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
@@ -2033,7 +2115,7 @@ def process_cod_order(request):
 
         if not request.session.get("buy_now_variant_id"):
             Cart.objects.filter(user=request.user).delete()
-        
+
         # Trigger unified notifications
         _send_order_confirmation(order)
 
@@ -2061,13 +2143,130 @@ def order_success(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     return render(request, "user/order_success.html", {"order": order})
 
+
+@login_required
+def notification_settings(request):
+    # Ensure preference object exists for the user
+    pref, created = NotificationPreference.objects.get_or_create(user=request.user)
+
+    if request.method == "POST":
+        pref.email_order_updates = request.POST.get("email_order_updates") == "on"
+        pref.whatsapp_order_updates = request.POST.get("whatsapp_order_updates") == "on"
+        pref.email_promotions = request.POST.get("email_promotions") == "on"
+        pref.whatsapp_promotions = request.POST.get("whatsapp_promotions") == "on"
+        pref.save()
+
+        messages.success(request, "Notification preferences updated successfully!")
+        return redirect("notification_settings")
+
+    return render(request, "user/notification_preferences.html", {"pref": pref})
+
+
 @login_required
 def all_notifications(request):
     """
     View to list all notifications for the logged-in user with pagination.
     """
-    notifications_list = Notification.objects.filter(user=request.user).order_by('-created_at')
+    filter_type = request.GET.get("filter", "all")
+    
+    notifications_qs = Notification.objects.filter(user=request.user)
+    
+    if filter_type == "unread":
+        notifications_qs = notifications_qs.filter(is_read=False)
+        
+    notifications_list = notifications_qs.order_by("-created_at")
     paginator = Paginator(notifications_list, 15)  # Show 15 notifications per page
-    page_number = request.GET.get('page')
+    page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
-    return render(request, 'user/notifications.html', {'page_obj': page_obj})
+    return render(request, "user/notifications.html", {"page_obj": page_obj, "current_filter": filter_type})
+
+
+@login_required
+def payment_methods(request):
+    if request.method == "POST":
+        card_holder_name = request.POST.get("card_holder_name")
+        card_number = request.POST.get("card_number")
+        expiry = request.POST.get("expiry")  # MM/YY
+
+        if card_holder_name and card_number and expiry:
+            try:
+                if "/" not in expiry:
+                    raise ValueError("Invalid expiry format. Use MM/YY")
+                month, year = expiry.split("/")
+
+                # Simple mock detection
+                brand = "Visa" if card_number.startswith("4") else "Mastercard"
+                if card_number.startswith("3"):
+                    brand = "Amex"
+
+                SavedCard.objects.create(
+                    user=request.user,
+                    card_holder_name=card_holder_name,
+                    card_number=card_number[-4:],  # Store last 4 digits
+                    expiry_month=month,
+                    expiry_year=year,
+                    card_brand=brand,
+                )
+                messages.success(request, "Payment method added successfully.")
+            except Exception as e:
+                messages.error(request, f"Failed to add card: {e}")
+        else:
+            messages.error(request, "All fields are required.")
+        return redirect("payment_methods")
+
+    cards = SavedCard.objects.filter(user=request.user).order_by(
+        "-is_default", "-created_at"
+    )
+    return render(request, "user/payment_methods.html", {"cards": cards})
+
+
+@login_required
+def delete_saved_card(request, card_id):
+    if request.method == "POST":
+        card = get_object_or_404(SavedCard, id=card_id, user=request.user)
+        card.delete()
+        messages.success(request, "Payment method removed successfully.")
+    return redirect("payment_methods")
+
+
+@login_required
+def mark_notification_read(request, notification_id):
+    if request.method == "POST":
+        notification = get_object_or_404(
+            Notification, id=notification_id, user=request.user
+        )
+        notification.is_read = True
+        notification.save()
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+            return JsonResponse({"success": True, "unread_count": unread_count})
+
+        messages.success(request, "Notification marked as read")
+    return redirect("all_notifications")
+
+
+@login_required
+def delete_notification(request, notification_id):
+    if request.method == "POST":
+        notification = get_object_or_404(
+            Notification, id=notification_id, user=request.user
+        )
+        notification.delete()
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+            return JsonResponse({"success": True, "unread_count": unread_count})
+
+        messages.success(request, "Notification deleted")
+    return redirect("all_notifications")
+
+
+@login_required
+def mark_all_notifications_read(request):
+    if request.method == "POST":
+        Notification.objects.filter(user=request.user, is_read=False).update(
+            is_read=True
+        )
+        messages.success(request, "All notifications marked as read")
+    return redirect("all_notifications")

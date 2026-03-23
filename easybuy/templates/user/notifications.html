@@ -6,13 +6,23 @@
 <div class="max-w-4xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-black text-stone-900 dark:text-white">Your Notifications</h1>
+        <div class="flex gap-2">
+            <a href="?filter=all" class="px-3 py-1 rounded-full text-sm font-bold border transition-colors {% if current_filter == 'all' %}bg-stone-900 text-white border-stone-900 dark:bg-white dark:text-stone-900{% else %}bg-transparent text-stone-500 border-stone-200 hover:border-stone-400{% endif %}">All</a>
+            <a href="?filter=unread" class="px-3 py-1 rounded-full text-sm font-bold border transition-colors {% if current_filter == 'unread' %}bg-stone-900 text-white border-stone-900 dark:bg-white dark:text-stone-900{% else %}bg-transparent text-stone-500 border-stone-200 hover:border-stone-400{% endif %}">Unread</a>
+        </div>
+        {% if page_obj %}
+        <form action="{% url 'mark_all_notifications_read' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="text-sm font-bold text-primary hover:underline">Mark all as read</button>
+        </form>
+        {% endif %}
     </div>
 
     <div class="bg-white dark:bg-surface-dark rounded-2xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-hidden">
         {% if page_obj %}
             <div class="divide-y divide-stone-100 dark:divide-stone-700">
                 {% for notification in page_obj %}
-                <div class="p-5 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors relative {% if not notification.is_read %}bg-blue-50/30 dark:bg-blue-900/10{% endif %}">
+                <div class="p-5 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors relative group {% if not notification.is_read %}bg-blue-50/30 dark:bg-blue-900/10{% endif %}" id="notification-{{ notification.id }}">
                     {% if notification.redirect_url %}
                         <a href="{{ notification.redirect_url }}" class="absolute inset-0 z-10"></a>
                     {% elif 'Cart' in notification.title or 'cart' in notification.title %}
@@ -44,7 +54,17 @@
                         <div class="flex-1">
                             <div class="flex justify-between items-start">
                                 <h3 class="font-bold text-stone-900 dark:text-white">{{ notification.title }}</h3>
-                                <span class="text-xs text-stone-400 whitespace-nowrap ml-2">{{ notification.created_at|timesince }} ago</span>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-stone-400 whitespace-nowrap ml-2">{{ notification.created_at|timesince }} ago</span>
+                                    {% if not notification.is_read %}
+                                    <button onclick="event.preventDefault(); markAsRead('{{ notification.id }}')" class="text-stone-400 hover:text-primary z-20 relative" title="Mark as read">
+                                        <span class="material-symbols-outlined text-[20px]">drafts</span>
+                                    </button>
+                                    {% endif %}
+                                    <button onclick="event.preventDefault(); deleteNotification('{{ notification.id }}')" class="text-stone-400 hover:text-red-500 z-20 relative" title="Delete">
+                                        <span class="material-symbols-outlined text-[20px]">delete</span>
+                                    </button>
+                                </div>
                             </div>
                             <p class="text-stone-600 dark:text-stone-300 mt-1 text-sm leading-relaxed">{{ notification.message }}</p>
                             
@@ -67,7 +87,7 @@
             <div class="p-4 border-t border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/50 flex justify-center">
                 <div class="flex gap-2">
                     {% if page_obj.has_previous %}
-                    <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 rounded-lg border border-stone-200 dark:border-stone-600 hover:bg-white dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 text-sm font-medium transition-colors">Previous</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if current_filter %}&filter={{ current_filter }}{% endif %}" class="px-3 py-1 rounded-lg border border-stone-200 dark:border-stone-600 hover:bg-white dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 text-sm font-medium transition-colors">Previous</a>
                     {% endif %}
                     
                     <span class="px-3 py-1 text-sm text-stone-500 dark:text-stone-400">
@@ -75,7 +95,7 @@
                     </span>
 
                     {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 rounded-lg border border-stone-200 dark:border-stone-600 hover:bg-white dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 text-sm font-medium transition-colors">Next</a>
+                    <a href="?page={{ page_obj.next_page_number }}{% if current_filter %}&filter={{ current_filter }}{% endif %}" class="px-3 py-1 rounded-lg border border-stone-200 dark:border-stone-600 hover:bg-white dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 text-sm font-medium transition-colors">Next</a>
                     {% endif %}
                 </div>
             </div>
@@ -92,4 +112,69 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+function markAsRead(notificationId) {
+    const row = document.getElementById('notification-' + notificationId);
+    
+    fetch(`/user/notifications/read/${notificationId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            row.classList.remove('bg-blue-50/30', 'dark:bg-blue-900/10');
+            row.querySelector('button[title="Mark as read"]').remove();
+
+            // Update header badge
+            const badge = document.getElementById('notification-badge');
+            if (badge) {
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.textContent = 0;
+                    badge.classList.add('hidden');
+                }
+            }
+        }
+    });
+}
+
+function deleteNotification(notificationId) {
+    if(!confirm('Delete this notification?')) return;
+    
+    const row = document.getElementById('notification-' + notificationId);
+    
+    fetch(`/user/notifications/delete/${notificationId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            row.remove();
+            const badge = document.getElementById('notification-badge');
+            if (badge) {
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.textContent = 0;
+                    badge.classList.add('hidden');
+                }
+            }
+            // If list empty on page, reload to show empty state
+            if (document.querySelectorAll('[id^="notification-"]').length === 0) location.reload();
+        }
+    });
+}
+</script>
 {% endblock %}

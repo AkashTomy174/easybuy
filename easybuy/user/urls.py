@@ -16,6 +16,17 @@ urlpatterns = [
     path("products/", all_products, name="all_products"),
     path("profile/", views.profile_settings, name="profile_settings"),
     path("profile/addresses/", views.manage_addresses, name="manage_addresses"),
+    path(
+        "profile/notifications/",
+        views.notification_settings,
+        name="notification_settings",
+    ),
+    path("profile/payment-methods/", views.payment_methods, name="payment_methods"),
+    path(
+        "profile/payment-methods/delete/<int:card_id>/",
+        views.delete_saved_card,
+        name="delete_saved_card",
+    ),
     path("profile/addresses/add/", views.user_address, name="user_address"),
     path(
         "profile/addresses/delete/<int:id>/",
@@ -62,6 +73,11 @@ urlpatterns = [
         "orders/item-cancel/<int:item_id>/",
         views.order_item_cancel,
         name="order_item_cancel",
+    ),
+    path(
+        "orders/return/<int:item_id>/",
+        views.request_return,
+        name="request_return",
     ),
     path("reviews/add/<int:variant_id>/", views.add_reviews, name="add_review"),
     path(
@@ -123,4 +139,19 @@ urlpatterns = [
     ),
     path("process-cod-order/", views.process_cod_order, name="process_cod_order"),
     path("notifications/", views.all_notifications, name="all_notifications"),
+    path(
+        "notifications/read/all/",
+        views.mark_all_notifications_read,
+        name="mark_all_notifications_read",
+    ),
+    path(
+        "notifications/read/<int:notification_id>/",
+        views.mark_notification_read,
+        name="mark_notification_read",
+    ),
+    path(
+        "notifications/delete/<int:notification_id>/",
+        views.delete_notification,
+        name="delete_notification",
+    ),
 ]
