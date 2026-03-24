@@ -2164,11 +2164,7 @@ def notification_settings(request):
 
 @login_required
 def all_notifications(request):
-    """
-    View to list all notifications for the logged-in user with pagination.
-    """
     filter_type = request.GET.get("filter", "all")
-    
     notifications_qs = Notification.objects.filter(user=request.user)
     
     if filter_type == "unread":
