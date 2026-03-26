@@ -1447,11 +1447,13 @@ def request_return(request, item_id):
         return redirect("user_orders")
 
     with transaction.atomic():
-        return_req = ReturnRequest.objects.create(order_item=item, reason=reason, status="PENDING")
-        
-        for image in request.FILES.getlist('images'):
+        return_req = ReturnRequest.objects.create(
+            order_item=item, reason=reason, status="PENDING"
+        )
+
+        for image in request.FILES.getlist("images"):
             ReturnRequestImage.objects.create(return_request=return_req, image=image)
-            
+
         item.status = "RETURN_REQUESTED"
         item.save()
 
@@ -1936,154 +1938,270 @@ def create_razorpay_order(request):
         data = json.loads(request.body)
         address_id = data.get("selected_address_id")
     except json.JSONDecodeError:
+        logger.error("Invalid JSON in create_razorpay_order request")
         return JsonResponse({"error": "Invalid data"}, status=400)
 
     user = request.user
-    address = get_object_or_404(Address, id=address_id, user=user)
+
+    try:
+        address = get_object_or_404(Address, id=address_id, user=user)
+    except Http404:
+        logger.warning(f"Invalid address ID {address_id} for user {user.id}")
+        return JsonResponse({"error": "Invalid delivery address"}, status=400)
 
     buy_now_variant_id = data.get("buy_now_variant_id")
-    buy_now_quantity = int(data.get("buy_now_quantity", 1))
 
-    if buy_now_variant_id:
-        variant = get_object_or_404(ProductVariant, id=buy_now_variant_id)
-        subtotal = variant.selling_price * buy_now_quantity
-    else:
-        cart = Cart.objects.filter(user=user).first()
-        if not cart or not cart.items.exists():
-            return JsonResponse({"error": "Cart is empty"}, status=400)
-        subtotal = sum(i.quantity * i.price_at_time for i in cart.items.all())
+    try:
+        buy_now_quantity = int(data.get("buy_now_quantity", 1))
+    except (ValueError, TypeError):
+        logger.error("Invalid quantity in create_razorpay_order")
+        return JsonResponse({"error": "Invalid quantity"}, status=400)
 
-    shipping = Decimal("99") if subtotal < 999 else Decimal("0")
-    tax = subtotal * Decimal("0.18")
-    grand_total = subtotal + shipping + tax
-
-    # 2. Create Order and items in a single transaction
-    with transaction.atomic():
-        order = Order.objects.create(
-            user=user,
-            order_number=f"EB{timezone.now().strftime('%Y%m%d')}{uuid.uuid4().hex[:6]}",
-            total_amount=grand_total,
-            payment_status="PENDING",
-            order_status="PENDING",
-            shipping_name=address.full_name,
-            shipping_phone=address.phone_number,
-            shipping_address=f"{address.house_info}, {address.city}, {address.state}",
-        )
-
+    try:
         if buy_now_variant_id:
-            OrderItem.objects.create(
-                order=order,
-                variant=variant,
-                seller=variant.product.seller,
-                quantity=buy_now_quantity,
-                price_at_purchase=variant.selling_price,
-            )
+            variant = get_object_or_404(ProductVariant, id=buy_now_variant_id)
+            if variant.stock_quantity < buy_now_quantity:
+                logger.warning(f"Insufficient stock for variant {buy_now_variant_id}")
+                return JsonResponse({"error": "Insufficient stock"}, status=400)
+            subtotal = variant.selling_price * buy_now_quantity
         else:
-            for item in cart.items.all():
+            cart = Cart.objects.filter(user=user).first()
+            if not cart or not cart.items.exists():
+                logger.warning(f"Empty cart for user {user.id}")
+                return JsonResponse({"error": "Cart is empty"}, status=400)
+            subtotal = sum(i.quantity * i.price_at_time for i in cart.items.all())
+
+        shipping = DzDecimal("99") if subtotal < 999 else DzDecimal("0")
+        tax = subtotal * DzDecimal("0.18")
+        grand_total = subtotal + shipping + tax
+
+        # Create Order and items in a single transaction
+        with transaction.atomic():
+            order = Order.objects.create(
+                user=user,
+                order_number=f"EB{timezone.now().strftime('%Y%m%d')}{uuid.uuid4().hex[:6]}",
+                total_amount=grand_total,
+                payment_status="PENDING",
+                order_status="PENDING",
+                shipping_name=address.full_name,
+                shipping_phone=address.phone_number,
+                shipping_address=f"{address.house_info}, {address.city}, {address.state}",
+            )
+
+            if buy_now_variant_id:
                 OrderItem.objects.create(
                     order=order,
-                    variant=item.variant,
-                    seller=item.variant.product.seller,
-                    quantity=item.quantity,
-                    price_at_purchase=item.price_at_time,
+                    variant=variant,
+                    seller=variant.product.seller,
+                    quantity=buy_now_quantity,
+                    price_at_purchase=variant.selling_price,
+                )
+            else:
+                for item in cart.items.all():
+                    OrderItem.objects.create(
+                        order=order,
+                        variant=item.variant,
+                        seller=item.variant.product.seller,
+                        quantity=item.quantity,
+                        price_at_purchase=item.price_at_time,
+                    )
+
+            logger.info(f"Order created: {order.order_number} for user {user.id}")
+
+            # Razorpay Gateway logic - WITH ERROR HANDLING
+            try:
+                amount_paise = int(order.total_amount * 100)
+
+                logger.info(
+                    f"Creating Razorpay order for {order.order_number}: ₹{order.total_amount}"
                 )
 
-        # 3. Razorpay Gateway logic
-        amount_paise = int(order.total_amount * 100)
-        razorpay_order = client.order.create(
-            {"amount": amount_paise, "currency": "INR", "receipt": order.order_number}
+                razorpay_order = client.order.create(
+                    {
+                        "amount": amount_paise,
+                        "currency": "INR",
+                        "receipt": order.order_number,
+                    }
+                )
+
+                if not razorpay_order or "id" not in razorpay_order:
+                    logger.error(
+                        f"Razorpay API returned invalid response: {razorpay_order}"
+                    )
+                    return JsonResponse(
+                        {
+                            "error": "Payment gateway error. Razorpay order creation failed"
+                        },
+                        status=500,
+                    )
+
+                order.razorpay_order_id = razorpay_order["id"]
+                order.save()
+
+                logger.info(
+                    f"Razorpay order created: {razorpay_order['id']} for {order.order_number}"
+                )
+
+                request.session["pending_order_id"] = order.id
+
+                # Validate prefill data
+                prefill_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+                if not prefill_name:
+                    prefill_name = user.username
+
+                return JsonResponse(
+                    {
+                        "key": settings.RAZORPAY_KEY_ID,
+                        "amount": amount_paise,
+                        "order_id": razorpay_order["id"],
+                        "internal_order_id": order.id,
+                        "prefill": {
+                            "name": prefill_name,
+                            "email": user.email or "",
+                            "contact": address.phone_number,
+                        },
+                    }
+                )
+
+            except razorpay.errors.Errors as e:
+                logger.error(f"Razorpay API Error: {str(e)}", exc_info=True)
+                return JsonResponse(
+                    {
+                        "error": f"Payment gateway error: {str(e)}",
+                        "details": "Unable to connect to Razorpay. Please try again.",
+                    },
+                    status=502,
+                )
+            except Exception as e:
+                logger.error(
+                    f"Unexpected error creating Razorpay order: {str(e)}", exc_info=True
+                )
+                return JsonResponse(
+                    {"error": "Unexpected error. Please contact support."}, status=500
+                )
+
+    except Exception as e:
+        logger.error(f"Error in create_razorpay_order: {str(e)}", exc_info=True)
+        return JsonResponse(
+            {"error": "An error occurred while processing your order"}, status=500
         )
-
-        order.razorpay_order_id = razorpay_order["id"]
-        order.save()
-
-        request.session["pending_order_id"] = order.id
-
-    return JsonResponse(
-        {
-            "key": settings.RAZORPAY_KEY_ID,
-            "amount": amount_paise,
-            "order_id": razorpay_order["id"],
-            "internal_order_id": order.id,
-            "prefill": {
-                "name": f"{user.first_name} {user.last_name}",
-                "email": user.email,
-            },
-        }
-    )
 
 
 @login_required
 @csrf_exempt
 def verify_razorpay_payment(request):
-    params_dict = {
-        "razorpay_order_id": request.POST.get("razorpay_order_id"),
-        "razorpay_payment_id": request.POST.get("razorpay_payment_id"),
-        "razorpay_signature": request.POST.get("razorpay_signature"),
-    }
-
-    logger.info(f"Razorpay verification params: {params_dict}")
+    """Verify Razorpay payment signature and confirm order"""
 
     try:
-        order = get_object_or_404(
-            Order, razorpay_order_id=params_dict["razorpay_order_id"]
+        # Validate required parameters FIRST
+        razorpay_order_id = request.POST.get("razorpay_order_id", "").strip()
+        razorpay_payment_id = request.POST.get("razorpay_payment_id", "").strip()
+        razorpay_signature = request.POST.get("razorpay_signature", "").strip()
+
+        if not razorpay_order_id or not razorpay_payment_id or not razorpay_signature:
+            logger.warning(f"Missing parameters in verify_razorpay_payment")
+            messages.error(request, "Payment verification failed: Missing parameters")
+            return redirect("checkout")
+
+        params_dict = {
+            "razorpay_order_id": razorpay_order_id,
+            "razorpay_payment_id": razorpay_payment_id,
+            "razorpay_signature": razorpay_signature,
+        }
+
+        logger.info(
+            f"Verifying Razorpay payment: order_id={razorpay_order_id}, payment_id={razorpay_payment_id}"
         )
 
-        # Save payment_id first
-        order.razorpay_payment_id = params_dict["razorpay_payment_id"]
+        # Get order
+        try:
+            order = Order.objects.get(razorpay_order_id=razorpay_order_id)
+        except Order.DoesNotExist:
+            logger.error(f"Order not found for razorpay_order_id: {razorpay_order_id}")
+            messages.error(request, "Payment verification failed: Order not found")
+            return redirect("checkout")
+
+        # Save payment_id BEFORE verification
+        order.razorpay_payment_id = razorpay_payment_id
         order.save()
 
         # Verify signature
-        client.utility.verify_payment_signature(params_dict)
-
-        # Payment successful
-        with transaction.atomic():
-            # 1. Update order status
-            order.payment_status = "PAID"
-            order.order_status = "CONFIRMED"
-            order.save()
-
-            # 2. Update stock
-            for item in order.items.all():
-                item.variant.stock_quantity -= item.quantity
-                item.variant.save()
-
-            # 3. Clear cart if not buy-now
-            if not request.session.get("buy_now_variant_id"):
-                Cart.objects.filter(user=request.user).delete()
-
-            # 4. Trigger notification
-            _send_order_confirmation(order)
-
-            # 5. Clear session
-            request.session.pop("buy_now_variant_id", None)
-            request.session.pop("buy_now_quantity", None)
-            request.session.pop("pending_order_id", None)
-
-        logger.info(f"Payment verified successfully for order {order.order_number}")
-        return redirect("order_success", order_id=order.id)
-
-    except Exception as e:
-        logger.error(f"Razorpay verification FAILED: {str(e)}")
-        logger.error(f"Params that failed: {params_dict}")
-
-        # Save partial payment if possible
         try:
-            order = Order.objects.get(
-                razorpay_order_id=params_dict["razorpay_order_id"]
+            client.utility.verify_payment_signature(params_dict)
+            logger.info(
+                f"Signature verified successfully for order {order.order_number}"
             )
-            order.razorpay_payment_id = params_dict["razorpay_payment_id"]
+        except razorpay.errors.SignatureVerificationError as e:
+            logger.error(
+                f"Signature verification FAILED for order {order.order_number}: {str(e)}"
+            )
+            order.payment_status = "FAILED"
+            order.save()
+            messages.error(request, "Payment verification failed: Invalid signature")
+            return redirect("user_orders")
+        except Exception as e:
+            logger.error(
+                f"Unexpected error during signature verification: {str(e)}",
+                exc_info=True,
+            )
+            order.payment_status = "FAILED"
+            order.save()
+            messages.error(
+                request, "Payment verification error. Please contact support."
+            )
+            return redirect("user_orders")
+
+        # Payment successful - Update order and inventory
+        try:
+            with transaction.atomic():
+                order.payment_status = "PAID"
+                order.order_status = "CONFIRMED"
+                order.save()
+                logger.info(f"Order {order.order_number} marked as PAID")
+
+                # Update stock
+                for item in order.items.all():
+                    item.variant.stock_quantity -= item.quantity
+                    item.variant.save()
+                    logger.info(
+                        f"Stock updated for variant {item.variant.id}: -{item.quantity}"
+                    )
+
+                # Clear cart if not buy-now
+                if not request.session.get("buy_now_variant_id"):
+                    Cart.objects.filter(user=request.user).delete()
+                    logger.info(f"Cart cleared for user {request.user.id}")
+
+                # Trigger notification
+                _send_order_confirmation(order)
+                logger.info(
+                    f"Order confirmation notification sent for {order.order_number}"
+                )
+
+                # Clear session
+                request.session.pop("buy_now_variant_id", None)
+                request.session.pop("buy_now_quantity", None)
+                request.session.pop("pending_order_id", None)
+
+            logger.info(f"Payment verified and order confirmed: {order.order_number}")
+            return redirect("order_success", order_id=order.id)
+
+        except Exception as e:
+            logger.error(f"Error updating order status: {str(e)}", exc_info=True)
             order.payment_status = "PARTIAL"
             order.save()
-            logger.info(f"Saved partial payment for {order.order_number}")
-        except Order.DoesNotExist:
-            logger.error("Order not found for razorpay_order_id")
+            messages.error(
+                request,
+                "Payment received but order processing failed. Support team notified.",
+            )
+            return redirect("user_orders")
 
-        messages.error(
-            request,
-            "Payment received but verification failed. Please contact support with payment ID.",
+    except Exception as e:
+        logger.error(
+            f"Unexpected error in verify_razorpay_payment: {str(e)}", exc_info=True
         )
-        return redirect("user_orders")
+        messages.error(request, "An unexpected error occurred. Please contact support.")
+        return redirect("checkout")
 
 
 @login_required
@@ -2166,15 +2284,19 @@ def notification_settings(request):
 def all_notifications(request):
     filter_type = request.GET.get("filter", "all")
     notifications_qs = Notification.objects.filter(user=request.user)
-    
+
     if filter_type == "unread":
         notifications_qs = notifications_qs.filter(is_read=False)
-        
+
     notifications_list = notifications_qs.order_by("-created_at")
     paginator = Paginator(notifications_list, 15)  # Show 15 notifications per page
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
-    return render(request, "user/notifications.html", {"page_obj": page_obj, "current_filter": filter_type})
+    return render(
+        request,
+        "user/notifications.html",
+        {"page_obj": page_obj, "current_filter": filter_type},
+    )
 
 
 @login_required
@@ -2235,7 +2357,9 @@ def mark_notification_read(request, notification_id):
         notification.save()
 
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+            unread_count = Notification.objects.filter(
+                user=request.user, is_read=False
+            ).count()
             return JsonResponse({"success": True, "unread_count": unread_count})
 
         messages.success(request, "Notification marked as read")
@@ -2251,7 +2375,9 @@ def delete_notification(request, notification_id):
         notification.delete()
 
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+            unread_count = Notification.objects.filter(
+                user=request.user, is_read=False
+            ).count()
             return JsonResponse({"success": True, "unread_count": unread_count})
 
         messages.success(request, "Notification deleted")

@@ -1,0 +1,674 @@
+/* ============================================================================
+   UI/UX ENHANCEMENTS - Loading States, Animations & Responses
+   ============================================================================ */
+
+/* ============================================================================
+   LOADING SPINNERS & STATES
+   ============================================================================ */
+
+/* Spinner Animation */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+/* Loading Spinner */
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(74, 124, 67, 0.2);
+    border-radius: 50%;
+    border-top-color: #4a7c43;
+    animation: spin 0.8s linear infinite;
+}
+
+.spinner-lg {
+    width: 40px;
+    height: 40px;
+    border-width: 4px;
+}
+
+.spinner-sm {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+}
+
+/* Loading Container */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem;
+}
+
+.loading-text {
+    color: #666;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Skeleton Loading */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        #f0f0f0 25%,
+        #e0e0e0 50%,
+        #f0f0f0 75%
+    );
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+    border-radius: 0.5rem;
+}
+
+.dark .skeleton {
+    background: linear-gradient(
+        90deg,
+        #333 25%,
+        #444 50%,
+        #333 75%
+    );
+    background-size: 1000px 100%;
+}
+
+.skeleton-text {
+    height: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.skeleton-avatar {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+}
+
+.skeleton-card {
+    border-radius: 1.5rem;
+    height: 300px;
+}
+
+/* ============================================================================
+   BUTTON STATES & INTERACTIONS
+   ============================================================================ */
+
+/* Button Loading State */
+.btn-loading {
+    position: relative;
+    color: transparent;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Button Disabled State */
+button:disabled,
+button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Button Focus State */
+button:focus-visible {
+    outline: 2px solid #4a7c43;
+    outline-offset: 2px;
+}
+
+/* ============================================================================
+   FORM INTERACTIONS
+   ============================================================================ */
+
+/* Form Input Focus Enhancement */
+input:focus,
+select:focus,
+textarea:focus {
+    box-shadow: 0 0 0 3px rgba(74, 124, 67, 0.1);
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+    box-shadow: 0 0 0 3px rgba(74, 124, 67, 0.2);
+}
+
+/* Input Error State */
+input.error,
+select.error,
+textarea.error {
+    border-color: #ef4444 !important;
+    background-color: rgba(239, 68, 68, 0.05);
+}
+
+.dark input.error,
+.dark select.error,
+.dark textarea.error {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* Input Success State */
+input.success,
+select.success,
+textarea.success {
+    border-color: #10b981 !important;
+    background-color: rgba(16, 185, 129, 0.05);
+}
+
+.dark input.success,
+.dark select.success,
+.dark textarea.success {
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+/* Form Error Message */
+.form-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #ef4444;
+    margin-top: 0.25rem;
+    animation: slideInUp 0.3s ease-out;
+}
+
+.form-error::before {
+    content: '⚠';
+    flex-shrink: 0;
+}
+
+/* Form Success Message */
+.form-success {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #10b981;
+    margin-top: 0.25rem;
+    animation: slideInUp 0.3s ease-out;
+}
+
+.form-success::before {
+    content: '✓';
+    flex-shrink: 0;
+}
+
+/* ============================================================================
+   TRANSITIONS & ANIMATIONS
+   ============================================================================ */
+
+/* Smooth Container Transitions */
+.transition-container {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Fade In Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Fade In Up */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.3s ease-out forwards;
+}
+
+/* Fade In Down */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-down {
+    animation: fadeInDown 0.3s ease-out forwards;
+}
+
+/* Slide In Up */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in-up {
+    animation: slideInUp 0.2s ease-out forwards;
+}
+
+/* Slide In Down */
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in-down {
+    animation: slideInDown 0.2s ease-out forwards;
+}
+
+/* Slide In Left */
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slide-in-left {
+    animation: slideInLeft 0.3s ease-out forwards;
+}
+
+/* Slide In Right */
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slide-in-right {
+    animation: slideInRight 0.3s ease-out forwards;
+}
+
+/* ============================================================================
+   PAGE TRANSITIONS
+   ============================================================================ */
+
+/* Page Load Animation */
+@keyframes pageEnter {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.page-enter {
+    animation: pageEnter 0.5s ease-out;
+}
+
+/* Page Exit Animation */
+@keyframes pageExit {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+}
+
+.page-exit {
+    animation: pageExit 0.3s ease-in forwards;
+}
+
+/* ============================================================================
+   CARD & HOVER EFFECTS
+   ============================================================================ */
+
+/* Card Lift on Hover */
+.card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Card Glow Effect */
+.card-glow {
+    position: relative;
+    overflow: hidden;
+}
+
+.card-glow::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+        circle,
+        rgba(74, 124, 67, 0.3) 0%,
+        transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.card-glow:hover::before {
+    opacity: 1;
+}
+
+/* ============================================================================
+   RESPONSIVE IMPROVEMENTS
+   ============================================================================ */
+
+/* Mobile Menu Animation */
+@keyframes slideOutLeft {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-100%);
+    }
+}
+
+.mobile-menu-exit {
+    animation: slideOutLeft 0.3s ease-in forwards;
+}
+
+/* Touch-Friendly Buttons */
+@media (max-width: 768px) {
+    button,
+    a {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .btn-primary {
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+    }
+}
+
+/* ============================================================================
+   ACCESSIBILITY & FOCUS STATES
+   ============================================================================ */
+
+/* Focus Visible Ring */
+:focus-visible {
+    outline: 2px solid #4a7c43;
+    outline-offset: 2px;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================================================
+   PAYMENT PROCESSING STATES
+   ============================================================================ */
+
+/* Payment Processing */
+.payment-processing {
+    position: relative;
+    pointer-events: none;
+}
+
+.payment-processing::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+}
+
+.dark .payment-processing::after {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================================
+   TOAST & NOTIFICATION ANIMATIONS
+   ============================================================================ */
+
+/* Toast Animations */
+@keyframes toastEnter {
+    from {
+        opacity: 0;
+        transform: translateX(400px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes toastExit {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(400px);
+    }
+}
+
+.toast-enter {
+    animation: toastEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.toast-exit {
+    animation: toastExit 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ============================================================================
+   PROGRESS INDICATORS
+   ============================================================================ */
+
+/* Progress Bar Animation */
+@keyframes progressFill {
+    0% {
+        width: 0;
+    }
+}
+
+.progress-bar {
+    height: 4px;
+    background: linear-gradient(
+        90deg,
+        #4a7c43 0%,
+        #6b9e5f 100%
+    );
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar.indeterminate {
+    animation: progressFill 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============================================================================
+   MODAL & OVERLAY ANIMATIONS
+   ============================================================================ */
+
+/* Modal Enter */
+@keyframes modalEnter {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal-enter {
+    animation: modalEnter 0.3s ease-out forwards;
+}
+
+/* Backdrop Fade */
+@keyframes backdropFade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.backdrop-fade {
+    animation: backdropFade 0.2s ease-out forwards;
+}
+
+/* ============================================================================
+   SKELETON LOADERS FOR SPECIFIC COMPONENTS
+   ============================================================================ */
+
+.skeleton-product-card {
+    height: 400px;
+    margin-bottom: 1rem;
+}
+
+.skeleton-product-image {
+    height: 250px;
+    margin-bottom: 1rem;
+}
+
+.skeleton-text-line {
+    height: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.skeleton-text-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.skeleton-text-lines .skeleton-text-line:last-child {
+    width: 80%;
+    margin-bottom: 0;
+}
+
+/* ============================================================================
+   STAGGER ANIMATIONS FOR LISTS
+   ============================================================================ */
+
+.stagger-item {
+    animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.stagger-item:nth-child(1) {
+    animation-delay: 0s;
+}
+.stagger-item:nth-child(2) {
+    animation-delay: 0.05s;
+}
+.stagger-item:nth-child(3) {
+    animation-delay: 0.1s;
+}
+.stagger-item:nth-child(4) {
+    animation-delay: 0.15s;
+}
+.stagger-item:nth-child(5) {
+    animation-delay: 0.2s;
+}
+.stagger-item:nth-child(n+6) {
+    animation-delay: 0.25s;
+}
+
+/* ============================================================================
+   DARK MODE ENHANCEMENTS
+   ============================================================================ */
+
+.dark .form-error {
+    color: #fca5a5;
+}
+
+.dark .form-success {
+    color: #6ee7b7;
+}
+
+.dark button:focus-visible {
+    outline-color: #6b9e5f;
+}

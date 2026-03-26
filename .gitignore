@@ -64,3 +64,9 @@ images/
 
 
 easybuy/media/
+
+
+easybuy/media/
+easybuy/db.sqlite3
+__pycache__/
+*.pyc

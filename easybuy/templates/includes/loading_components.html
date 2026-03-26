@@ -1,0 +1,58 @@
+<!-- Spinner/Loading Components -->
+
+<!-- Simple Spinner -->
+<div class="spinner"></div>
+
+<!-- Large Spinner -->
+<div class="spinner spinner-lg"></div>
+
+<!-- Small Spinner -->
+<div class="spinner spinner-sm"></div>
+
+<!-- Loading Container with Text -->
+<div id="loading-container" class="hidden loading-container">
+    <div class="spinner spinner-lg"></div>
+    <p class="loading-text">Processing your request...</p>
+</div>
+
+<!-- Skeleton Loader - Product Card -->
+<template id="skeleton-product-card">
+    <div class="skeleton skeleton-card"></div>
+</template>
+
+<!-- Skeleton Loader - Product Grid -->
+<template id="skeleton-grid">
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="skeleton skeleton-product-card"></div>
+        <div class="skeleton skeleton-product-card"></div>
+        <div class="skeleton skeleton-product-card"></div>
+        <div class="skeleton skeleton-product-card"></div>
+    </div>
+</template>
+
+<!-- Skeleton Loader - Text Content -->
+<template id="skeleton-text">
+    <div class="skeleton-text-lines">
+        <div class="skeleton skeleton-text-line"></div>
+        <div class="skeleton skeleton-text-line w-5/6"></div>
+        <div class="skeleton skeleton-text-line w-4/6"></div>
+    </div>
+</template>
+
+<!-- Progress Bar -->
+<template id="progress-bar">
+    <div class="progress-bar"></div>
+</template>
+
+<!-- Form Feedback Messages -->
+<template id="form-error">
+    <div class="form-error">
+        <span id="error-message"></span>
+    </div>
+</template>
+
+<template id="form-success">
+    <div class="form-success">
+        <span id="success-message"></span>
+    </div>
+</template>

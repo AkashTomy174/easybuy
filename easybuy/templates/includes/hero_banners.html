@@ -1,0 +1,63 @@
+<!-- Hero Banner Template - Reusable for different sections -->
+
+<!-- DEFAULT HERO (Electronics) -->
+<template id="hero-electronics">
+    <section class="relative h-[400px] md:h-[550px] w-full overflow-hidden bg-stone-900">
+        <div class="absolute inset-0">
+            <img alt="Hero" class="h-full w-full object-cover object-center opacity-60 dark:opacity-40" src="https://images.unsplash.com/photo-1491933382434-500287f9b54b?q=80&w=1600&auto=format&fit=crop"/>
+            <div class="absolute inset-0 bg-gradient-to-r from-stone-950/90 via-stone-950/40 to-transparent"></div>
+        </div>
+        <div class="relative mx-auto flex h-full max-w-7xl flex-col justify-center px-4 sm:px-8 md:px-12">
+            <span class="mb-3 md:mb-4 text-xs font-bold uppercase tracking-widest text-accent-terracotta animate-fade-in-up">Biggest Tech Sale of the Season</span>
+            <h1 class="max-w-2xl text-4xl md:text-6xl font-black text-white leading-[1.1] animate-fade-in-up">Premium Electronics At Unbeatable Prices</h1>
+            <p class="mt-4 md:mt-6 max-w-lg text-base md:text-lg text-stone-200 leading-relaxed animate-fade-in-up">Shop the latest smartphones, laptops, and gadgets with up to 50% off. Limited time offers!</p>
+            <div class="mt-8 md:mt-10 flex flex-wrap gap-3 md:gap-4 animate-fade-in-up">
+                <a href="/user/products/" class="inline-block">
+                    <button class="rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-6 md:px-10 py-3 md:py-4 font-bold text-white text-sm md:text-base transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/30 shadow-lg shadow-primary/20">Shop Electronics</button>
+                </a>
+                <a href="/user/categories/" class="inline-block">
+                    <button class="rounded-2xl border border-white/30 bg-white/10 px-6 md:px-10 py-3 md:py-4 font-bold text-white text-sm md:text-base backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:scale-105">Browse All</button>
+                </a>
+            </div>
+        </div>
+    </section>
+</template>
+
+<!-- SALE HERO -->
+<template id="hero-sale">
+    <section class="relative h-[350px] md:h-[450px] w-full overflow-hidden bg-gradient-to-r from-red-600 to-orange-600">
+        <div class="absolute inset-0 opacity-20">
+            <svg class="h-full w-full" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
+                <rect x="0" y="0" width="100" height="100" fill="white" opacity="0.1"/>
+                <circle cx="1000" cy="200" r="150" fill="white" opacity="0.1"/>
+            </svg>
+        </div>
+        <div class="relative mx-auto flex h-full max-w-7xl flex-col justify-center items-center text-center px-4 sm:px-8">
+            <span class="mb-3 text-xs font-bold uppercase tracking-widest text-white/80 animate-fade-in-up">Flash Sale</span>
+            <h1 class="max-w-3xl text-4xl md:text-6xl font-black text-white leading-[1.1] animate-fade-in-up">Up to 70% OFF</h1>
+            <p class="mt-4 max-w-lg text-base md:text-lg text-white/90 leading-relaxed animate-fade-in-up">Hurry! Offer ends in 24 hours</p>
+            <a href="/user/products/" class="mt-8 inline-block">
+                <button class="rounded-2xl bg-white text-red-600 px-10 py-4 font-bold text-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl">Shop Sale</button>
+            </a>
+        </div>
+    </section>
+</template>
+
+<!-- CATEGORY HIGHLIGHT HERO -->
+<template id="hero-category">
+    <section class="relative h-[300px] md:h-[400px] w-full overflow-hidden bg-stone-900">
+        <div class="absolute inset-0">
+            <img alt="Category" class="h-full w-full object-cover opacity-40"/>
+            <div class="absolute inset-0 bg-gradient-to-b from-stone-950/70 to-stone-950/90"></div>
+        </div>
+        <div class="relative mx-auto flex h-full max-w-7xl flex-col justify-between px-4 sm:px-12 py-8 md:py-12">
+            <div>
+                <h1 class="text-3xl md:text-5xl font-black text-white mb-3 animate-fade-in-up">Featured Category</h1>
+                <p class="text-base md:text-lg text-stone-200 max-w-2xl animate-fade-in-up">Explore our curated selection of premium products</p>
+            </div>
+            <a href="#" class="inline-block w-fit">
+                <button class="rounded-2xl bg-primary hover:bg-primary-dark px-8 md:px-12 py-3 md:py-4 font-bold text-white transition-colors">Explore Category</button>
+            </a>
+        </div>
+    </section>
+</template>
