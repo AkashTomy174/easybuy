@@ -139,6 +139,7 @@ WHATSAPP_NOTIFICATIONS_ENABLED = os.getenv(
     "WHATSAPP_NOTIFICATIONS_ENABLED", "true"
 ).lower() in ("true", "1", "yes")
 
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
