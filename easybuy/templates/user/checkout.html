@@ -2,25 +2,36 @@
 {% block title %}Checkout | EasyBuy{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-stone-50 dark:bg-stone-900 py-12">
+<div class="min-h-screen bg-stone-50 dark:bg-stone-900 py-8 md:py-12">
     {% if error %}
-        <div class="text-center py-20">
+        <div class="text-center py-20 px-4">
             <span class="material-symbols-outlined text-7xl text-stone-300">search_off</span>
-            <h1 class="text-2xl font-bold mt-4">{{ error }}</h1>
-            <a href="{% url 'all_products' %}" class="text-primary underline mt-4 inline-block font-bold">Back to Shopping</a>
+            <h1 class="text-2xl font-bold mt-4 text-stone-900 dark:text-white">{{ error }}</h1>
+            <a href="{% url 'all_products' %}" class="text-primary underline mt-4 inline-block font-bold hover:scale-105 transition-transform">Back to Shopping</a>
         </div>
     {% else %}
     <div class="mx-auto max-w-7xl px-4 lg:px-12">
-        <h1 class="text-3xl font-black mb-8 text-stone-900 dark:text-white">Checkout</h1>
+        <!-- Progress Indicator -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl md:text-3xl font-black text-stone-900 dark:text-white">Checkout</h2>
+                <span class="text-sm font-medium text-stone-500 dark:text-stone-400">Step 1 of 3</span>
+            </div>
+            <div class="h-2 bg-stone-200 dark:bg-stone-800 rounded-full overflow-hidden">
+                <div class="h-full w-1/3 bg-gradient-to-r from-primary to-primary-dark transition-all duration-300"></div>
+            </div>
+        </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
             
             <div class="lg:col-span-7 space-y-6">
-                <div class="bg-white dark:bg-stone-800 p-6 rounded-3xl shadow-sm border border-stone-200 dark:border-stone-700">
-                    <h2 class="text-xl font-bold mb-4 flex items-center">
-                        <span class="material-symbols-outlined mr-2">location_on</span> Delivery Address
+                <!-- Address Section -->
+                <div class="bg-white dark:bg-stone-800 p-6 rounded-3xl shadow-sm border border-stone-200 dark:border-stone-700 transition-all hover:shadow-md fade-in-up">
+                    <h2 class="text-lg md:text-xl font-bold mb-4 flex items-center text-stone-900 dark:text-white">
+                        <span class="material-symbols-outlined mr-3 text-primary">location_on</span> Delivery Address
                     </h2>
-                    <select id="address-select" class="w-full rounded-xl border-stone-300 dark:bg-stone-700 p-3 outline-none focus:ring-2 focus:ring-primary">
+                    <select id="address-select" 
+                            class="w-full rounded-xl border-2 border-stone-200 dark:bg-stone-700 dark:border-stone-600 p-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-stone-900 dark:text-white font-medium">
                         <option value="">-- Select Saved Address --</option>
                         {% for address in addresses %}
                             <option value="{{ address.id }}" {% if address.is_default %}selected{% endif %}>
@@ -28,66 +39,106 @@
                             </option>
                         {% endfor %}
                     </select>
+                    <p class="text-xs text-stone-500 dark:text-stone-400 mt-2">Required to proceed with checkout</p>
                 </div>
 
-                <div class="bg-white dark:bg-stone-800 p-6 rounded-3xl shadow-sm border border-stone-200 dark:border-stone-700">
-                    <h2 class="text-xl font-bold mb-4 flex items-center">
-                        <span class="material-symbols-outlined mr-2">payments</span> Payment Method
+                <!-- Payment Method Section -->
+                <div class="bg-white dark:bg-stone-800 p-6 rounded-3xl shadow-sm border border-stone-200 dark:border-stone-700 transition-all hover:shadow-md fade-in-up">
+                    <h2 class="text-lg md:text-xl font-bold mb-4 flex items-center text-stone-900 dark:text-white">
+                        <span class="material-symbols-outlined mr-3 text-primary">payments</span> Payment Method
                     </h2>
                     
                     <div class="space-y-3">
-                        <label class="flex items-center p-4 border rounded-2xl cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700 transition-all">
-                            <input type="radio" name="payment_method" value="ONLINE" checked class="w-5 h-5 text-primary">
+                        <label class="flex items-center p-4 border-2 border-stone-200 dark:border-stone-700 rounded-2xl cursor-pointer hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/5 transition-all payment-option">
+                            <input type="radio" name="payment_method" value="ONLINE" checked class="w-5 h-5 text-primary cursor-pointer">
                             <div class="ml-4">
-                                <span class="block font-bold">Secure Online Payment</span>
-                                <span class="text-sm text-stone-500">Razorpay (Cards, UPI, NetBanking)</span>
+                                <span class="block font-bold text-stone-900 dark:text-white">Secure Online Payment</span>
+                                <span class="text-sm text-stone-500 dark:text-stone-400">Razorpay (Cards, UPI, NetBanking)</span>
                             </div>
+                            <span class="material-symbols-outlined ml-auto text-primary opacity-0 group-hover:opacity-100 transition-opacity">check_circle</span>
                         </label>
 
-                        <label class="flex items-center p-4 border rounded-2xl cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700 transition-all">
-                            <input type="radio" name="payment_method" value="COD" class="w-5 h-5 text-primary">
+                        <label class="flex items-center p-4 border-2 border-stone-200 dark:border-stone-700 rounded-2xl cursor-pointer hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/5 transition-all payment-option">
+                            <input type="radio" name="payment_method" value="COD" class="w-5 h-5 text-primary cursor-pointer">
                             <div class="ml-4">
-                                <span class="block font-bold">Cash on Delivery</span>
-                                <span class="text-sm text-stone-500">Pay in cash upon delivery</span>
+                                <span class="block font-bold text-stone-900 dark:text-white">Cash on Delivery</span>
+                                <span class="text-sm text-stone-500 dark:text-stone-400">Pay ₹{{ grand_total|floatformat:2 }} in cash when you receive</span>
                             </div>
+                            <span class="material-symbols-outlined ml-auto text-primary opacity-0 group-hover:opacity-100 transition-opacity">check_circle</span>
                         </label>
                     </div>
                 </div>
             </div>
 
+            <!-- Order Summary Sidebar -->
             <div class="lg:col-span-5">
-                <div class="bg-white dark:bg-stone-800 p-6 rounded-3xl shadow-xl border border-stone-200 dark:border-stone-700 sticky top-8">
-                    <h2 class="text-xl font-bold mb-6">Order Summary</h2>
+                <div class="bg-white dark:bg-stone-800 p-6 rounded-3xl shadow-xl border border-stone-200 dark:border-stone-700 sticky top-8 fade-in-up">
+                    <h2 class="text-lg md:text-xl font-bold mb-6 text-stone-900 dark:text-white">Order Summary</h2>
                     
-                    <div class="space-y-3 mb-6">
+                    <!-- Order Items -->
+                    <div class="space-y-3 mb-6 max-h-64 overflow-y-auto pr-2">
                         {% if single_product %}
-                            <div class="flex justify-between text-stone-600 dark:text-stone-300">
-                                <span>{{ variant.product.name }} (x{{ quantity }})</span>
-                                <span>₹{{ subtotal|floatformat:2 }}</span>
+                            <div class="flex justify-between text-sm md:text-base text-stone-600 dark:text-stone-300 pb-2 border-b border-stone-100 dark:border-stone-700">
+                                <span class="font-medium">{{ variant.product.name }}</span>
+                                <span class="font-semibold">₹{{ subtotal|floatformat:2 }}</span>
                             </div>
+                            <div class="text-xs text-stone-500 dark:text-stone-400">Quantity: {{ quantity }}</div>
                         {% else %}
                             {% for item in cart.items.all %}
-                                <div class="flex justify-between text-stone-600 dark:text-stone-300">
-                                    <span>{{ item.variant.product.name }} (x{{ item.quantity }})</span>
-                                    <span>₹{{ item.total_price|floatformat:2 }}</span>
+                                <div class="flex justify-between text-sm md:text-base text-stone-600 dark:text-stone-300 pb-2 border-b border-stone-100 dark:border-stone-700">
+                                    <span class="font-medium">{{ item.variant.product.name }}</span>
+                                    <span class="font-semibold">₹{{ item.total_price|floatformat:2 }}</span>
                                 </div>
+                                <div class="text-xs text-stone-500 dark:text-stone-400 -mt-1">Qty: {{ item.quantity }}</div>
                             {% endfor %}
                         {% endif %}
                     </div>
 
-                    <div class="border-t border-stone-100 dark:border-stone-700 pt-4 space-y-2">
-                        <div class="flex justify-between text-sm"><span>Subtotal</span><span>₹{{ subtotal|floatformat:2 }}</span></div>
-                        <div class="flex justify-between text-sm"><span>Shipping</span><span>₹{{ shipping|floatformat:2 }}</span></div>
-                        <div class="flex justify-between text-sm"><span>GST (18%)</span><span>₹{{ tax_amount|floatformat:2 }}</span></div>
-                        <div class="flex justify-between text-xl font-black mt-4 pt-4 border-t border-stone-200">
-                            <span>Total</span><span>₹{{ grand_total|floatformat:2 }}</span>
+                    <!-- Pricing Breakdown -->
+                    <div class="border-t border-stone-200 dark:border-stone-700 pt-4 space-y-2 text-sm md:text-base">
+                        <div class="flex justify-between text-stone-600 dark:text-stone-300">
+                            <span>Subtotal</span>
+                            <span class="font-medium">₹{{ subtotal|floatformat:2 }}</span>
+                        </div>
+                        <div class="flex justify-between text-stone-600 dark:text-stone-300">
+                            <span>Shipping</span>
+                            <span class="font-medium">
+                                {% if shipping == 0 %}
+                                    <span class="text-green-600 font-bold">FREE</span>
+                                {% else %}
+                                    ₹{{ shipping|floatformat:2 }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="flex justify-between text-stone-600 dark:text-stone-300">
+                            <span>GST (18%)</span>
+                            <span class="font-medium">₹{{ tax_amount|floatformat:2 }}</span>
+                        </div>
+                        <div class="flex justify-between text-lg md:text-xl font-black mt-4 pt-4 border-t border-stone-300 dark:border-stone-700 text-stone-900 dark:text-white">
+                            <span>Total Amount</span>
+                            <span class="text-primary">₹{{ grand_total|floatformat:2 }}</span>
                         </div>
                     </div>
 
+                    <!-- Security Message -->
+                    <div class="mt-6 p-3 bg-green-50 dark:bg-green-900/20 rounded-2xl border border-green-200 dark:border-green-800 text-xs text-green-700 dark:text-green-300 flex items-start gap-2">
+                        <span class="material-symbols-outlined text-sm flex-shrink-0">verified_user</span>
+                        <span><strong>Secure checkout</strong> — Your payment information is encrypted</span>
+                    </div>
+
+                    <!-- Place Order Button -->
                     <button id="place-order-btn" onclick="handlePlaceOrder()"
-                            class="w-full mt-8 h-14 bg-stone-900 dark:bg-primary text-white rounded-2xl font-bold text-lg hover:opacity-90 transition-all active:scale-95">
-                        Place Order
+                            class="w-full mt-6 h-13 md:h-14 bg-gradient-to-r from-primary to-primary-dark text-white rounded-2xl font-bold text-base md:text-lg hover:shadow-lg hover:shadow-primary/30 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
+                        <span class="flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">payment</span>
+                            <span>Place Order</span>
+                        </span>
                     </button>
+
+                    <!-- Continue Shopping Link -->
+                    <a href="{% url 'all_products' %}" class="block text-center text-sm text-stone-500 dark:text-stone-400 hover:text-primary mt-3 transition-colors font-medium">
+                        ← Continue Shopping
+                    </a>
                 </div>
             </div>
         </div>
@@ -97,15 +148,30 @@
 
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
+    // Handle payment option selection
+    document.querySelectorAll('.payment-option input').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('.payment-option').forEach(opt => {
+                opt.classList.remove('border-primary', 'bg-primary/5', 'dark:bg-primary/5');
+                opt.classList.add('border-stone-200', 'dark:border-stone-700');
+            });
+            this.closest('.payment-option').classList.remove('border-stone-200', 'dark:border-stone-700');
+            this.closest('.payment-option').classList.add('border-primary', 'bg-primary/5', 'dark:bg-primary/5');
+        });
+    });
+
     async function handlePlaceOrder() {
         const addressId = document.getElementById('address-select').value;
         const method = document.querySelector('input[name="payment_method"]:checked').value;
         const btn = document.getElementById('place-order-btn');
 
-        if (!addressId) { alert("Please select a delivery address"); return; }
+        if (!addressId) {
+            ToastManager.error("Please select a delivery address");
+            return;
+        }
 
-        btn.disabled = true;
-        btn.innerText = "Processing...";
+        // Show loading state
+        window.loadingManager.showOnElement(btn);
 
         try {
             // Step 1: Create the Pending Order in Django
@@ -121,8 +187,26 @@
                 })
             });
 
+            // Check HTTP status FIRST
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMsg = errorData.error || `Server error (${response.status})`;
+                console.error('Payment API error:', errorData);
+                throw new Error(errorMsg);
+            }
+
             const data = await response.json();
-            if (data.error) throw new Error(data.error);
+            
+            // Check for error field in response
+            if (data.error) {
+                const detailMsg = data.details ? ` - ${data.details}` : '';
+                throw new Error(data.error + detailMsg);
+            }
+
+            // Validate required fields
+            if (!data.key || !data.order_id) {
+                throw new Error('Invalid payment gateway response. Missing order data.');
+            }
 
             if (method === "ONLINE") {
                 // Step 2a: Launch Razorpay
@@ -131,8 +215,19 @@
                     "amount": data.amount,
                     "currency": "INR",
                     "name": "EasyBuy",
+                    "description": "Order from EasyBuy",
                     "order_id": data.order_id,
                     "handler": function (rzp_res) {
+                        // Validate Razorpay response
+                        if (!rzp_res.razorpay_payment_id || !rzp_res.razorpay_signature) {
+                            ToastManager.error("Payment response incomplete. Please contact support.");
+                            window.loadingManager.hideOnElement(btn);
+                            return;
+                        }
+
+                        // Show loading state while verifying
+                        window.loadingManager.show("Verifying payment...");
+                        
                         const form = document.createElement('form');
                         form.method = 'POST';
                         form.action = "{% url 'verify_razorpay_payment' %}";
@@ -144,25 +239,61 @@
                         };
                         for (const key in fields) {
                             const input = document.createElement('input');
-                            input.type = 'hidden'; input.name = key; input.value = fields[key];
+                            input.type = 'hidden';
+                            input.name = key;
+                            input.value = fields[key];
                             form.appendChild(input);
                         }
                         document.body.appendChild(form);
                         form.submit();
                     },
-                    "prefill": data.prefill,
-                    "modal": { "ondismiss": function() { btn.disabled = false; btn.innerText = "Place Order"; } }
+                    "prefill": data.prefill || {},
+                    "modal": {
+                        "ondismiss": function() {
+                            window.loadingManager.hideOnElement(btn);
+                            ToastManager.warning("Payment cancelled. Please try again.");
+                            console.log("User closed Razorpay modal");
+                        },
+                        "confirm_close": true,
+                        "escape": true
+                    },
+                    "theme": {
+                        "color": "#4a7c43"
+                    },
+                    "timeout": 900  // 15 minutes timeout
                 };
+                
+                // Validate Razorpay script is loaded
+                if (typeof Razorpay === 'undefined') {
+                    throw new Error('Payment gateway failed to load. Please refresh and try again.');
+                }
+                
                 const rzp = new Razorpay(options);
                 rzp.open();
             } else {
-                // Step 2b: Redirect to COD Success
+                // Step 2b: Process COD
+                window.loadingManager.show("Processing your order...");
                 window.location.href = "{% url 'process_cod_order' %}";
             }
         } catch (err) {
-            alert(err.message);
-            btn.disabled = false;
-            btn.innerText = "Place Order";
+            console.error('Payment error details:', err);
+            
+            // Better error messages
+            let userMessage = "Payment failed";
+            if (err.message.includes("gateway")) {
+                userMessage = "Payment gateway error: " + err.message;
+            } else if (err.message.includes("address")) {
+                userMessage = "Invalid address: " + err.message;
+            } else if (err.message.includes("Cart")) {
+                userMessage = "Your cart is empty. Please add items before checkout.";
+            } else if (err.message.includes("stock")) {
+                userMessage = "Some items are out of stock. Please update your cart.";
+            } else {
+                userMessage = err.message || "An error occurred. Please try again.";
+            }
+            
+            ToastManager.error(userMessage);
+            window.loadingManager.hideOnElement(btn);
         }
     }
 </script>
