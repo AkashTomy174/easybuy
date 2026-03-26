@@ -61,3 +61,6 @@ images/
 # Backup files
 *.bak
 *.tmp
+
+
+easybuy/media/
