@@ -33,7 +33,6 @@ db.sqlite3
 db.sqlite3-journal
 /media
 /staticfiles
-/static
 
 # IDE
 .vscode/
@@ -43,34 +42,49 @@ db.sqlite3-journal
 *~
 .DS_Store
 
-# Testing
+# Testing and Development Scripts - UNTRACK ALL
 test_*.py
 *_test.py
+test_files
 create_test_order.py
 reset_order_to_pending.py
 check_order_owner.py
-.coverage
-htmlcov/
-.pytest_cache/
-.tox/
+test_celery*.py
+test_whatsapp*.py
+seed_db.py
+set_admin.py
+populate*.py
+fix_*.py
+flatten_images.py
+cleanup*.py
+*.bat  # Except essential ones if any
 
-# Non-static images (keep static/)
+# Images and Media - NON-STATIC (static/images/ stays tracked)
 easybuy/images/
+easybuy/media/
 images/
+**/images/
 
-# Backup files
+# Migrations (local only)
+**/migrations/0*_initial.py
+
+# TODO and Temp Files
+*.md !TODO.md !TODO_PROGRESS.md !TODO_RAZORPAY_FINAL_FIX.md !TODO_PRODUCT_REJECTION.md !TODO_REJECTION_REASON.md
+*_SUMMARY.md
+*_GUIDE.md
+*_INSTRUCTIONS.txt
+status_change_log.txt
+
+# Backups and Temp
 *.bak
 *.tmp
+.DS_Store
 
+# OS specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-easybuy/media/
-
-
-easybuy/media/
+# Django specific exclusions
 easybuy/db.sqlite3
-__pycache__/
-*.pyc
 
-__pycache__/
-*.pyc
-db.sqlite3
