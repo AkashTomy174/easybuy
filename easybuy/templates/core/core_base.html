@@ -516,6 +516,48 @@
         </aside>
     </main>
 
+    <!-- Global Wishlist Selection Modal -->
+    <div id="wishlistModal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true" onclick="if(event.target === this) closeWishlistModal()">
+        <div class="flex items-center justify-center min-h-screen px-4 text-center sm:p-0">
+            <div class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+            <div class="relative bg-white dark:bg-surface-dark rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full border border-stone-200 dark:border-stone-700">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-black text-stone-900 dark:text-white" id="modal-title">Save to Collection</h3>
+                        <button onclick="closeWishlistModal()" class="h-10 w-10 rounded-full flex items-center justify-center text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+                        {% for wishlist in user.wishlists.all %}
+                        <button onclick="addToSpecificWishlist('{{ wishlist.id }}')" class="w-full group flex items-center justify-between p-4 rounded-2xl border-2 border-transparent hover:border-primary hover:bg-primary/5 transition-all text-left">
+                            <div class="flex items-center gap-4">
+                                <div class="h-12 w-12 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-400 group-hover:text-primary transition-colors">
+                                    <span class="material-symbols-outlined">folder_heart</span>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-stone-900 dark:text-white">{{ wishlist.wishlist_name }}</p>
+                                    <p class="text-xs text-stone-500">{{ wishlist.items.count }} items</p>
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined text-stone-300 group-hover:text-primary transition-colors">add_circle</span>
+                        </button>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mt-6 pt-6 border-t border-stone-100 dark:border-stone-700">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3 ml-1">Create New Collection</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="newWishlistName" class="flex-1 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 px-4 py-3 text-sm font-bold focus:border-primary focus:ring-0 transition-colors dark:text-white" placeholder="e.g. Dream PC Setup">
+                            <button onclick="createNewWishlistAndAdd()" class="px-6 py-3 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-xl text-sm font-black uppercase tracking-wider hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all shadow-lg">Create</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Newsletter Section -->
     <section class="bg-gradient-to-r from-primary to-primary-dark py-16">
         <div class="max-w-4xl mx-auto px-4 text-center">

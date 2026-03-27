@@ -158,7 +158,7 @@
                 
                 <div class="mt-2">
                     <ul class="divide-y divide-stone-100 dark:divide-stone-700 max-h-60 overflow-y-auto custom-scrollbar">
-                        {% for wishlist in wishlists %}
+                        {% for wishlist in user.wishlists.all %}
                         <li class="py-3 px-2 flex justify-between items-center hover:bg-stone-50 dark:hover:bg-stone-800 cursor-pointer rounded-lg transition-colors" onclick="addToSpecificWishlist('{{ wishlist.id }}')">
                             <span class="font-medium text-stone-700 dark:text-stone-200">{{ wishlist.wishlist_name }}</span>
                             <span class="text-xs text-stone-400">{{ wishlist.items.count }} items</span>
@@ -218,13 +218,12 @@
     function addToSpecificWishlist(wishlistId) {
         if (!currentVariantId) return;
         
-        fetch(`/user/wishlist/toggle/${currentVariantId}/`, {
+        fetch(`/user/wishlist/toggle/${currentVariantId}/${wishlistId}/`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken'),
                 'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ wishlist_id: wishlistId })
+            }
         })
         .then(response => response.json())
         .then(data => {

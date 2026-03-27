@@ -30,4 +30,9 @@ urlpatterns = [
     path("filter/", filtering, name="filtering"),
     path("ads/", views.ad_space_list, name="ad_space_list"),
     path("ads/book/<int:space_id>/", views.book_ad, name="book_ad"),
+    path(
+        "stock-notify/<int:variant_id>/",
+        views.toggle_stock_notification,
+        name="toggle_stock_notify",
+    ),
 ]

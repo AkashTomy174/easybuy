@@ -12,19 +12,13 @@ logger = logging.getLogger(__name__)
 
 def schedule_cart_reminder(user):
     """
-    Create a cart reminder notification and schedule it to be sent 1 hour later.
+    Schedule a task to create and send a cart reminder notification 1 hour later.
     """
-    # 1. Create the notification
-    notification = create_notification(
-        user=user,
-        type="cart_reminder",
-        title="You left items in your cart!",
-        message="Complete your purchase before your items go out of stock.",
-    )
-
-    # 2. Schedule Celery task to send it after 1 hour
+    # FIX: Do not create the notification record here.
+    # Passing user info to a task that handles creation AFTER the delay
+    # prevents the notification from appearing in the UI dropdown immediately.
     send_notification_task.apply_async(
-        args=[notification.id], eta=timezone.now() + timedelta(hours=1)
+        args=[user.id, "cart_reminder"], countdown=3600  # 1 hour in seconds
     )
 
 

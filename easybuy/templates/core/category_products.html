@@ -237,9 +237,15 @@
                                 Add
                             </button>
                             {% else %}
-                            <button disabled class="h-12 w-12 rounded-full bg-stone-300 text-stone-500 flex items-center justify-center cursor-not-allowed">
-                                <span class="material-symbols-outlined">remove_shopping_cart</span>
+                            {% if user.is_authenticated %}
+                            <button data-stock-notify-btn data-variant-id="{{ variant.id }}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; toggleStockNotify(btn.dataset.variantId, btn); return false;" class="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/50 transition-all hover:scale-105">
+                                <span class="material-symbols-outlined text-lg">notifications_active</span>
                             </button>
+                            {% else %}
+                            <button disabled class="h-12 w-12 rounded-full bg-stone-300 text-stone-500 flex items-center justify-center cursor-not-allowed" title="Login to get notified">
+                                <span class="material-symbols-outlined">notifications_off</span>
+                            </button>
+                            {% endif %}
                             {% endif %}
                         </div>
                     </div>

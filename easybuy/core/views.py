@@ -15,6 +15,11 @@ from django.utils import timezone
 from .models import Notification, NotificationDelivery, NotificationConfig
 from .forms import AdBookingForm
 from django.db.models import Q
+from django.http import JsonResponse
+from .models import StockNotification
+from easybuy.seller.models import ProductVariant
+from .services import create_notification
+
 
 def generate_otp():
     return "".join(random.choices(string.digits, k=6))
@@ -235,13 +240,18 @@ def ad_space_list(request):
 
     # Fetch active ads for sidebars
     today = timezone.now().date()
-    
+
     # Show ACTIVE ads to everyone, plus YOUR own ads (Pending/Active) for preview
     filter_query = Q(status="ACTIVE", start_date__lte=today, end_date__gte=today)
     if request.user.is_authenticated:
         filter_query |= Q(user=request.user, end_date__gte=today)
 
-    active_ads = AdBooking.objects.filter(filter_query).select_related("ad_space").distinct().order_by('-created_at')
+    active_ads = (
+        AdBooking.objects.filter(filter_query)
+        .select_related("ad_space")
+        .distinct()
+        .order_by("-created_at")
+    )
 
     left_ad = active_ads.filter(ad_space__name__icontains="left").first()
     if not left_ad:
@@ -282,3 +292,29 @@ def book_ad(request, space_id):
         form = AdBookingForm()
 
     return render(request, "core/book_ad.html", {"form": form, "space": space})
+
+
+@login_required
+def toggle_stock_notification(request, variant_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "POST only"})
+
+    variant = get_object_or_404(ProductVariant, id=variant_id)
+    notification, created = StockNotification.objects.get_or_create(
+        user=request.user,
+        variant=variant,
+        defaults={
+            "email": request.user.email,
+            "phone": getattr(request.user, "phone_number", ""),
+        },
+    )
+
+    if not created:
+        notification.delete()
+        is_notified = False
+        msg = "Stock notification turned off"
+    else:
+        is_notified = True
+        msg = "You will be notified when back in stock!"
+
+    return JsonResponse({"success": True, "notified": is_notified, "message": msg})

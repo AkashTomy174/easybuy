@@ -131,26 +131,17 @@
         }
     }
 
-    async function handleAddToCart() {
+    function handleAddToCart() {
         if (!selectedVariantId) { alert("Please select a variant"); return; }
         if (selectedVariantStock <= 0) { alert("Out of stock"); return; }
 
-        const url = "{% url 'add_to_cart' 0 %}".replace('0', selectedVariantId);
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ quantity: 1 })
-        });
+        const btn = document.getElementById('add-to-cart-btn');
+        const img = document.getElementById('main-product-image');
+        const productImageUrl = img ? img.src : null;
 
-        if (response.ok) {
-            window.location.href = "{% url 'cart' %}";
-        } else {
-            alert("Error adding to cart. Please try again.");
-        }
+        // Use the global standard addToCart function defined in core_base.html.
+        // This handles the request, updates the UI, and plays animations without redirecting.
+        addToCart(selectedVariantId, btn, productImageUrl);
     }
 
     function handleBuyNow() {

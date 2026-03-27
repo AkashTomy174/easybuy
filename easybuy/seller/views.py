@@ -549,6 +549,7 @@ def add_stock(request):
                 id=item_id, product__seller=request.user.seller_profile
             )
 
+            old_stock = item.stock_quantity
             item.stock_quantity += stock_to_add
             item.save()
             InventoryLog.objects.create(
@@ -557,6 +558,12 @@ def add_stock(request):
                 reason=reason,
                 performed_by=request.user,
             )
+
+            # Check stock notifications if stock was 0 and now >0
+            if old_stock <= 0 and item.stock_quantity > 0:
+                from easybuy.core.services import check_stock_notifications
+
+                check_stock_notifications(item)
 
             return JsonResponse(
                 {
@@ -858,7 +865,7 @@ def seller_returns(request):
         return_requests = return_requests_qs.filter(status=status_filter)
     else:
         return_requests = return_requests_qs
- 
+
     paginator = Paginator(return_requests, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)

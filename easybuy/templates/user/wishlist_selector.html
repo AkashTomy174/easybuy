@@ -84,7 +84,7 @@ function addToSpecificWishlist(wishlistId, event) {
     event.preventDefault();
     event.stopPropagation();
 
-    const variantId = window.selectedVariantIdForWishlist || selectedVariantId;
+    const variantId = window.selectedVariantIdForWishlist || window.selectedVariantId || (typeof selectedVariantId !== 'undefined' ? selectedVariantId : null);
     console.log("Clicked wishlist:", wishlistId, "Variant:", variantId); // DEBUG
 
     if (!variantId) {
@@ -94,7 +94,7 @@ function addToSpecificWishlist(wishlistId, event) {
 
     const csrftoken = getCookie('csrftoken');
 
-    fetch(`/user/wishlist/toggle/${selectedVariantId}/${wishlistId}/`, {
+    fetch(`/user/wishlist/toggle/${variantId}/${wishlistId}/`, {
         method: 'POST',
         headers: {
             'X-CSRFToken': csrftoken
@@ -116,4 +116,3 @@ function addToSpecificWishlist(wishlistId, event) {
     });
 }
 </script>
-

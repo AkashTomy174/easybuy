@@ -43,6 +43,10 @@
                                 <div class="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
                                     <span class="material-symbols-outlined">local_shipping</span>
                                 </div>
+                            {% elif notification.type == 'stock_available' %}
+                                <div class="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                    <span class="material-symbols-outlined">inventory_2</span>
+                                </div>
                             {% else %}
                                 <div class="h-10 w-10 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-500 dark:text-stone-400">
                                     <span class="material-symbols-outlined">notifications</span>

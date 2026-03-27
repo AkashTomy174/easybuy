@@ -5,7 +5,6 @@ from decimal import Decimal
 
 
 def generate_unique_category_slug(klass, field, slug_field="slug"):
-
     origin_slug = slugify(field)
     unique_slug = origin_slug
     counter = 1
@@ -167,6 +166,21 @@ class AdSpace(models.Model):
         return self.name
 
 
+class StockNotification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="stock_notifications")
+    variant = models.ForeignKey("seller.ProductVariant", on_delete=models.CASCADE, related_name="notifications")
+    email = models.EmailField()
+    phone = models.CharField(max_length=15, blank=True)
+    notified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ["user", "variant"]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.variant}"
+
+
 class AdBooking(models.Model):
     STATUS_CHOICES = (
         ("PENDING", "Pending"),
@@ -191,7 +205,7 @@ class AdBooking(models.Model):
 
     def save(self, *args, **kwargs):
         if self.start_date and self.end_date and self.ad_space:
-            if self.total_cost == 0:  # Calculate if not set
+            if self.total_cost == 0:
                 days = (self.end_date - self.start_date).days
                 if days > 0:
                     self.total_cost = self.ad_space.price_per_day * Decimal(days)
