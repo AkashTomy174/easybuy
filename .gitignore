@@ -43,6 +43,7 @@ db.sqlite3-journal
 .DS_Store
 
 # Testing and Development Scripts - UNTRACK ALL
+**/tests.py
 test_*.py
 *_test.py
 test_files
