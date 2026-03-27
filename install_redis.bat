@@ -1,1 +1,0 @@
-@echo off&#10;echo Installing Redis for Windows...&#10;winget install Redis.Redis-x64-5.0.14.1&#10;REM Or download from https://github.com/microsoftarchive/redis/releases&#10;REM Extract redis-server.exe to C:\Redis&#10;pause
