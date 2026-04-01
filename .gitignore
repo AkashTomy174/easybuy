@@ -48,6 +48,9 @@ test_*.py
 *_test.py
 test_files
 create_test_order.py
+
+# Markdown files
+*.md
 reset_order_to_pending.py
 check_order_owner.py
 test_celery*.py
@@ -70,7 +73,7 @@ images/
 **/migrations/0*_initial.py
 
 # TODO and Temp Files
-*.md !TODO.md !TODO_PROGRESS.md !TODO_RAZORPAY_FINAL_FIX.md !TODO_PRODUCT_REJECTION.md !TODO_REJECTION_REASON.md
+*.md
 *_SUMMARY.md
 *_GUIDE.md
 *_INSTRUCTIONS.txt
