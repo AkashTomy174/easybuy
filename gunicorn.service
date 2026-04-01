@@ -1,0 +1,14 @@
+[Unit]
+Description=gunicorn daemon
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/var/www/easybuy
+Environment="PATH=/var/www/easybuy/venv/bin"
+ExecStart=/var/www/easybuy/venv/bin/gunicorn --workers 3 --bind unix:/var/www/easybuy/easybuy.sock easybuy.easybuy.wsgi:application
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

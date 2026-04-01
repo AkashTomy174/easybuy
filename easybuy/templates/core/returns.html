@@ -1,0 +1,206 @@
+{% extends "core/core_base.html" %}
+{% load static %}
+
+{% block title %}Returns & Refunds - EasyBuy{% endblock %}
+
+{% block meta_description %}Learn about EasyBuy's return policy, refund process, and how to initiate returns for your purchases.{% endblock %}
+
+{% block content %}
+<div class="min-h-screen py-12 px-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-black text-stone-800 dark:text-white mb-4">
+                Returns & <span class="text-primary">Refunds</span>
+            </h1>
+            <p class="text-lg text-stone-600 dark:text-stone-300 max-w-2xl mx-auto">
+                We want you to be completely satisfied with your purchase. Learn about our hassle-free return policy and how to process returns.
+            </p>
+        </div>
+
+        <!-- Return Policy Overview -->
+        <div class="bg-white dark:bg-surface-dark rounded-3xl p-8 shadow-card border border-stone-200 dark:border-stone-700 mb-8">
+            <div class="grid md:grid-cols-3 gap-6 mb-8">
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <span class="material-symbols-outlined text-primary text-3xl">schedule</span>
+                    </div>
+                    <h3 class="font-bold text-stone-800 dark:text-white mb-2">30-Day Returns</h3>
+                    <p class="text-sm text-stone-600 dark:text-stone-300">Return most items within 30 days of delivery</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-accent-emerald/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <span class="material-symbols-outlined text-accent-emerald text-3xl">local_shipping</span>
+                    </div>
+                    <h3 class="font-bold text-stone-800 dark:text-white mb-2">Free Returns</h3>
+                    <p class="text-sm text-stone-600 dark:text-stone-300">Free return shipping on most orders</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-accent-gold/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <span class="material-symbols-outlined text-accent-gold text-3xl">payments</span>
+                    </div>
+                    <h3 class="font-bold text-stone-800 dark:text-white mb-2">Quick Refunds</h3>
+                    <p class="text-sm text-stone-600 dark:text-stone-300">Refunds processed within 5-7 business days</p>
+                </div>
+            </div>
+
+            <div class="border-t border-stone-100 dark:border-stone-700 pt-6">
+                <h2 class="text-2xl font-bold text-stone-800 dark:text-white mb-4">Return Policy Details</h2>
+                <div class="prose prose-stone dark:prose-invert max-w-none">
+                    <ul class="space-y-2 text-stone-600 dark:text-stone-300">
+                        <li><strong>Eligibility:</strong> Items must be unused, in original packaging, and with all accessories included.</li>
+                        <li><strong>Time Frame:</strong> Returns must be initiated within 30 days of delivery.</li>
+                        <li><strong>Condition:</strong> Items should be in the same condition as received, with tags attached where applicable.</li>
+                        <li><strong>Exclusions:</strong> Certain items like personalized products, digital downloads, and perishable goods are not eligible for return.</li>
+                        <li><strong>Process:</strong> Contact our support team or use the return request form in your order details.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- How to Return -->
+        <div class="grid lg:grid-cols-2 gap-8 mb-8">
+            <!-- Return Process -->
+            <div class="bg-white dark:bg-surface-dark rounded-3xl p-8 shadow-card border border-stone-200 dark:border-stone-700">
+                <h2 class="text-2xl font-bold text-stone-800 dark:text-white mb-6">How to Return an Item</h2>
+
+                <div class="space-y-6">
+                    <div class="flex items-start gap-4">
+                        <div class="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm">1</div>
+                        <div>
+                            <h3 class="font-bold text-stone-800 dark:text-white mb-1">Log into your account</h3>
+                            <p class="text-sm text-stone-600 dark:text-stone-300">Access your order history from your account dashboard.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-4">
+                        <div class="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                        <div>
+                            <h3 class="font-bold text-stone-800 dark:text-white mb-1">Select the order</h3>
+                            <p class="text-sm text-stone-600 dark:text-stone-300">Find the order containing the item you want to return.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-4">
+                        <div class="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm">3</div>
+                        <div>
+                            <h3 class="font-bold text-stone-800 dark:text-white mb-1">Choose items to return</h3>
+                            <p class="text-sm text-stone-600 dark:text-stone-300">Select the specific items and provide a reason for return.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-4">
+                        <div class="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm">4</div>
+                        <div>
+                            <h3 class="font-bold text-stone-800 dark:text-white mb-1">Package and ship</h3>
+                            <p class="text-sm text-stone-600 dark:text-stone-300">Pack the item securely and use the provided return label.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Refund Process -->
+            <div class="bg-white dark:bg-surface-dark rounded-3xl p-8 shadow-card border border-stone-200 dark:border-stone-700">
+                <h2 class="text-2xl font-bold text-stone-800 dark:text-white mb-6">Refund Timeline</h2>
+
+                <div class="space-y-4">
+                    <div class="flex items-center gap-4 p-4 bg-stone-50 dark:bg-stone-800/50 rounded-xl">
+                        <div class="w-3 h-3 bg-accent-emerald rounded-full"></div>
+                        <div class="flex-1">
+                            <p class="font-medium text-stone-800 dark:text-white">Return Request Submitted</p>
+                            <p class="text-sm text-stone-600 dark:text-stone-300">Immediate confirmation</p>
+                        </div>
+                        <span class="text-sm font-bold text-accent-emerald">Day 0</span>
+                    </div>
+
+                    <div class="flex items-center gap-4 p-4 bg-stone-50 dark:bg-stone-800/50 rounded-xl">
+                        <div class="w-3 h-3 bg-primary rounded-full"></div>
+                        <div class="flex-1">
+                            <p class="font-medium text-stone-800 dark:text-white">Return Approved</p>
+                            <p class="text-sm text-stone-600 dark:text-stone-300">Return label sent</p>
+                        </div>
+                        <span class="text-sm font-bold text-primary">1-2 Days</span>
+                    </div>
+
+                    <div class="flex items-center gap-4 p-4 bg-stone-50 dark:bg-stone-800/50 rounded-xl">
+                        <div class="w-3 h-3 bg-accent-gold rounded-full"></div>
+                        <div class="flex-1">
+                            <p class="font-medium text-stone-800 dark:text-white">Item Received</p>
+                            <p class="text-sm text-stone-600 dark:text-stone-300">Quality inspection</p>
+                        </div>
+                        <span class="text-sm font-bold text-accent-gold">3-5 Days</span>
+                    </div>
+
+                    <div class="flex items-center gap-4 p-4 bg-stone-50 dark:bg-stone-800/50 rounded-xl">
+                        <div class="w-3 h-3 bg-accent-terracotta rounded-full"></div>
+                        <div class="flex-1">
+                            <p class="font-medium text-stone-800 dark:text-white">Refund Processed</p>
+                            <p class="text-sm text-stone-600 dark:text-stone-300">Money back to original payment method</p>
+                        </div>
+                        <span class="text-sm font-bold text-accent-terracotta">5-7 Days</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="bg-white dark:bg-surface-dark rounded-3xl p-8 shadow-card border border-stone-200 dark:border-stone-700">
+            <h2 class="text-2xl font-bold text-stone-800 dark:text-white mb-6">Frequently Asked Questions</h2>
+
+            <div class="space-y-4">
+                <details class="group border border-stone-200 dark:border-stone-700 rounded-xl">
+                    <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-stone-800 dark:text-white hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors rounded-xl">
+                        Can I return items bought on sale or with a discount?
+                        <span class="material-symbols-outlined text-stone-400 group-open:rotate-180 transition-transform">expand_more</span>
+                    </summary>
+                    <div class="px-6 pb-6">
+                        <p class="text-stone-600 dark:text-stone-300">Yes, sale items can be returned within our standard 30-day return window, provided they meet all other return conditions.</p>
+                    </div>
+                </details>
+
+                <details class="group border border-stone-200 dark:border-stone-700 rounded-xl">
+                    <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-stone-800 dark:text-white hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors rounded-xl">
+                        What if I received a damaged or defective item?
+                        <span class="material-symbols-outlined text-stone-400 group-open:rotate-180 transition-transform">expand_more</span>
+                    </summary>
+                    <div class="px-6 pb-6">
+                        <p class="text-stone-600 dark:text-stone-300">For damaged or defective items, please contact us immediately. We may arrange for a replacement or full refund without requiring you to return the item first.</p>
+                    </div>
+                </details>
+
+                <details class="group border border-stone-200 dark:border-stone-700 rounded-xl">
+                    <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-stone-800 dark:text-white hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors rounded-xl">
+                        How long does shipping take for returns?
+                        <span class="material-symbols-outlined text-stone-400 group-open:rotate-180 transition-transform">expand_more</span>
+                    </summary>
+                    <div class="px-6 pb-6">
+                        <p class="text-stone-600 dark:text-stone-300">Return shipping typically takes 3-5 business days. You'll receive a tracking number once your return is approved and the shipping label is generated.</p>
+                    </div>
+                </details>
+
+                <details class="group border border-stone-200 dark:border-stone-700 rounded-xl">
+                    <summary class="flex items-center justify-between cursor-pointer p-6 font-medium text-stone-800 dark:text-white hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors rounded-xl">
+                        Can I exchange an item instead of getting a refund?
+                        <span class="material-symbols-outlined text-stone-400 group-open:rotate-180 transition-transform">expand_more</span>
+                    </summary>
+                    <div class="px-6 pb-6">
+                        <p class="text-stone-600 dark:text-stone-300">Yes, exchanges are available for the same item in a different size/color or a different item of equal or lesser value. Contact our support team to arrange an exchange.</p>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- Contact CTA -->
+        <div class="text-center mt-8">
+            <div class="bg-gradient-to-r from-primary to-primary-dark rounded-3xl p-8 text-white">
+                <h2 class="text-2xl font-bold mb-4">Need Help with a Return?</h2>
+                <p class="mb-6 opacity-90">Our customer support team is here to assist you with any questions about returns or refunds.</p>
+                <a href="{% url 'contact' %}" class="inline-flex items-center gap-2 bg-white text-primary px-6 py-3 rounded-xl font-bold hover:bg-stone-100 transition-colors">
+                    <span class="material-symbols-outlined">contact_support</span>
+                    Contact Support
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

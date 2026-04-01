@@ -68,6 +68,15 @@
                 {% endif %}
 
                 <div class="flex flex-col sm:flex-row gap-4">
+                    {% if request.user.is_authenticated %}
+                    <button id="notify-btn" onclick="toggleStockNotify('{{ selected_variant.id }}', this)" class="flex-1 h-16 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all">
+                        <span class="material-symbols-outlined">notifications_active</span> Notify Me
+                    </button>
+                    {% else %}
+                    <button id="notify-btn" disabled class="flex-1 h-16 bg-stone-300 text-stone-500 rounded-2xl font-bold flex items-center justify-center gap-2 cursor-not-allowed" title="Login to get notified">
+                        <span class="material-symbols-outlined">notifications_off</span> Notify Me
+                    </button>
+                    {% endif %}
                     <button id="add-to-cart-btn" class="flex-1 h-16 bg-stone-900 dark:bg-white dark:text-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90">
                         <span class="material-symbols-outlined">shopping_cart</span> Add to Cart
                     </button>
@@ -129,6 +138,27 @@
             mainImage.classList.add('animate-pulse');
             mainImage.onload = () => mainImage.classList.remove('animate-pulse');
         }
+
+        // 5. Update Buttons based on stock
+        updateButtonsForStock(selectedVariantStock);
+    }
+
+    function updateButtonsForStock(stock) {
+        const addToCartBtn = document.getElementById('add-to-cart-btn');
+        const buyNowBtn = document.getElementById('buynow-btn');
+        const notifyBtn = document.getElementById('notify-btn');
+
+        if (stock <= 0) {
+            // Out of stock - show notify button
+            if (addToCartBtn) addToCartBtn.style.display = 'none';
+            if (buyNowBtn) buyNowBtn.style.display = 'none';
+            if (notifyBtn) notifyBtn.style.display = 'block';
+        } else {
+            // In stock - show add to cart and buy now
+            if (addToCartBtn) addToCartBtn.style.display = 'block';
+            if (buyNowBtn) buyNowBtn.style.display = 'block';
+            if (notifyBtn) notifyBtn.style.display = 'none';
+        }
     }
 
     function handleAddToCart() {
@@ -165,6 +195,9 @@
 
         document.getElementById('add-to-cart-btn').addEventListener('click', handleAddToCart);
         document.getElementById('buynow-btn').addEventListener('click', handleBuyNow);
+
+        // Initial button state
+        updateButtonsForStock({{ selected_variant.stock_quantity|default:0 }});
     });
 </script>
 {% endblock %}

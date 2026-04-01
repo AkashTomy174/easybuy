@@ -318,3 +318,15 @@ def toggle_stock_notification(request, variant_id):
         msg = "You will be notified when back in stock!"
 
     return JsonResponse({"success": True, "notified": is_notified, "message": msg})
+
+
+def contact_view(request):
+    return render(request, "core/contact.html")
+
+
+def returns_view(request):
+    return render(request, "core/returns.html")
+
+
+def track_order_view(request):
+    return render(request, "core/track_order.html")

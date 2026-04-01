@@ -254,6 +254,7 @@
                         <a class="px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'all_categories' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'all_categories' %}">Categories</a>
                         <a class="px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'new_arrivals_user' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'new_arrivals_user' %}">New</a>
                         <a class="px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'best_sellers' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'best_sellers' %}">Trending</a>
+                        <a class="px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'contact' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'contact' %}">Contact</a>
                     </nav>
                     
                     <!-- Notification Bell -->
@@ -426,6 +427,7 @@
                 <a class="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'all_categories' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'all_categories' %}">Categories</a>
                 <a class="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'new_arrivals_user' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'new_arrivals_user' %}">New Arrivals</a>
                 <a class="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'best_sellers' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'best_sellers' %}">Best Sellers</a>
+                <a class="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors {% if request.resolver_match.url_name == 'contact' %}text-primary bg-primary/10{% else %}text-stone-600 dark:text-stone-300{% endif %}" href="{% url 'contact' %}">Contact Us</a>
                 <a class="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300" href="#">Deals & Offers</a>
                 {% if not request.user.is_authenticated %}
                 <div class="border-t border-stone-200 dark:border-stone-700 pt-3 mt-3">
@@ -617,10 +619,10 @@
                     <h3 class="text-sm font-bold text-stone-900 dark:text-white uppercase tracking-wider mb-4">Support</h3>
                     <ul class="space-y-3">
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Help Center</a></li>
-                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Returns</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'returns' %}">Returns</a></li>
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Shipping Info</a></li>
-                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Track Order</a></li>
-                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Contact Us</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'track_order' %}">Track Order</a></li>
+                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'contact' %}">Contact Us</a></li>
                     </ul>
                 </div>
                 
@@ -1126,6 +1128,62 @@ function displayAutocompleteResults(data) {
     
     dropdown.innerHTML = html;
     dropdown.classList.remove('hidden');
+}
+
+// Stock Notification Toggle Function
+function toggleStockNotify(variantId, buttonElement = null) {
+    if (!variantId) return;
+
+    const btn = buttonElement || document.querySelector('[data-stock-notify-btn]');
+    const originalContent = btn ? btn.innerHTML : '';
+    const wasDisabled = btn ? btn.disabled : false;
+
+    // Add loading state
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span><span>Processing...</span>';
+    }
+
+    fetch(`/stock-notify/${variantId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            // Update button text based on notification status
+            if (btn) {
+                if (data.notified) {
+                    btn.innerHTML = '<span class="material-symbols-outlined">notifications_active</span> Notified';
+                    btn.classList.add('bg-green-500', 'hover:bg-green-600');
+                    btn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                } else {
+                    btn.innerHTML = '<span class="material-symbols-outlined">notifications</span> Notify Me';
+                    btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                    btn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                }
+            }
+        } else {
+            showToast(data.error || 'Error updating notification', 'error');
+        }
+    })
+    .catch(err => {
+        console.error('Stock notify error:', err);
+        showToast('Please login to get notified', 'error');
+    })
+    .finally(() => {
+        // Restore button state
+        if (btn) {
+            btn.disabled = wasDisabled;
+            if (!data || !data.success) {
+                btn.innerHTML = originalContent;
+            }
+        }
+    });
 }
 </script>
 

@@ -578,6 +578,7 @@ def product_detail(request, slug=None, id=None):
 
     context = {
         "product": product,
+        "selected_variant": product.variants.first(),
         "related_products": related_products,
         "reviews": reviews,
         "avg_rating": round(float(avg_rating), 1),

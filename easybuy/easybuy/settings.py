@@ -10,9 +10,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-fallback-key")
 
 
-DEBUG = os.getenv("DEBUG", "False") == "True"
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+
+# Add whitenoise for static files in production
+if not DEBUG:
+    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 AUTH_USER_MODEL = "core.User"
 
@@ -73,6 +77,13 @@ DATABASES = {
         "NAME": BASE_DIR / "easybuy" / "db.sqlite3",
     }
 }
+
+# Use DATABASE_URL if provided (for Heroku Postgres)
+import dj_database_url
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    DATABASES["default"] = dj_database_url.config(default=DATABASE_URL)
 
 SITE_ID = 1
 
@@ -168,8 +179,8 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
 
 
-CELERY_BROKER_URL = "memory://localhost/"  # explicitly add localhost
-CELERY_RESULT_BACKEND = "cache+memory://"
+CELERY_BROKER_URL = os.getenv("REDIS_URL", "memory://localhost/")
+CELERY_RESULT_BACKEND = os.getenv("REDIS_URL", "cache+memory://")
 
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"

@@ -6,3 +6,10 @@ sqlparse==0.5.5
 tzdata==2025.3
 twilio==9.10.3
 python-dotenv==1.2.2
+django-allauth==0.63.3
+celery==5.3.4
+redis==5.0.1
+gunicorn==21.2.0
+whitenoise==6.6.0
+psycopg2-binary==2.9.9
+dj-database-url==2.1.0

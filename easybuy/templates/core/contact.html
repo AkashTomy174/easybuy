@@ -1,0 +1,150 @@
+{% extends "core/core_base.html" %}
+{% load static %}
+
+{% block title %}Contact Us - EasyBuy{% endblock %}
+
+{% block meta_description %}Get in touch with EasyBuy. We're here to help with your questions, feedback, and support needs.{% endblock %}
+
+{% block content %}
+<div class="min-h-screen py-12 px-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-black text-stone-800 dark:text-white mb-4">
+                Contact <span class="text-primary">Us</span>
+            </h1>
+            <p class="text-lg text-stone-600 dark:text-stone-300 max-w-2xl mx-auto">
+                Have questions, feedback, or need support? We'd love to hear from you. 
+                Our team is here to help make your shopping experience amazing.
+            </p>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-12">
+            <!-- Contact Form -->
+            <div class="bg-white dark:bg-surface-dark rounded-3xl p-8 shadow-card border border-stone-200 dark:border-stone-700">
+                <h2 class="text-2xl font-bold text-stone-800 dark:text-white mb-6">Send us a message</h2>
+                
+                <form class="space-y-6">
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="first_name" class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">First Name</label>
+                            <input type="text" id="first_name" name="first_name" class="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white placeholder-stone-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" placeholder="John">
+                        </div>
+                        <div>
+                            <label for="last_name" class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Last Name</label>
+                            <input type="text" id="last_name" name="last_name" class="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white placeholder-stone-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Doe">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Email Address</label>
+                        <input type="email" id="email" name="email" class="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white placeholder-stone-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" placeholder="john@example.com">
+                    </div>
+                    
+                    <div>
+                        <label for="subject" class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Subject</label>
+                        <select id="subject" name="subject" class="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                            <option value="">Select a subject</option>
+                            <option value="general">General Inquiry</option>
+                            <option value="support">Technical Support</option>
+                            <option value="orders">Order Issues</option>
+                            <option value="returns">Returns & Refunds</option>
+                            <option value="feedback">Feedback</option>
+                            <option value="partnership">Partnership</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="message" class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Message</label>
+                        <textarea id="message" name="message" rows="6" class="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white placeholder-stone-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none" placeholder="Tell us how we can help you..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 px-6 rounded-xl transition-colors shadow-button hover:shadow-gold">
+                        Send Message
+                    </button>
+                </form>
+            </div>
+
+            <!-- Contact Info -->
+            <div class="space-y-8">
+                <!-- Contact Methods -->
+                <div class="bg-white dark:bg-surface-dark rounded-3xl p-8 shadow-card border border-stone-200 dark:border-stone-700">
+                    <h2 class="text-2xl font-bold text-stone-800 dark:text-white mb-6">Get in touch</h2>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                                <span class="material-symbols-outlined text-primary text-xl">email</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-stone-800 dark:text-white mb-1">Email Us</h3>
+                                <p class="text-stone-600 dark:text-stone-300 mb-2">Send us an email and we'll respond within 24 hours.</p>
+                                <a href="mailto:support@easybuy.com" class="text-primary hover:underline font-medium">support@easybuy.com</a>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-accent-blue/10 rounded-xl flex items-center justify-center">
+                                <span class="material-symbols-outlined text-accent-blue text-xl">phone</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-stone-800 dark:text-white mb-1">Call Us</h3>
+                                <p class="text-stone-600 dark:text-stone-300 mb-2">Speak directly with our support team.</p>
+                                <a href="tel:+91-9876543210" class="text-accent-blue hover:underline font-medium">+91 98765 43210</a>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-accent-emerald/10 rounded-xl flex items-center justify-center">
+                                <span class="material-symbols-outlined text-accent-emerald text-xl">chat</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-stone-800 dark:text-white mb-1">Live Chat</h3>
+                                <p class="text-stone-600 dark:text-stone-300 mb-2">Chat with us instantly during business hours.</p>
+                                <button class="text-accent-emerald hover:underline font-medium">Start Live Chat</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ -->
+                <div class="bg-white dark:bg-surface-dark rounded-3xl p-8 shadow-card border border-stone-200 dark:border-stone-700">
+                    <h2 class="text-2xl font-bold text-stone-800 dark:text-white mb-6">Frequently Asked Questions</h2>
+                    
+                    <div class="space-y-4">
+                        <details class="group">
+                            <summary class="flex items-center justify-between cursor-pointer py-3 font-medium text-stone-800 dark:text-white">
+                                How do I track my order?
+                                <span class="material-symbols-outlined text-stone-400 group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <p class="text-stone-600 dark:text-stone-300 mt-2 pb-3 border-b border-stone-100 dark:border-stone-700">
+                                You can track your order by logging into your account and visiting the "Orders" section, or by clicking the tracking link in your order confirmation email.
+                            </p>
+                        </details>
+                        
+                        <details class="group">
+                            <summary class="flex items-center justify-between cursor-pointer py-3 font-medium text-stone-800 dark:text-white">
+                                What is your return policy?
+                                <span class="material-symbols-outlined text-stone-400 group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <p class="text-stone-600 dark:text-stone-300 mt-2 pb-3 border-b border-stone-100 dark:border-stone-700">
+                                We offer a 30-day return policy for most items. Items must be in original condition with tags attached. Return shipping costs may apply.
+                            </p>
+                        </details>
+                        
+                        <details class="group">
+                            <summary class="flex items-center justify-between cursor-pointer py-3 font-medium text-stone-800 dark:text-white">
+                                How do I change my shipping address?
+                                <span class="material-symbols-outlined text-stone-400 group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <p class="text-stone-600 dark:text-stone-300 mt-2 pb-3">
+                                You can update your shipping address in your account settings under "Addresses". Changes can only be made before the order ships.
+                            </p>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

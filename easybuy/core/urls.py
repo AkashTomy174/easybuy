@@ -35,4 +35,7 @@ urlpatterns = [
         views.toggle_stock_notification,
         name="toggle_stock_notify",
     ),
+    path("contact/", views.contact_view, name="contact"),
+    path("returns/", views.returns_view, name="returns"),
+    path("track-order/", views.track_order_view, name="track_order"),
 ]
