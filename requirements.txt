@@ -7,6 +7,7 @@ tzdata==2025.3
 twilio==9.10.3
 python-dotenv==1.2.2
 django-allauth==0.63.3
+cryptography>=42.0.0
 celery==5.3.4
 redis==5.0.1
 gunicorn==21.2.0
