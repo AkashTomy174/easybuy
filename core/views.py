@@ -217,7 +217,7 @@ def verify_otp(request):
         if "pending_registration" in request.session:
             del request.session["pending_registration"]
 
-        login(request, user)
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         messages.success(request, "Account verified successfully!")
         return redirect("home")
 
