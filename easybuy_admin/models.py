@@ -1,7 +1,7 @@
 from django.db import models
-from easybuy.core.models import Category
-from easybuy.user.models import OrderItem
-from easybuy.seller.models import SellerProfile, Product
+from core.models import Category
+from user.models import OrderItem
+from seller.models import SellerProfile, Product
 # Create your models here.
 
 
@@ -89,3 +89,4 @@ class PlatformCommission(models.Model):
     settled_at = models.DateTimeField(null=True, blank=True)
     def __str__(self):
         return str(self.seller)
+

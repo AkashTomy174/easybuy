@@ -4,19 +4,28 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Points to C:\Users\hp\OneDrive\Desktop\BESTBUY\project
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def env_bool(name, default=False):
+    return os.getenv(name, str(default)).lower() in ("true", "1", "yes", "on")
+
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-fallback-key")
 
 
-DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+DEBUG = env_bool("DEBUG", False)
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
-
-# Add whitenoise for static files in production
-if not DEBUG:
-    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+    if host.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
 
 AUTH_USER_MODEL = "core.User"
 
@@ -28,10 +37,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "easybuy.core",
-    "easybuy.user",
-    "easybuy.easybuy_admin",
-    "easybuy.seller",
+    "core",
+    "user",
+    "easybuy_admin",
+    "seller",
     "django.contrib.sites",
     "allauth",
     "allauth.account",
@@ -50,39 +59,43 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
 ]
 
-ROOT_URLCONF = "easybuy.easybuy.urls"
+if not DEBUG:
+    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+
+ROOT_URLCONF = "easybuy.urls"
 
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        # Look in both project root templates and app-specific templates folder
-        "DIRS": [BASE_DIR / "easybuy" / "templates", BASE_DIR / "templates"],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "easybuy.user.context_processors.notifications",
+                "user.context_processors.notifications",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = "easybuy.easybuy.wsgi.application"
+WSGI_APPLICATION = "easybuy.wsgi.application"
 
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "easybuy" / "db.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
-# Use DATABASE_URL if provided (for Heroku Postgres)
-import dj_database_url
+try:
+    import dj_database_url
+except ModuleNotFoundError:
+    dj_database_url = None
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL:
+if DATABASE_URL and dj_database_url:
     DATABASES["default"] = dj_database_url.config(default=DATABASE_URL)
 
 SITE_ID = 1
@@ -110,22 +123,21 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Kolkata"
 
 USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = "static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "easybuy", "static")]
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 MEDIA_URL = "/media/"
-# Join them using os.path.join to handle Windows backslashes properly
-MEDIA_ROOT = os.path.join(BASE_DIR, "easybuy", "media")
+MEDIA_ROOT = BASE_DIR / "media"
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
@@ -141,6 +153,7 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or "noreply@easybuy.local"
 
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
@@ -186,3 +199,17 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Asia/Kolkata"
+
+SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", not DEBUG)
+CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", not DEBUG)
+SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", not DEBUG)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = env_bool("USE_X_FORWARDED_HOST", not DEBUG)
+SECURE_HSTS_SECONDS = int(
+    os.getenv("SECURE_HSTS_SECONDS", "31536000" if not DEBUG else "0")
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG
+)
+SECURE_HSTS_PRELOAD = env_bool("SECURE_HSTS_PRELOAD", False)
+

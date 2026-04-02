@@ -2,9 +2,9 @@ import requests, decimal
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
 from django.utils.text import slugify
-from easybuy.seller.models import SellerProfile, Product, ProductVariant, ProductImage
-from easybuy.core.models import SubCategory, User
-from easybuy.core.models import SubCategory, Category
+from seller.models import SellerProfile, Product, ProductVariant, ProductImage
+from core.models import SubCategory, User
+from core.models import SubCategory, Category
 
 class Command(BaseCommand):
     help = 'Search Amazon via Rainforest and save to DB'

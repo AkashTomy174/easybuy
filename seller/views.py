@@ -15,16 +15,16 @@ import logging
 import traceback
 import random
 import string
-from easybuy.core.decorators import role_required
+from core.decorators import role_required
 from .models import SellerProfile, Product, ProductVariant, ProductImage, InventoryLog
-from easybuy.core.models import SubCategory
-from easybuy.user.models import Order, OrderItem, Review, ReturnRequest
-from easybuy.core.whatsapp_utils import whatsapp_notifier
+from core.models import SubCategory
+from user.models import Order, OrderItem, Review, ReturnRequest
+from core.whatsapp_utils import whatsapp_notifier
 from django.db import transaction, IntegrityError
 from decimal import Decimal, InvalidOperation
 from django.core.mail import send_mail
 from django.urls import reverse
-from easybuy.core.notifications import send_status_change_notification
+from core.notifications import send_status_change_notification
 
 
 User = get_user_model()
@@ -561,7 +561,7 @@ def add_stock(request):
 
             # Check stock notifications if stock was 0 and now >0
             if old_stock <= 0 and item.stock_quantity > 0:
-                from easybuy.core.services import check_stock_notifications
+                from core.services import check_stock_notifications
 
                 check_stock_notifications(item)
 
@@ -948,3 +948,4 @@ def process_return(request, id):
         messages.error(request, "An error occurred processing the return.")
 
     return redirect("seller_returns")
+

@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from easybuy.seller.models import Product, ProductVariant, ProductImage
+from seller.models import Product, ProductVariant, ProductImage
 import os
 from django.conf import settings
 
@@ -71,3 +71,4 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(f"Successfully added {images_added} product images")
         )
+

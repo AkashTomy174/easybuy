@@ -1,11 +1,8 @@
-from datetime import timedelta
-from django.utils import timezone
 from django.conf import settings
 from django.core.mail import send_mail
 from django.urls import reverse
 import logging
 from .services import create_notification
-from .tasks import send_notification_task
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +11,17 @@ def schedule_cart_reminder(user):
     """
     Schedule a task to create and send a cart reminder notification 1 hour later.
     """
-    # FIX: Do not create the notification record here.
-    # Passing user info to a task that handles creation AFTER the delay
-    # prevents the notification from appearing in the UI dropdown immediately.
-    send_notification_task.apply_async(
-        args=[user.id, "cart_reminder"], countdown=3600  # 1 hour in seconds
+    from .tasks import create_notification_task
+
+    create_notification_task.apply_async(
+        kwargs={
+            "user_id": user.id,
+            "notification_type": "cart_reminder",
+            "title": "Items waiting in your cart",
+            "message": "Your saved items are still available. Complete your checkout before they sell out.",
+            "redirect_url": reverse("cart"),
+        },
+        countdown=3600,
     )
 
 

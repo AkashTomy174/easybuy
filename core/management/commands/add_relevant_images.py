@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from easybuy.seller.models import Product, ProductVariant, ProductImage
+from seller.models import Product, ProductVariant, ProductImage
 from django.core.files.base import ContentFile
 from PIL import Image, ImageDraw, ImageFont
 import io
@@ -191,3 +191,4 @@ def add_relevant_images():
     print("  - Category badges")
     print("  - Multiple views (Front, Side, Detail)")
     print("\n" + "="*60)
+

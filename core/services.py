@@ -1,11 +1,12 @@
-from .models import Notification
-from .tasks import send_notification_task
+from .models import Notification, StockNotification
 
 
 def create_notification(user, type, title, message, image_url=None, redirect_url=None):
     """
     Create a notification and trigger background delivery via Celery.
     """
+    from .tasks import send_notification_task
+
     notification = Notification.objects.create(
         user=user,
         type=type,
@@ -16,10 +17,6 @@ def create_notification(user, type, title, message, image_url=None, redirect_url
     )
     send_notification_task.delay(notification.id)
     return notification
-
-
-from easybuy.core.models import StockNotification
-
 
 def check_stock_notifications(variant):
     """
@@ -33,11 +30,8 @@ def check_stock_notifications(variant):
         notif.notified = True
         notif.save()
 
-        image_url = (
-            variant.product_images.first().image.url
-            if variant.product_images.first()
-            else None
-        )
+        primary_image = variant.images.filter(is_primary=True).first() or variant.images.first()
+        image_url = primary_image.image.url if primary_image and primary_image.image else None
         product_url = f"/product/{variant.product.slug}/"
 
         create_notification(
@@ -48,3 +42,4 @@ def check_stock_notifications(variant):
             image_url=image_url,
             redirect_url=product_url,
         )
+

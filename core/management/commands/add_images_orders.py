@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
-from easybuy.seller.models import Product, ProductVariant, ProductImage
-from easybuy.user.models import Order, OrderItem, Cart, CartItem
-from easybuy.core.models import User, Address
+from seller.models import Product, ProductVariant, ProductImage
+from user.models import Order, OrderItem, Cart, CartItem
+from core.models import User, Address
 from decimal import Decimal
 import random
 from datetime import datetime, timedelta
@@ -125,3 +125,4 @@ def add_images_and_orders():
     print(f"- Order Items: {OrderItem.objects.count()}")
     print(f"- Cart Items: {CartItem.objects.count()}")
     print("\n" + "="*50)
+

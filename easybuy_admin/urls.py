@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
-from easybuy.user.views import all_categories
-from easybuy.core.views import logout_view
+from user.views import all_categories
+from core.views import logout_view
 
 urlpatterns = [
     path("dashboard/", views.admin_dashboard, name="admin_dashboard"),
@@ -31,3 +31,4 @@ urlpatterns = [
     path('admin/category/toggle/<int:id>/', views.toggle_category_status, name='toggle_category_status'),
     path('admin/subcategory/toggle/<int:id>/', views.toggle_subcategory_status, name='toggle_subcategory_status'),
 ]
+

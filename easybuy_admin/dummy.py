@@ -14,14 +14,14 @@ from datetime import datetime, timedelta
 import random
 
 # Import models with correct path
-from easybuy.easybuy_admin.models import (
+from easybuy_admin.models import (
     AdminProfile, Offer, Discount, Coupon,
     OfferDiscountBridge, ProductOfferBridge, CategoryOfferBridge,
     ProductDiscountBridge, CategoryDiscountBridge, PlatformCommission
 )
-from easybuy.core.models import Category
-from easybuy.seller.models import Product, SellerProfile
-from easybuy.user.models import OrderItem
+from core.models import Category
+from seller.models import Product, SellerProfile
+from user.models import OrderItem
 
 User = get_user_model()
 

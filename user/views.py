@@ -5,8 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
 from django.core.mail import send_mail
-from easybuy.core.decorators import role_required
-from easybuy.seller.models import Product, ProductVariant, ProductImage
+from core.decorators import role_required
+from seller.models import Product, ProductVariant, ProductImage
 from .models import (
     Cart,
     CartItem,
@@ -22,8 +22,9 @@ from .models import (
     SavedCard,
     ReturnRequest,
     ReturnRequestImage,
+    PaymentTransaction,
 )
-from easybuy.core.models import SubCategory, Category, Address, Notification
+from core.models import SubCategory, Category, Address, Notification
 import json
 from django.http import Http404
 from django.db.models import Q, Avg
@@ -39,8 +40,8 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from decimal import Decimal as DzDecimal
-from easybuy.core.whatsapp_utils import WhatsAppNotifier
-from easybuy.core.services import create_notification
+from core.whatsapp_utils import WhatsAppNotifier
+from core.services import create_notification
 
 
 logger = logging.getLogger(__name__)
@@ -913,7 +914,7 @@ def addtocart(request, id):
     cart.total_amount = total
     cart_count = cart.items.count()
     cart.save()
-    from easybuy.core.notifications import schedule_cart_reminder
+    from core.notifications import schedule_cart_reminder
 
     schedule_cart_reminder(request.user)
 
@@ -982,7 +983,7 @@ def update_cart_quantity(request, item_id):
 
     cart_count = cart.items.count()
     if cart_count > 0:
-        from easybuy.core.notifications import schedule_cart_reminder
+        from core.notifications import schedule_cart_reminder
 
         schedule_cart_reminder(request.user)
 
@@ -2089,6 +2090,52 @@ def create_razorpay_order(request):
 
 
 @login_required
+def log_razorpay_failure(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid data"}, status=400)
+
+    razorpay_order_id = str(data.get("razorpay_order_id", "")).strip()
+    razorpay_payment_id = str(data.get("razorpay_payment_id", "")).strip()
+    error_data = data.get("error") or {}
+
+    if not razorpay_order_id:
+        return JsonResponse({"error": "Missing razorpay_order_id"}, status=400)
+
+    order = Order.objects.filter(
+        razorpay_order_id=razorpay_order_id,
+        user=request.user,
+    ).first()
+    if not order:
+        return JsonResponse({"error": "Order not found"}, status=404)
+
+    order.payment_status = "FAILED"
+    if razorpay_payment_id:
+        order.razorpay_payment_id = razorpay_payment_id
+    order.save(update_fields=["payment_status", "razorpay_payment_id"])
+
+    PaymentTransaction.objects.create(
+        order=order,
+        transaction_id=razorpay_payment_id or f"failed-{timezone.now().timestamp()}",
+        payment_gateway="Razorpay",
+        amount=order.total_amount,
+        status="FAILED",
+        gateway_response=error_data if isinstance(error_data, dict) else {"raw": error_data},
+    )
+
+    logger.warning(
+        "Razorpay payment failed for order %s: %s",
+        order.order_number,
+        error_data,
+    )
+    return JsonResponse({"success": True})
+
+
+@login_required
 @csrf_exempt
 def verify_razorpay_payment(request):
     """Verify Razorpay payment signature and confirm order"""
@@ -2393,3 +2440,4 @@ def mark_all_notifications_read(request):
         )
         messages.success(request, "All notifications marked as read")
     return redirect("all_notifications")
+

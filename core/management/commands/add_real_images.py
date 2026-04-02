@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from easybuy.seller.models import Product, ProductVariant, ProductImage
+from seller.models import Product, ProductVariant, ProductImage
 from django.core.files.base import ContentFile
 from PIL import Image
 import io
@@ -73,3 +73,4 @@ def add_real_images():
     print(f"\nTotal Product Images: {ProductImage.objects.count()}")
     print(f"Images per variant: ~{ProductImage.objects.count() / variants.count():.1f}")
     print("\n" + "="*50)
+

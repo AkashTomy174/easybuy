@@ -10,14 +10,13 @@ import random
 import string
 import logging
 from .models import Category, User, Otp, AdSpace, AdBooking
-from celery import shared_task
 from django.utils import timezone
 from .models import Notification, NotificationDelivery, NotificationConfig
 from .forms import AdBookingForm
 from django.db.models import Q
 from django.http import JsonResponse
 from .models import StockNotification
-from easybuy.seller.models import ProductVariant
+from seller.models import ProductVariant
 from .services import create_notification
 
 
@@ -26,6 +25,18 @@ def generate_otp():
 
 
 logger = logging.getLogger(__name__)
+
+
+def _login_context():
+    google_login_enabled = False
+    try:
+        from allauth.socialaccount.models import SocialApp
+
+        google_login_enabled = SocialApp.objects.filter(provider="google").exists()
+    except Exception:
+        google_login_enabled = False
+
+    return {"google_login_enabled": google_login_enabled}
 
 
 def send_otp_email(email, otp):
@@ -73,9 +84,9 @@ def all_login(request):
                 return redirect("seller_dashboard")
         else:
             messages.error(request, "Invalid username or password.")
-            return render(request, "core/login.html")
+            return render(request, "core/login.html", _login_context())
 
-    return render(request, "core/login.html")
+    return render(request, "core/login.html", _login_context())
 
 
 def register_view(request):
@@ -330,3 +341,4 @@ def returns_view(request):
 
 def track_order_view(request):
     return render(request, "core/track_order.html")
+

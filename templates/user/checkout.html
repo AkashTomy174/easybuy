@@ -269,6 +269,35 @@
                 }
                 
                 const rzp = new Razorpay(options);
+                rzp.on('payment.failed', async function (response) {
+                    console.error('Razorpay payment failed:', response.error);
+
+                    try {
+                        await fetch("{% url 'log_razorpay_failure' %}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": "{{ csrf_token }}"
+                            },
+                            body: JSON.stringify({
+                                razorpay_order_id: data.order_id,
+                                razorpay_payment_id: response.error?.metadata?.payment_id || "",
+                                error: response.error || {}
+                            })
+                        });
+                    } catch (logErr) {
+                        console.error('Failed to log Razorpay failure:', logErr);
+                    }
+
+                    const reason =
+                        response.error?.description ||
+                        response.error?.reason ||
+                        response.error?.code ||
+                        'Payment was declined by Razorpay.';
+
+                    ToastManager.error(`Payment failed: ${reason}`);
+                    window.loadingManager.hideOnElement(btn);
+                });
                 rzp.open();
             } else {
                 // Step 2b: Process COD

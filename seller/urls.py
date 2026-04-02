@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from easybuy.core.views import logout_view
+from core.views import logout_view
 
 urlpatterns = [
     path("dashboard/", views.seller_dashboard, name="seller_dashboard"),
@@ -26,3 +26,4 @@ urlpatterns = [
     path("returns/", views.seller_returns, name="seller_returns"),
     path("returns/process/<int:id>/", views.process_return, name="process_return"),
 ]
+

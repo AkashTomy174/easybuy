@@ -1,6 +1,6 @@
 from django.db import models
-from easybuy.core.models import User
-from easybuy.seller.models import ProductVariant, SellerProfile, Product
+from core.models import User
+from seller.models import ProductVariant, SellerProfile, Product
 
 
 class Cart(models.Model):
@@ -210,3 +210,4 @@ class SavedCard(models.Model):
 
     def __str__(self):
         return f"{self.card_brand} ending in {self.card_number}"
+

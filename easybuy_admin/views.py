@@ -5,10 +5,10 @@ from django.core.paginator import Paginator
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from easybuy.core.decorators import role_required
-from easybuy.core.models import Category, User,SubCategory
-from easybuy.seller.models import SellerProfile, Product
-from easybuy.user.models import OrderItem
+from core.decorators import role_required
+from core.models import Category, User,SubCategory
+from seller.models import SellerProfile, Product
+from user.models import OrderItem
 from django.db.models import Sum, F
 from django.shortcuts import render
 from django.contrib.auth import get_user_model
@@ -253,20 +253,6 @@ def toggle_category_status(request, id):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def toggle_subcategory_status(request, id):
-    sub = get_object_or_404(SubCategory, id=id)
-
-    sub.is_active = not sub.is_active
-    sub.save()
-    status = "activated" if sub.is_active else "deactivated"
-    messages.success(request, f"Subcategory '{sub.name}' has been {status}!")
-    return redirect("admin_all_categories")
-
-
-@login_required
-@role_required(allowed_roles=["ADMIN"])
-def toggle_subcategory_status(request, id):
-    from easybuy.core.models import SubCategory
-
     subcategory = get_object_or_404(SubCategory, id=id)
     subcategory.is_active = not subcategory.is_active
     subcategory.save()
@@ -280,7 +266,7 @@ def toggle_subcategory_status(request, id):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def add_subcategory(request):
-    from easybuy.core.models import Category, SubCategory
+    from core.models import Category, SubCategory
 
     if request.method == "POST":
         category_id = request.POST.get("category")
@@ -311,7 +297,7 @@ def all_users(request):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def all_sellers(request):
-    sellers = SellerProfile.objects.select_related("user").all()
+    sellers = SellerProfile.objects.select_related("user").order_by("-created_at")
     paginator = Paginator(sellers, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -327,7 +313,7 @@ def all_sellers(request):
 def approve_product(request):
     products = Product.objects.select_related("seller", "subcategory").filter(
         approval_status="PENDING"
-    )
+    ).order_by("-created_at")
     paginator = Paginator(products, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -374,7 +360,7 @@ def reject_single_product(request, id):
 def rejected_products(request):
     products = Product.objects.select_related("seller", "subcategory").filter(
         approval_status="REJECTED"
-    )
+    ).order_by("-created_at")
     paginator = Paginator(products, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -388,7 +374,9 @@ def rejected_products(request):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def rejected_sellers(request):
-    sellers = SellerProfile.objects.select_related("user").filter(status="REJECTED")
+    sellers = SellerProfile.objects.select_related("user").filter(
+        status="REJECTED"
+    ).order_by("-created_at")
     paginator = Paginator(sellers, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -397,3 +385,4 @@ def rejected_sellers(request):
         "admin/rejected_sellers.html",
         {"page_obj": page_obj, "active_menu": "rejected_sellers"},
     )
+

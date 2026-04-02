@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from easybuy.user.views import all_products
+from user.views import all_products
 
 urlpatterns = [
     path(
@@ -12,6 +12,11 @@ urlpatterns = [
         "verify-razorpay-payment/",
         views.verify_razorpay_payment,
         name="verify_razorpay_payment",
+    ),
+    path(
+        "log-razorpay-failure/",
+        views.log_razorpay_failure,
+        name="log_razorpay_failure",
     ),
     path("products/", all_products, name="all_products"),
     path("profile/", views.profile_settings, name="profile_settings"),
@@ -155,3 +160,4 @@ urlpatterns = [
         name="delete_notification",
     ),
 ]
+

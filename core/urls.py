@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from easybuy.user.views import (
+from user.views import (
     home_view,
     all_categories,
     new_arrival,
@@ -39,3 +39,4 @@ urlpatterns = [
     path("returns/", views.returns_view, name="returns"),
     path("track-order/", views.track_order_view, name="track_order"),
 ]
+

@@ -13,11 +13,13 @@
         </div>
 
         <div class="space-y-3 mb-8">
+            {% if google_login_enabled %}
             <a href="{% provider_login_url 'google' %}" 
                class="flex items-center justify-center gap-3 w-full py-3.5 border border-stone-200 dark:border-stone-700 rounded-2xl font-bold text-sm text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800 transition-all active:scale-[0.98]">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5">
                 Continue with Google
             </a>
+            {% endif %}
             
             <div class="relative flex items-center py-2">
                 <div class="flex-grow border-t border-stone-200 dark:border-stone-700"></div>

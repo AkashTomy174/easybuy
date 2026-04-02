@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils.text import slugify
-from easybuy.core.models import User, SubCategory
+from core.models import User, SubCategory
 
 # Create your models here.
 
@@ -146,3 +146,4 @@ class ProductRatingSummary(models.Model):
     product = models.OneToOneField("seller.Product", on_delete=models.CASCADE)
     average_rating = models.FloatField(default=0)
     total_reviews = models.IntegerField(default=0)
+

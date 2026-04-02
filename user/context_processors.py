@@ -1,4 +1,4 @@
-from easybuy.core.models import Notification
+from core.models import Notification
 
 
 def notifications(request):
@@ -20,3 +20,4 @@ def notifications(request):
             "recent_notifications": recent_notifications,
         }
     return {"unread_notification_count": 0, "recent_notifications": []}
+
