@@ -318,14 +318,14 @@
                     <a href="{% url 'wishlist' %}" class="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative">
                         <span class="material-symbols-outlined text-xl">favorite_border</span>
                         {% if request.user.is_authenticated %}
-                        <span id="header-wishlist-count" class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">{{ request.user.wishlists.first.items.count|default:0 }}</span>
+                        <span id="header-wishlist-count" class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">{{ wishlist_count }}</span>
                         {% endif %}
                     </a>
                     
                     <!-- Cart -->
                     <a href="{% url 'cart' %}" class="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative">
                         <span class="material-symbols-outlined text-xl">shopping_cart</span>
-                        <span id="header-cart-count" class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[10px] font-bold text-white">{% if request.user.is_authenticated %}{{ request.user.cart.items.count }}{% else %}0{% endif %}</span>
+                        <span id="header-cart-count" class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[10px] font-bold text-white">{{ cart_count }}</span>
                     </a>
                     
                     <!-- Dark Mode Toggle -->
@@ -460,8 +460,8 @@
             <a href="{% url 'cart' %}" class="flex flex-col items-center gap-1 p-2 {% if request.resolver_match.url_name == 'cart' %}text-primary{% else %}text-stone-500{% endif %} relative">
                 <span class="material-symbols-outlined">shopping_cart</span>
                 <span class="text-[10px] font-medium">Cart</span>
-                {% if request.user.is_authenticated and request.user.cart.items.count %}
-                <span class="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[8px] font-bold text-white">{{ request.user.cart.items.count }}</span>
+                {% if request.user.is_authenticated and cart_count %}
+                <span class="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[8px] font-bold text-white">{{ cart_count }}</span>
                 {% endif %}
             </a>
             {% if request.user.is_authenticated %}

@@ -206,6 +206,14 @@ def verify_otp(request):
 
         user.save()
 
+        # Ensure related per-user records exist before redirecting into
+        # templates that read wishlist/cart counts for authenticated users.
+        from user.models import Cart, NotificationPreference, Wishlist
+
+        Cart.objects.get_or_create(user=user)
+        NotificationPreference.objects.get_or_create(user=user)
+        Wishlist.objects.get_or_create(user=user, wishlist_name="My Wishlist")
+
         if "pending_registration" in request.session:
             del request.session["pending_registration"]
 
