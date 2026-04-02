@@ -69,9 +69,6 @@ easybuy/media/
 images/
 **/images/
 
-# Migrations (local only)
-**/migrations/0*_initial.py
-
 # TODO and Temp Files
 *.md
 *_SUMMARY.md
