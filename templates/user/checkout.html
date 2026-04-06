@@ -180,6 +180,7 @@
                 headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
                 body: JSON.stringify({
                     selected_address_id: addressId,
+                    payment_method: method,
                     {% if single_product %}
                     buy_now_variant_id: "{{ variant.id }}",
                     buy_now_quantity: "{{ quantity }}",
@@ -203,8 +204,8 @@
                 throw new Error(data.error + detailMsg);
             }
 
-            // Validate required fields
-            if (!data.key || !data.order_id) {
+            // Validate required fields for online payments only
+            if (method === "ONLINE" && (!data.key || !data.order_id)) {
                 throw new Error('Invalid payment gateway response. Missing order data.');
             }
 
@@ -302,7 +303,18 @@
             } else {
                 // Step 2b: Process COD
                 window.loadingManager.show("Processing your order...");
-                window.location.href = "{% url 'process_cod_order' %}";
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{% url 'process_cod_order' %}";
+
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = '{{ csrf_token }}';
+                form.appendChild(csrfInput);
+
+                document.body.appendChild(form);
+                form.submit();
             }
         } catch (err) {
             console.error('Payment error details:', err);

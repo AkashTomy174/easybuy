@@ -9,6 +9,7 @@ from datetime import timedelta
 import random
 import string
 import logging
+from django.db import transaction
 from .models import Category, User, Otp, AdSpace, AdBooking
 from django.utils import timezone
 from .models import Notification, NotificationDelivery, NotificationConfig
@@ -95,14 +96,14 @@ def register_view(request):
             return verify_otp(request)
 
         if "resend" in request.POST:
-            email = request.POST.get("email")
+            email = request.POST.get("email") or request.session.get(
+                "pending_registration", {}
+            ).get("email")
             if email:
                 otp_code = generate_otp()
-
-                Otp.objects.filter(user__email=email).delete()
-
                 try:
                     user = User.objects.get(email=email)
+                    Otp.objects.filter(user=user).delete()
                     Otp.objects.create(user=user, otp=otp_code)
 
                     if send_otp_email(email, otp_code):
@@ -128,41 +129,39 @@ def register_view(request):
         if password1 != password2:
             messages.error(request, "Passwords do not match.")
             return redirect("register")
-        if User.objects.filter(username=username).exists():
+        existing_user = User.objects.filter(email=email).first()
+        username_conflict = User.objects.filter(username=username)
+        if existing_user:
+            username_conflict = username_conflict.exclude(pk=existing_user.pk)
+
+        if username_conflict.exists():
             messages.error(request, "Username already exists.")
             return redirect("register")
-        if User.objects.filter(email=email).exists():
+        if existing_user and existing_user.is_active:
             messages.error(request, "Email already registered.")
             return redirect("register")
 
-        if "pending_registration" in request.session:
-            pending = request.session["pending_registration"]
-            pending["username"] = username
-            pending["email"] = email
-            pending["password"] = password1
-            request.session["pending_registration"] = pending
-        else:
-            request.session["pending_registration"] = {
-                "username": username,
-                "email": email,
-                "password": password1,
-            }
-
         otp_code = generate_otp()
+        try:
+            with transaction.atomic():
+                user = existing_user or User(email=email, role="CUSTOMER")
+                user.username = username
+                user.role = "CUSTOMER"
+                user.is_active = False
+                user.set_password(password1)
+                user.save()
 
-        Otp.objects.filter(user__email=email).delete()
+                Otp.objects.filter(user=user).delete()
+                Otp.objects.create(user=user, otp=otp_code)
+        except Exception as exc:
+            logger.error("Registration setup failed: %s", exc)
+            messages.error(request, "Unable to start registration. Please try again.")
+            return redirect("register")
 
-        user, created = User.objects.get_or_create(
-            email=email, defaults={"username": username, "is_active": False}
-        )
-
-        if not created:
-            user.username = username
-            user.set_password(password1)
-            user.is_active = False
-            user.save()
-
-        Otp.objects.create(user=user, otp=otp_code)
+        request.session["pending_registration"] = {
+            "username": username,
+            "email": email,
+        }
 
         if send_otp_email(email, otp_code):
             messages.success(request, f"OTP sent to {email}. Please verify.")
@@ -187,23 +186,20 @@ def verify_otp(request):
 
     try:
         user = User.objects.get(email=email)
-        otp_record = Otp.objects.filter(
-            user=user, otp=otp_input, verified=False
-        ).latest("created_at")
+        otp_record = Otp.objects.filter(user=user, verified=False).latest("created_at")
 
         if timezone.now() - otp_record.created_at > timedelta(minutes=5):
             messages.error(request, "OTP has expired. Please request a new one.")
+            return render(request, "core/verify_otp.html", {"email": email})
+
+        if not otp_record.matches(otp_input):
+            messages.error(request, "Invalid OTP. Please try again.")
             return render(request, "core/verify_otp.html", {"email": email})
 
         otp_record.verified = True
         otp_record.save()
 
         user.is_active = True
-
-        pending = request.session.get("pending_registration")
-        if pending and pending.get("email") == email:
-            user.set_password(pending["password"])
-
         user.save()
 
         # Ensure related per-user records exist before redirecting into

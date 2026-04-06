@@ -189,25 +189,6 @@
     </div>
 </section>
 
-<script>
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                if (typeof showToast === 'function') showToast('Added to cart!', 'success');
-                else alert('Added to cart!');
-            } else {
-                alert(data.message);
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    }
-</script>
-
 <style>
 @keyframes fadeInUp {
     from {

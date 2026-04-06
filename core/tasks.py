@@ -40,13 +40,18 @@ def send_notification_task(self, notification_id):
     """
     try:
         notification = Notification.objects.get(id=notification_id)
-        config = NotificationConfig.objects.get(type=notification.type)
     except Notification.DoesNotExist:
         logger.error(f"Notification {notification_id} not found")
         return
-    except NotificationConfig.DoesNotExist:
-        logger.warning(f"No config found for type {notification.type}")
-        return
+
+    config, _ = NotificationConfig.objects.get_or_create(
+        type=notification.type,
+        defaults={
+            "enable_email": True,
+            "enable_whatsapp": False,
+            "enable_in_app": True,
+        },
+    )
 
     channels = []
     if config.enable_whatsapp:

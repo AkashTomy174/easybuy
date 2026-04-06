@@ -151,6 +151,8 @@ E-commerce Team"""
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def approve_seller(request, id):
+    if request.method != "POST":
+        return redirect("seller_veri")
     seller = get_object_or_404(SellerProfile, id=id)
     seller.status = "APPROVED"
     seller.save()
@@ -165,6 +167,8 @@ def approve_seller(request, id):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def reject_seller(request, id):
+    if request.method != "POST":
+        return redirect("seller_veri")
     seller = get_object_or_404(SellerProfile, id=id)
     reason = request.POST.get("reason") if request.method == "POST" else None
     seller.rejection_reason = reason
@@ -243,6 +247,8 @@ def admin_all_categories(request):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def toggle_category_status(request, id):
+    if request.method != "POST":
+        return redirect("admin_all_categories")
     category = get_object_or_404(Category, id=id)
     category.is_active = not category.is_active
     category.save()
@@ -253,6 +259,8 @@ def toggle_category_status(request, id):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def toggle_subcategory_status(request, id):
+    if request.method != "POST":
+        return redirect("admin_all_categories")
     subcategory = get_object_or_404(SubCategory, id=id)
     subcategory.is_active = not subcategory.is_active
     subcategory.save()
@@ -327,6 +335,8 @@ def approve_product(request):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def approve_single_product(request, id):
+    if request.method != "POST":
+        return redirect("approve_products")
     product = get_object_or_404(Product, id=id)
     product.approval_status = "APPROVED"
     product.save()
@@ -337,6 +347,8 @@ def approve_single_product(request, id):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def reject_single_product(request, id):
+    if request.method != "POST":
+        return redirect("approve_products")
     product = get_object_or_404(Product, id=id)
     reason = request.POST.get("reason") if request.method == "POST" else None
     product.rejection_reason = reason

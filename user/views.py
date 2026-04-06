@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db.models import F
 from core.decorators import role_required
 from seller.models import Product, ProductVariant, ProductImage
 from .models import (
@@ -37,7 +38,6 @@ import uuid
 import razorpay
 import logging
 from django.conf import settings
-from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from decimal import Decimal as DzDecimal
 from core.whatsapp_utils import WhatsAppNotifier
@@ -45,6 +45,32 @@ from core.services import create_notification
 
 
 logger = logging.getLogger(__name__)
+
+
+def _restock_order_item(order_item):
+    if not order_item.stock_deducted:
+        return
+
+    ProductVariant.objects.filter(pk=order_item.variant_id).update(
+        stock_quantity=F("stock_quantity") + order_item.quantity
+    )
+    order_item.stock_deducted = False
+    order_item.save(update_fields=["stock_deducted"])
+
+
+def _deduct_order_item_stock(order_item):
+    if order_item.stock_deducted:
+        return True
+
+    updated_rows = ProductVariant.objects.filter(
+        pk=order_item.variant_id, stock_quantity__gte=order_item.quantity
+    ).update(stock_quantity=F("stock_quantity") - order_item.quantity)
+    if not updated_rows:
+        return False
+
+    order_item.stock_deducted = True
+    order_item.save(update_fields=["stock_deducted"])
+    return True
 
 
 # home related diplaying mainly
@@ -1398,9 +1424,8 @@ def order_cancel(request, order_id):
         order.save()
         for item in order.items.all():
             item.status = "CANCELLED"
-            item.variant.stock_quantity += item.quantity
-            item.variant.save()
             item.save()
+            _restock_order_item(item)
     return JsonResponse({"success": True, "message": "Order cancelled successfully"})
 
 
@@ -1420,8 +1445,7 @@ def order_item_cancel(request, item_id):
     with transaction.atomic():
         order_item.status = "CANCELLED"
         order_item.save()
-        order_item.variant.stock_quantity += order_item.quantity
-        order_item.variant.save()
+        _restock_order_item(order_item)
 
     return JsonResponse({"success": True, "message": "Item cancelled successfully"})
 
@@ -1939,6 +1963,7 @@ def create_razorpay_order(request):
     try:
         data = json.loads(request.body)
         address_id = data.get("selected_address_id")
+        payment_method = (data.get("payment_method") or "ONLINE").upper()
     except json.JSONDecodeError:
         logger.error("Invalid JSON in create_razorpay_order request")
         return JsonResponse({"error": "Invalid data"}, status=400)
@@ -1950,6 +1975,9 @@ def create_razorpay_order(request):
     except Http404:
         logger.warning(f"Invalid address ID {address_id} for user {user.id}")
         return JsonResponse({"error": "Invalid delivery address"}, status=400)
+
+    if payment_method not in {"ONLINE", "COD"}:
+        return JsonResponse({"error": "Invalid payment method"}, status=400)
 
     buy_now_variant_id = data.get("buy_now_variant_id")
 
@@ -1988,6 +2016,7 @@ def create_razorpay_order(request):
                 shipping_name=address.full_name,
                 shipping_phone=address.phone_number,
                 shipping_address=f"{address.house_info}, {address.city}, {address.state}",
+                payment_method=payment_method,
             )
 
             if buy_now_variant_id:
@@ -2009,6 +2038,15 @@ def create_razorpay_order(request):
                     )
 
             logger.info(f"Order created: {order.order_number} for user {user.id}")
+
+            if payment_method == "COD":
+                request.session["pending_order_id"] = order.id
+                return JsonResponse(
+                    {
+                        "cod_ready": True,
+                        "internal_order_id": order.id,
+                    }
+                )
 
             # Razorpay Gateway logic - WITH ERROR HANDLING
             try:
@@ -2118,13 +2156,17 @@ def log_razorpay_failure(request):
         order.razorpay_payment_id = razorpay_payment_id
     order.save(update_fields=["payment_status", "razorpay_payment_id"])
 
-    PaymentTransaction.objects.create(
+    PaymentTransaction.objects.get_or_create(
         order=order,
         transaction_id=razorpay_payment_id or f"failed-{timezone.now().timestamp()}",
-        payment_gateway="Razorpay",
-        amount=order.total_amount,
-        status="FAILED",
-        gateway_response=error_data if isinstance(error_data, dict) else {"raw": error_data},
+        defaults={
+            "payment_gateway": "Razorpay",
+            "amount": order.total_amount,
+            "status": "FAILED",
+            "gateway_response": (
+                error_data if isinstance(error_data, dict) else {"raw": error_data}
+            ),
+        },
     )
 
     logger.warning(
@@ -2136,9 +2178,11 @@ def log_razorpay_failure(request):
 
 
 @login_required
-@csrf_exempt
 def verify_razorpay_payment(request):
     """Verify Razorpay payment signature and confirm order"""
+    if request.method != "POST":
+        messages.error(request, "Invalid payment verification request.")
+        return redirect("checkout")
 
     try:
         # Validate required parameters FIRST
@@ -2163,7 +2207,7 @@ def verify_razorpay_payment(request):
 
         # Get order
         try:
-            order = Order.objects.get(razorpay_order_id=razorpay_order_id)
+            order = Order.objects.get(razorpay_order_id=razorpay_order_id, user=request.user)
         except Order.DoesNotExist:
             logger.error(f"Order not found for razorpay_order_id: {razorpay_order_id}")
             messages.error(request, "Payment verification failed: Order not found")
@@ -2202,18 +2246,42 @@ def verify_razorpay_payment(request):
         # Payment successful - Update order and inventory
         try:
             with transaction.atomic():
+                order = (
+                    Order.objects.select_for_update()
+                    .prefetch_related("items__variant")
+                    .get(pk=order.pk)
+                )
+                if order.payment_status == "PAID":
+                    logger.info("Order %s already verified; returning success page", order.order_number)
+                    return redirect("order_success", order_id=order.id)
+
                 order.payment_status = "PAID"
                 order.order_status = "CONFIRMED"
+                order.payment_method = "ONLINE"
                 order.save()
                 logger.info(f"Order {order.order_number} marked as PAID")
 
                 # Update stock
                 for item in order.items.all():
-                    item.variant.stock_quantity -= item.quantity
-                    item.variant.save()
+                    ProductVariant.objects.select_for_update().filter(pk=item.variant_id).first()
+                    if not _deduct_order_item_stock(item):
+                        raise ValueError(
+                            f"Insufficient stock for {item.variant.product.name}"
+                        )
                     logger.info(
                         f"Stock updated for variant {item.variant.id}: -{item.quantity}"
                     )
+
+                PaymentTransaction.objects.get_or_create(
+                    order=order,
+                    transaction_id=razorpay_payment_id,
+                    defaults={
+                        "payment_gateway": "Razorpay",
+                        "amount": order.total_amount,
+                        "status": "PAID",
+                        "gateway_response": params_dict,
+                    },
+                )
 
                 # Clear cart if not buy-now
                 if not request.session.get("buy_now_variant_id"):
@@ -2254,6 +2322,9 @@ def verify_razorpay_payment(request):
 
 @login_required
 def process_cod_order(request):
+    if request.method != "POST":
+        return redirect("checkout")
+
     order_id = request.session.get("pending_order_id")
     if not order_id:
         return redirect("checkout")
@@ -2261,9 +2332,17 @@ def process_cod_order(request):
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
     with transaction.atomic():
+        order = Order.objects.select_for_update().prefetch_related("items__variant").get(
+            pk=order.pk
+        )
+        if order.order_status == "CONFIRMED":
+            return redirect("order_success", order_id=order.id)
+
         # Check stock availability
         for item in order.items.all():
-            if item.variant.stock_quantity < item.quantity:
+            ProductVariant.objects.select_for_update().filter(pk=item.variant_id).first()
+            variant = ProductVariant.objects.get(pk=item.variant_id)
+            if not item.stock_deducted and variant.stock_quantity < item.quantity:
                 messages.error(
                     request, f"Insufficient stock for {item.variant.product.name}"
                 )
@@ -2271,11 +2350,15 @@ def process_cod_order(request):
 
         # Update stock
         for item in order.items.all():
-            item.variant.stock_quantity -= item.quantity
-            item.variant.save()
+            if not _deduct_order_item_stock(item):
+                messages.error(
+                    request, f"Insufficient stock for {item.variant.product.name}"
+                )
+                return redirect("checkout")
 
         # Confirm order
         order.payment_method = "COD"
+        order.payment_status = "PENDING"
         order.order_status = "CONFIRMED"
         order.save()
 
@@ -2307,7 +2390,11 @@ def buy_now(request, variant_id):
 @login_required
 def order_success(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
-    return render(request, "user/order_success.html", {"order": order})
+    return render(
+        request,
+        "user/order_success.html",
+        {"order": order, "payment_method": order.payment_method},
+    )
 
 
 @login_required

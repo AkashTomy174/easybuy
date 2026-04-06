@@ -94,6 +94,10 @@ class ReviewHelpful(models.Model):
 
 
 class Order(models.Model):
+    PAYMENT_METHOD_CHOICES = (
+        ("ONLINE", "Online Payment"),
+        ("COD", "Cash on Delivery"),
+    )
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
     order_number = models.CharField(max_length=100, unique=True)
@@ -105,6 +109,9 @@ class Order(models.Model):
     shipping_name = models.CharField(max_length=100, null=True, blank=True)
     shipping_phone = models.CharField(max_length=15, null=True, blank=True)
     shipping_address = models.TextField(null=True, blank=True)
+    payment_method = models.CharField(
+        max_length=20, choices=PAYMENT_METHOD_CHOICES, default="ONLINE"
+    )
     ordered_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -118,6 +125,7 @@ class OrderItem(models.Model):
     estimated_ship_date = models.DateTimeField(null=True, blank=True)
     shipped_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
+    stock_deducted = models.BooleanField(default=False)
     subtotal = models.DecimalField(
         max_digits=12,
         decimal_places=2,

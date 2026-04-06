@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.text import slugify
+from django.contrib.auth.hashers import check_password, make_password
 from decimal import Decimal
 
 
@@ -48,12 +49,22 @@ class User(AbstractUser):
 
 class Otp(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="otp")
-    otp = models.CharField(max_length=6)
+    otp = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
     verified = models.BooleanField(default=False)
 
     def __str__(self):
         return f"OTP for {self.user.email}"
+
+    def save(self, *args, **kwargs):
+        if self.otp and not self.otp.startswith("pbkdf2_"):
+            self.otp = make_password(self.otp)
+        super().save(*args, **kwargs)
+
+    def matches(self, raw_otp):
+        if not raw_otp:
+            return False
+        return check_password(raw_otp, self.otp)
 
 
 class Address(models.Model):

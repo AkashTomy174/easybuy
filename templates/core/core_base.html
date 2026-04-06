@@ -1137,6 +1137,7 @@ function toggleStockNotify(variantId, buttonElement = null) {
     const btn = buttonElement || document.querySelector('[data-stock-notify-btn]');
     const originalContent = btn ? btn.innerHTML : '';
     const wasDisabled = btn ? btn.disabled : false;
+    let requestSucceeded = false;
 
     // Add loading state
     if (btn) {
@@ -1154,6 +1155,7 @@ function toggleStockNotify(variantId, buttonElement = null) {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
+            requestSucceeded = true;
             showToast(data.message, 'success');
             // Update button text based on notification status
             if (btn) {
@@ -1179,7 +1181,7 @@ function toggleStockNotify(variantId, buttonElement = null) {
         // Restore button state
         if (btn) {
             btn.disabled = wasDisabled;
-            if (!data || !data.success) {
+            if (!requestSucceeded) {
                 btn.innerHTML = originalContent;
             }
         }

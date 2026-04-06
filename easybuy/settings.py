@@ -1,23 +1,32 @@
 from pathlib import Path
 import os
+import sys
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+RUNNING_TESTS = "test" in sys.argv
 
 
 def env_bool(name, default=False):
     return os.getenv(name, str(default)).lower() in ("true", "1", "yes", "on")
 
 
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-fallback-key")
+DEBUG = env_bool("DEBUG", RUNNING_TESTS)
 
-
-DEBUG = env_bool("DEBUG", False)
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG or RUNNING_TESTS:
+        SECRET_KEY = "easybuy-dev-secret-key"
+    else:
+        raise ImproperlyConfigured("SECRET_KEY must be set when DEBUG is disabled.")
 
 ALLOWED_HOSTS = [
-   "*"
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
 ]
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
