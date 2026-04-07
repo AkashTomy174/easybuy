@@ -103,6 +103,11 @@
                 <span class="text-sm font-medium">Homepage Banners</span>
             </a>
 
+            <a href="{% url 'admin_promo_codes' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors {% if active_menu == 'promotions' %}nav-link-active{% else %}hover:bg-slate-800/50 hover:text-white{% endif %}">
+                <span class="material-symbols-outlined text-[20px]">sell</span>
+                <span class="text-sm font-medium">Promo Codes</span>
+            </a>
+
             <div class="pt-6 pb-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-600">System</div>
             <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors">
                 <span class="material-symbols-outlined text-[20px]">settings</span>

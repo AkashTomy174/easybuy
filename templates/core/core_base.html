@@ -1230,6 +1230,8 @@ const chatbotState = {
     initialized: false,
     loading: false,
 };
+const CHATBOT_WINDOW_RESET_DELAY_MS = 5 * 60 * 1000;
+const CHATBOT_CLOSED_AT_KEY = 'easybuy_chatbot_closed_at';
 
 function chatbotElements() {
     return {
@@ -1240,6 +1242,52 @@ function chatbotElements() {
         input: document.getElementById('chatbot-input'),
         send: document.getElementById('chatbot-send'),
     };
+}
+
+function resetChatbotWindowState() {
+    const { messages, quickReplies, input } = chatbotElements();
+    chatbotState.sessionId = null;
+    chatbotState.initialized = false;
+    chatbotState.loading = false;
+    if (messages) {
+        messages.innerHTML = '';
+    }
+    if (quickReplies) {
+        quickReplies.innerHTML = '';
+    }
+    if (input) {
+        input.value = '';
+        input.style.height = '48px';
+    }
+}
+
+function markChatbotClosedAtNow() {
+    try {
+        localStorage.setItem(CHATBOT_CLOSED_AT_KEY, String(Date.now()));
+    } catch (error) {
+        console.warn('Unable to store chatbot close time:', error);
+    }
+}
+
+function clearChatbotClosedAt() {
+    try {
+        localStorage.removeItem(CHATBOT_CLOSED_AT_KEY);
+    } catch (error) {
+        console.warn('Unable to clear chatbot close time:', error);
+    }
+}
+
+function shouldResetChatbotWindow() {
+    try {
+        const rawValue = localStorage.getItem(CHATBOT_CLOSED_AT_KEY);
+        if (!rawValue) return false;
+        const closedAt = Number(rawValue);
+        if (!Number.isFinite(closedAt)) return false;
+        return (Date.now() - closedAt) >= CHATBOT_WINDOW_RESET_DELAY_MS;
+    } catch (error) {
+        console.warn('Unable to read chatbot close time:', error);
+        return false;
+    }
 }
 
 function setChatbotLoading(isLoading) {
@@ -1333,17 +1381,21 @@ function renderChatbotMessages(messages) {
     scrollChatbotToBottom();
 }
 
-async function initializeChatbot(forceRefresh = false) {
+async function initializeChatbot(forceRefresh = false, startFresh = false) {
     const { root } = chatbotElements();
-    if (!root || (chatbotState.initialized && !forceRefresh)) return;
+    if (!root || (chatbotState.initialized && !forceRefresh && !startFresh)) return;
 
     try {
         const response = await fetch(root.dataset.startUrl, {
             method: 'POST',
             headers: {
+                'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken'),
                 'X-Requested-With': 'XMLHttpRequest'
-            }
+            },
+            body: JSON.stringify({
+                new_session: Boolean(startFresh)
+            })
         });
         const data = await response.json();
         chatbotState.sessionId = data.session_id;
@@ -1412,7 +1464,12 @@ document.addEventListener('DOMContentLoaded', function() {
         toggle.addEventListener('click', async function() {
             panel.classList.toggle('hidden');
             if (!panel.classList.contains('hidden')) {
-                await initializeChatbot();
+                const startFresh = shouldResetChatbotWindow();
+                if (startFresh) {
+                    resetChatbotWindowState();
+                }
+                clearChatbotClosedAt();
+                await initializeChatbot(startFresh, startFresh);
                 if (input) {
                     input.focus();
                 }
@@ -1423,6 +1480,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (close && panel) {
         close.addEventListener('click', function() {
             panel.classList.add('hidden');
+            markChatbotClosedAtNow();
         });
     }
 

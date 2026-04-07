@@ -94,15 +94,31 @@
                         {% endif %}
                     </div>
 
+                    <div class="mb-6 rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-900/40">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-stone-900 dark:text-white">Promo Code</h3>
+                                <p class="text-xs text-stone-500 dark:text-stone-400">Use category, subcategory, or product offers here.</p>
+                            </div>
+                            <span class="material-symbols-outlined text-primary">local_offer</span>
+                        </div>
+                        <div class="mt-4 flex gap-2">
+                            <input id="promo-code-input" type="text" value="{{ promo_code }}" placeholder="Enter promo code" class="h-11 flex-1 rounded-2xl border border-stone-200 bg-white px-4 text-sm font-semibold uppercase tracking-[0.14em] text-stone-900 outline-none transition focus:border-primary dark:border-stone-700 dark:bg-stone-800 dark:text-white">
+                            <button type="button" onclick="applyPromoCode()" class="rounded-2xl bg-primary px-4 text-sm font-bold text-white transition hover:bg-primary-dark">Apply</button>
+                            <button id="remove-promo-btn" type="button" onclick="removePromoCode()" class="{% if not promo_code %}hidden {% endif %}rounded-2xl border border-stone-200 px-4 text-sm font-bold text-stone-600 transition hover:bg-stone-100 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800">Remove</button>
+                        </div>
+                        <p id="promo-feedback" class="mt-3 text-xs font-semibold {% if promo_error %}text-red-500{% elif promo_message %}text-emerald-600 dark:text-emerald-400{% else %}hidden{% endif %}">{% if promo_error %}{{ promo_error }}{% else %}{{ promo_message }}{% endif %}</p>
+                    </div>
+
                     <!-- Pricing Breakdown -->
                     <div class="border-t border-stone-200 dark:border-stone-700 pt-4 space-y-2 text-sm md:text-base">
                         <div class="flex justify-between text-stone-600 dark:text-stone-300">
                             <span>Subtotal</span>
-                            <span class="font-medium">₹{{ subtotal|floatformat:2 }}</span>
+                            <span id="subtotal-amount" class="font-medium">₹{{ subtotal|floatformat:2 }}</span>
                         </div>
                         <div class="flex justify-between text-stone-600 dark:text-stone-300">
                             <span>Shipping</span>
-                            <span class="font-medium">
+                            <span id="shipping-amount" class="font-medium">
                                 {% if shipping == 0 %}
                                     <span class="text-green-600 font-bold">FREE</span>
                                 {% else %}
@@ -110,13 +126,17 @@
                                 {% endif %}
                             </span>
                         </div>
+                        <div id="discount-row" class="{% if discount_amount <= 0 %}hidden {% endif %}flex justify-between text-emerald-600 dark:text-emerald-400">
+                            <span>Promo Discount</span>
+                            <span id="discount-amount" class="font-bold">-₹{{ discount_amount|floatformat:2 }}</span>
+                        </div>
                         <div class="flex justify-between text-stone-600 dark:text-stone-300">
                             <span>GST (18%)</span>
-                            <span class="font-medium">₹{{ tax_amount|floatformat:2 }}</span>
+                            <span id="tax-amount" class="font-medium">₹{{ tax_amount|floatformat:2 }}</span>
                         </div>
                         <div class="flex justify-between text-lg md:text-xl font-black mt-4 pt-4 border-t border-stone-300 dark:border-stone-700 text-stone-900 dark:text-white">
                             <span>Total Amount</span>
-                            <span class="text-primary">₹{{ grand_total|floatformat:2 }}</span>
+                            <span id="grand-total-amount" class="text-primary">₹{{ grand_total|floatformat:2 }}</span>
                         </div>
                     </div>
 
@@ -148,6 +168,101 @@
 
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
+    function formatCurrency(value) {
+        const amount = Number(value || 0);
+        return `₹${amount.toFixed(2)}`;
+    }
+
+    function updateCheckoutTotals(totals) {
+        document.getElementById('subtotal-amount').textContent = formatCurrency(totals.subtotal);
+
+        const shippingEl = document.getElementById('shipping-amount');
+        if (Number(totals.shipping) === 0) {
+            shippingEl.innerHTML = '<span class="text-green-600 font-bold">FREE</span>';
+        } else {
+            shippingEl.textContent = formatCurrency(totals.shipping);
+        }
+
+        const discountRow = document.getElementById('discount-row');
+        const discountAmount = Number(totals.discount_amount || 0);
+        if (discountAmount > 0) {
+            discountRow.classList.remove('hidden');
+            document.getElementById('discount-amount').textContent = `-₹${discountAmount.toFixed(2)}`;
+        } else {
+            discountRow.classList.add('hidden');
+        }
+
+        document.getElementById('tax-amount').textContent = formatCurrency(totals.tax_amount);
+        document.getElementById('grand-total-amount').textContent = formatCurrency(totals.grand_total);
+
+        const promoInput = document.getElementById('promo-code-input');
+        const removeBtn = document.getElementById('remove-promo-btn');
+        promoInput.value = totals.promo_code || '';
+        if (totals.promo_code) {
+            removeBtn.classList.remove('hidden');
+        } else {
+            removeBtn.classList.add('hidden');
+        }
+    }
+
+    function setPromoFeedback(message, isError = false) {
+        const feedback = document.getElementById('promo-feedback');
+        if (!message) {
+            feedback.textContent = '';
+            feedback.classList.add('hidden');
+            return;
+        }
+
+        feedback.textContent = message;
+        feedback.classList.remove('hidden', 'text-red-500', 'text-emerald-600', 'dark:text-emerald-400');
+        if (isError) {
+            feedback.classList.add('text-red-500');
+        } else {
+            feedback.classList.add('text-emerald-600', 'dark:text-emerald-400');
+        }
+    }
+
+    async function applyPromoCode() {
+        const promoCode = document.getElementById('promo-code-input').value.trim().toUpperCase();
+        if (!promoCode) {
+            setPromoFeedback('Enter a promo code.', true);
+            return;
+        }
+
+        try {
+            const response = await fetch("{% url 'apply_promo_code' %}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
+                body: JSON.stringify({ promo_code: promoCode })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || "Unable to apply promo code.");
+            }
+            updateCheckoutTotals(data.totals);
+            setPromoFeedback(data.totals.promo_message || `${promoCode} applied successfully.`);
+        } catch (error) {
+            setPromoFeedback(error.message, true);
+        }
+    }
+
+    async function removePromoCode() {
+        try {
+            const response = await fetch("{% url 'remove_promo_code' %}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" }
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || "Unable to remove promo code.");
+            }
+            updateCheckoutTotals(data.totals);
+            setPromoFeedback('Promo code removed.');
+        } catch (error) {
+            setPromoFeedback(error.message, true);
+        }
+    }
+
     // Handle payment option selection
     document.querySelectorAll('.payment-option input').forEach(radio => {
         radio.addEventListener('change', function() {
@@ -181,6 +296,7 @@
                 body: JSON.stringify({
                     selected_address_id: addressId,
                     payment_method: method,
+                    promo_code: document.getElementById('promo-code-input').value.trim().toUpperCase(),
                     {% if single_product %}
                     buy_now_variant_id: "{{ variant.id }}",
                     buy_now_quantity: "{{ quantity }}",

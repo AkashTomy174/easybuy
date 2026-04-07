@@ -3,18 +3,21 @@ from django.contrib import messages
 from django.utils.text import slugify
 from django.core.paginator import Paginator
 from django.core.mail import send_mail
+from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from core.decorators import role_required
 from core.forms import BannerForm
 from core.models import Banner, Category, User,SubCategory
 from seller.models import SellerProfile, Product
+from easybuy_admin.models import Coupon
 from user.models import OrderItem
 from django.db.models import Sum, F
 from django.shortcuts import render
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation
 import json
 from django.db.models import Q
 
@@ -441,4 +444,82 @@ def rejected_sellers(request):
         "admin/rejected_sellers.html",
         {"page_obj": page_obj, "active_menu": "rejected_sellers"},
     )
+
+
+def _parse_datetime_local(raw_value):
+    dt = datetime.fromisoformat(raw_value)
+    if timezone.is_naive(dt):
+        dt = timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt
+
+
+@login_required
+@role_required(allowed_roles=["ADMIN"])
+def admin_promo_codes(request):
+    if request.method == "POST":
+        try:
+            scope = (request.POST.get("scope") or "").strip().upper()
+            target_id = request.POST.get("target_id")
+            coupon_kwargs = {
+                "name": (request.POST.get("name") or "").strip(),
+                "code": (request.POST.get("code") or "").strip().upper(),
+                "discount_type": (request.POST.get("discount_type") or "PERCENT").strip().upper(),
+                "discount_value": Decimal(request.POST.get("discount_value") or "0"),
+                "valid_from": _parse_datetime_local(request.POST.get("valid_from")),
+                "valid_to": _parse_datetime_local(request.POST.get("valid_to")),
+                "usage_limit": int(request.POST.get("usage_limit") or 0),
+                "min_order_amount": Decimal(request.POST.get("min_order_amount") or "0"),
+                "is_active": request.POST.get("is_active") == "on",
+            }
+
+            if scope == "CATEGORY":
+                coupon_kwargs["category"] = get_object_or_404(Category, id=target_id)
+            elif scope == "SUBCATEGORY":
+                coupon_kwargs["subcategory"] = get_object_or_404(SubCategory, id=target_id)
+            else:
+                raise ValidationError("Choose a valid scope.")
+
+            Coupon.objects.create(**coupon_kwargs)
+            messages.success(request, "Promo code created successfully.")
+            return redirect("admin_promo_codes")
+        except (InvalidOperation, ValueError, TypeError):
+            messages.error(request, "Please enter valid promo code details.")
+        except ValidationError as exc:
+            messages.error(request, exc.message if hasattr(exc, "message") else str(exc))
+
+    promo_codes = Coupon.objects.filter(seller__isnull=True).select_related(
+        "category", "subcategory"
+    ).order_by("-created_at")
+    categories = Category.objects.filter(is_active=True).order_by("name")
+    subcategories = SubCategory.objects.filter(is_active=True).select_related(
+        "category"
+    ).order_by("category__name", "name")
+    return render(
+        request,
+        "admin/promo_codes.html",
+        {
+            "promo_codes": promo_codes,
+            "categories": categories,
+            "subcategories": subcategories,
+            "category_options": list(categories.values("id", "name")),
+            "subcategory_options": list(
+                subcategories.values("id", "name", "category__name")
+            ),
+            "active_menu": "promotions",
+        },
+    )
+
+
+@login_required
+@role_required(allowed_roles=["ADMIN"])
+def toggle_admin_promo_code(request, coupon_id):
+    if request.method != "POST":
+        return redirect("admin_promo_codes")
+
+    coupon = get_object_or_404(Coupon, id=coupon_id, seller__isnull=True)
+    coupon.is_active = not coupon.is_active
+    coupon.save(update_fields=["is_active"])
+    state = "activated" if coupon.is_active else "disabled"
+    messages.success(request, f"Promo code '{coupon.code}' {state}.")
+    return redirect("admin_promo_codes")
 

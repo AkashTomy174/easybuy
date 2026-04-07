@@ -45,6 +45,29 @@ def _get_chat_session(request, session_id=None):
     return chat_session
 
 
+def _create_fresh_chat_session(request):
+    session_key = _ensure_session_key(request)
+    queryset = ChatSession.objects.all()
+
+    if request.user.is_authenticated:
+        queryset = queryset.filter(user=request.user)
+        queryset.filter(is_active=True).update(is_active=False)
+        return ChatSession.objects.create(
+            user=request.user,
+            title="Shopping Assistant",
+            is_active=True,
+        )
+
+    queryset = queryset.filter(user__isnull=True, session_key=session_key)
+    queryset.filter(is_active=True).update(is_active=False)
+    return ChatSession.objects.create(
+        user=None,
+        session_key=session_key,
+        title="Shopping Assistant",
+        is_active=True,
+    )
+
+
 def _serialize_message(message):
     return {
         "id": message.id,
@@ -58,7 +81,17 @@ def _serialize_message(message):
 
 @require_POST
 def start_session(request):
-    chat_session = _get_chat_session(request)
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        data = {}
+
+    new_session = bool(data.get("new_session"))
+    chat_session = (
+        _create_fresh_chat_session(request)
+        if new_session
+        else _get_chat_session(request)
+    )
     if not chat_session.messages.exists():
         ChatMessage.objects.create(
             session=chat_session,

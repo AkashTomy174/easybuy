@@ -16,6 +16,7 @@ import traceback
 import random
 import string
 from core.decorators import role_required
+from easybuy_admin.models import Coupon
 from .models import SellerProfile, Product, ProductVariant, ProductImage, InventoryLog
 from core.models import SubCategory
 from user.models import Order, OrderItem, Review, ReturnRequest
@@ -33,6 +34,13 @@ User = get_user_model()
 def generate_sku(length=8):
     """Generate a random SKU: uppercase letters + digits."""
     return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
+
+def _parse_promo_datetime(raw_value):
+    dt = datetime.fromisoformat(raw_value)
+    if timezone.is_naive(dt):
+        dt = timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt
 
 
 def seller_regi_success(request):
@@ -302,6 +310,66 @@ def seller_inventory(request):
     }
 
     return render(request, "seller/inventory.html", context)
+
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def seller_promo_codes(request):
+    seller = request.user.seller_profile
+
+    if request.method == "POST":
+        try:
+            product = get_object_or_404(
+                Product, id=request.POST.get("product_id"), seller=seller
+            )
+            Coupon.objects.create(
+                seller=seller,
+                product=product,
+                name=(request.POST.get("name") or "").strip(),
+                code=(request.POST.get("code") or "").strip().upper(),
+                discount_type=(request.POST.get("discount_type") or "PERCENT").strip().upper(),
+                discount_value=Decimal(request.POST.get("discount_value") or "0"),
+                valid_from=_parse_promo_datetime(request.POST.get("valid_from")),
+                valid_to=_parse_promo_datetime(request.POST.get("valid_to")),
+                usage_limit=int(request.POST.get("usage_limit") or 0),
+                min_order_amount=Decimal(request.POST.get("min_order_amount") or "0"),
+                is_active=request.POST.get("is_active") == "on",
+            )
+            messages.success(request, "Product promo code created successfully.")
+            return redirect("seller_promo_codes")
+        except (InvalidOperation, ValueError, TypeError):
+            messages.error(request, "Please enter valid promo code details.")
+        except Exception as exc:
+            messages.error(request, str(exc))
+
+    promo_codes = Coupon.objects.filter(seller=seller).select_related("product").order_by(
+        "-created_at"
+    )
+    products = Product.objects.filter(seller=seller).order_by("name")
+    return render(
+        request,
+        "seller/promo_codes.html",
+        {
+            "promo_codes": promo_codes,
+            "products": products,
+            "active_menu": "promotions",
+            "data1": seller,
+        },
+    )
+
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def toggle_seller_promo_code(request, coupon_id):
+    if request.method != "POST":
+        return redirect("seller_promo_codes")
+
+    coupon = get_object_or_404(Coupon, id=coupon_id, seller=request.user.seller_profile)
+    coupon.is_active = not coupon.is_active
+    coupon.save(update_fields=["is_active"])
+    state = "activated" if coupon.is_active else "disabled"
+    messages.success(request, f"Promo code '{coupon.code}' {state}.")
+    return redirect("seller_promo_codes")
 
 
 @login_required

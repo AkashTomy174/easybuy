@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.db.models import F
 from core.decorators import role_required
+from easybuy_admin.models import Coupon
 from seller.models import Product, ProductVariant, ProductImage
 from .models import (
     Cart,
@@ -46,6 +47,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 
 logger = logging.getLogger(__name__)
+CHECKOUT_PROMO_SESSION_KEY = "checkout_promo_code"
+MONEY_PRECISION = DzDecimal("0.01")
 
 
 class RazorpayOrderError(Exception):
@@ -2019,48 +2022,244 @@ def _send_order_confirmation(order):
             logger.error(f"WhatsApp Notification Failed: {e}")
 
 
-@login_required
-@role_required(allowed_roles=["CUSTOMER"])
-def checkout(request):
+def _money(value):
+    return DzDecimal(value or 0).quantize(MONEY_PRECISION)
+
+
+def _get_checkout_coupon(raw_code):
+    raw_code = (raw_code or "").strip().upper()
+    if not raw_code:
+        return None
+    return (
+        Coupon.objects.select_related(
+            "seller",
+            "category",
+            "subcategory",
+            "product__seller",
+            "product__subcategory__category",
+        )
+        .filter(code=raw_code)
+        .first()
+    )
+
+
+def _remove_checkout_coupon(request):
+    request.session.pop(CHECKOUT_PROMO_SESSION_KEY, None)
+
+
+def _build_checkout_summary(
+    request,
+    *,
+    buy_now_variant_id=None,
+    buy_now_quantity=1,
+    promo_code=None,
+):
     user = request.user
-    buy_now_variant_id = request.session.get("buy_now_variant_id")
     addresses = user.addresses.all().order_by("-is_default", "-id")
 
     cart = None
     variant = None
-    quantity = request.session.get("buy_now_quantity", 1)
+    quantity = max(int(buy_now_quantity or 1), 1)
+    line_items = []
 
     if buy_now_variant_id:
-        variant = get_object_or_404(ProductVariant, id=buy_now_variant_id)
-        subtotal = variant.selling_price * quantity
+        variant = get_object_or_404(
+            ProductVariant.objects.select_related("product__subcategory__category"),
+            id=buy_now_variant_id,
+        )
+        if variant.stock_quantity < quantity:
+            raise ValueError("Insufficient stock")
+        line_total = _money(variant.selling_price * quantity)
+        line_items.append(
+            {
+                "variant": variant,
+                "product": variant.product,
+                "quantity": quantity,
+                "unit_price": _money(variant.selling_price),
+                "line_total": line_total,
+            }
+        )
     else:
         cart = (
             Cart.objects.filter(user=user)
-            .prefetch_related("items__variant__product")
+            .prefetch_related("items__variant__product__subcategory__category")
             .first()
         )
         if not cart or not cart.items.exists():
-            return render(
-                request, "user/checkout.html", {"error": "Your cart is empty"}
+            raise ValueError("Your cart is empty")
+        for item in cart.items.all():
+            if item.variant.stock_quantity < item.quantity:
+                raise ValueError(f"Insufficient stock for {item.variant.product.name}")
+            line_items.append(
+                {
+                    "variant": item.variant,
+                    "product": item.variant.product,
+                    "quantity": item.quantity,
+                    "unit_price": _money(item.price_at_time),
+                    "line_total": _money(item.quantity * item.price_at_time),
+                }
             )
-        subtotal = sum(i.quantity * i.price_at_time for i in cart.items.all())
 
-    shipping = Decimal("99") if subtotal < 999 else Decimal("0")
-    tax = subtotal * Decimal("0.18")
-    grand_total = subtotal + shipping + tax
+    subtotal = _money(sum(item["line_total"] for item in line_items))
+    shipping = _money("99") if subtotal < DzDecimal("999") else _money("0")
 
-    context = {
+    promo_code = (promo_code or "").strip().upper()
+    applied_coupon = None
+    promo_error = ""
+    discount_amount = _money("0")
+
+    if promo_code:
+        coupon = _get_checkout_coupon(promo_code)
+        if not coupon:
+            promo_error = "Promo code not found."
+        elif not coupon.is_currently_valid():
+            promo_error = "This promo code is inactive or expired."
+        elif subtotal < _money(coupon.min_order_amount):
+            promo_error = (
+                f"This promo code requires a minimum subtotal of ₹{coupon.min_order_amount:.2f}."
+            )
+        else:
+            eligible_subtotal = _money(
+                sum(
+                    item["line_total"]
+                    for item in line_items
+                    if coupon.matches_product(item["product"])
+                )
+            )
+            if eligible_subtotal <= 0:
+                promo_error = "This promo code does not apply to the selected items."
+            else:
+                discount_amount = _money(coupon.calculate_discount(eligible_subtotal))
+                if discount_amount <= 0:
+                    promo_error = "This promo code does not reduce the current total."
+                else:
+                    applied_coupon = coupon
+                    promo_code = coupon.code
+
+    discounted_subtotal = _money(subtotal - discount_amount)
+    tax = _money(discounted_subtotal * DzDecimal("0.18"))
+    grand_total = _money(discounted_subtotal + shipping + tax)
+
+    return {
         "cart": cart,
         "variant": variant,
         "quantity": quantity,
         "addresses": addresses,
         "subtotal": subtotal,
         "shipping": shipping,
+        "discount_amount": discount_amount,
         "tax_amount": tax,
         "grand_total": grand_total,
         "single_product": bool(buy_now_variant_id),
+        "promo_code": promo_code if applied_coupon else "",
+        "promo_message": (
+            f"{applied_coupon.code} applied to {applied_coupon.target_name}."
+            if applied_coupon
+            else ""
+        ),
+        "promo_error": promo_error,
+        "applied_coupon": applied_coupon,
     }
+
+
+def _serialize_checkout_totals(summary):
+    return {
+        "subtotal": f"{summary['subtotal']:.2f}",
+        "shipping": f"{summary['shipping']:.2f}",
+        "discount_amount": f"{summary['discount_amount']:.2f}",
+        "tax_amount": f"{summary['tax_amount']:.2f}",
+        "grand_total": f"{summary['grand_total']:.2f}",
+        "promo_code": summary["promo_code"],
+        "promo_message": summary["promo_message"],
+    }
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def checkout(request):
+    buy_now_variant_id = request.session.get("buy_now_variant_id")
+    quantity = request.session.get("buy_now_quantity", 1)
+    promo_code = request.session.get(CHECKOUT_PROMO_SESSION_KEY, "")
+
+    try:
+        context = _build_checkout_summary(
+            request,
+            buy_now_variant_id=buy_now_variant_id,
+            buy_now_quantity=quantity,
+            promo_code=promo_code,
+        )
+    except ValueError as exc:
+        _remove_checkout_coupon(request)
+        return render(request, "user/checkout.html", {"error": str(exc)})
+
+    if context["promo_error"]:
+        _remove_checkout_coupon(request)
+
     return render(request, "user/checkout.html", context)
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def apply_promo_code(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid data"}, status=400)
+
+    code = (data.get("promo_code") or "").strip().upper()
+    if not code:
+        return JsonResponse({"error": "Enter a promo code."}, status=400)
+
+    try:
+        summary = _build_checkout_summary(
+            request,
+            buy_now_variant_id=request.session.get("buy_now_variant_id"),
+            buy_now_quantity=request.session.get("buy_now_quantity", 1),
+            promo_code=code,
+        )
+    except ValueError as exc:
+        _remove_checkout_coupon(request)
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    if summary["promo_error"] or not summary["promo_code"]:
+        _remove_checkout_coupon(request)
+        return JsonResponse({"error": summary["promo_error"]}, status=400)
+
+    request.session[CHECKOUT_PROMO_SESSION_KEY] = summary["promo_code"]
+    return JsonResponse(
+        {
+            "success": True,
+            "totals": _serialize_checkout_totals(summary),
+        }
+    )
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def remove_promo_code(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    _remove_checkout_coupon(request)
+
+    try:
+        summary = _build_checkout_summary(
+            request,
+            buy_now_variant_id=request.session.get("buy_now_variant_id"),
+            buy_now_quantity=request.session.get("buy_now_quantity", 1),
+        )
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    return JsonResponse(
+        {
+            "success": True,
+            "totals": _serialize_checkout_totals(summary),
+        }
+    )
 
 
 @login_required
@@ -2072,6 +2271,7 @@ def create_razorpay_order(request):
         data = json.loads(request.body)
         address_id = data.get("selected_address_id")
         payment_method = (data.get("payment_method") or "ONLINE").upper()
+        promo_code = (data.get("promo_code") or "").strip().upper()
     except json.JSONDecodeError:
         logger.error("Invalid JSON in create_razorpay_order request")
         return JsonResponse({"error": "Invalid data"}, status=400)
@@ -2098,20 +2298,24 @@ def create_razorpay_order(request):
     try:
         if buy_now_variant_id:
             variant = get_object_or_404(ProductVariant, id=buy_now_variant_id)
-            if variant.stock_quantity < buy_now_quantity:
-                logger.warning(f"Insufficient stock for variant {buy_now_variant_id}")
-                return JsonResponse({"error": "Insufficient stock"}, status=400)
-            subtotal = variant.selling_price * buy_now_quantity
         else:
             cart = Cart.objects.filter(user=user).first()
             if not cart or not cart.items.exists():
                 logger.warning(f"Empty cart for user {user.id}")
                 return JsonResponse({"error": "Cart is empty"}, status=400)
-            subtotal = sum(i.quantity * i.price_at_time for i in cart.items.all())
 
-        shipping = DzDecimal("99") if subtotal < 999 else DzDecimal("0")
-        tax = subtotal * DzDecimal("0.18")
-        grand_total = subtotal + shipping + tax
+        summary = _build_checkout_summary(
+            request,
+            buy_now_variant_id=buy_now_variant_id,
+            buy_now_quantity=buy_now_quantity,
+            promo_code=promo_code,
+        )
+        if promo_code and summary["promo_error"]:
+            return JsonResponse({"error": summary["promo_error"]}, status=400)
+
+        grand_total = summary["grand_total"]
+        applied_promo_code = summary["promo_code"]
+        discount_amount = summary["discount_amount"]
 
         # Create Order and items in a single transaction
         with transaction.atomic():
@@ -2119,6 +2323,8 @@ def create_razorpay_order(request):
                 user=user,
                 order_number=f"EB{timezone.now().strftime('%Y%m%d')}{uuid.uuid4().hex[:6]}",
                 total_amount=grand_total,
+                discount_amount=discount_amount,
+                promo_code=applied_promo_code,
                 payment_status="PENDING",
                 order_status="PENDING",
                 shipping_name=address.full_name,
@@ -2190,6 +2396,8 @@ def create_razorpay_order(request):
                 )
 
                 request.session["pending_order_id"] = order.id
+                if applied_promo_code:
+                    request.session[CHECKOUT_PROMO_SESSION_KEY] = applied_promo_code
 
                 # Validate prefill data
                 prefill_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
@@ -2380,6 +2588,7 @@ def verify_razorpay_payment(request):
             request.session.pop("buy_now_variant_id", None)
             request.session.pop("buy_now_quantity", None)
             request.session.pop("pending_order_id", None)
+            _remove_checkout_coupon(request)
             return redirect("order_success", order_id=order.id)
 
         except Exception as e:
@@ -2520,6 +2729,7 @@ def process_cod_order(request):
         request.session.pop("pending_order_id", None)
         request.session.pop("buy_now_variant_id", None)
         request.session.pop("buy_now_quantity", None)
+        _remove_checkout_coupon(request)
 
     return redirect("order_success", order_id=order.id)
 

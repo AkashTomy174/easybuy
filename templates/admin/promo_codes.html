@@ -1,0 +1,177 @@
+{% extends "admin/admin_base.html" %}
+{% block title %}Promo Codes | EasyBuy Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <section class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <p class="text-xs font-black uppercase tracking-[0.3em] text-primary">Promotions</p>
+                <h1 class="mt-2 text-3xl font-black text-slate-900">Admin Promo Codes</h1>
+                <p class="mt-2 text-sm text-slate-500">Create promo codes for full categories or specific subcategories.</p>
+            </div>
+            <div class="rounded-2xl bg-primary/10 px-4 py-3 text-right">
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Active Codes</p>
+                <p class="mt-1 text-2xl font-black text-primary">{{ promo_codes|length }}</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="grid gap-8 xl:grid-cols-[1.05fr_1.35fr]">
+        <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <h2 class="text-xl font-black text-slate-900">Create Promo Code</h2>
+            <form method="post" class="mt-6 space-y-5">
+                {% csrf_token %}
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Name</span>
+                        <input name="name" required class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary" placeholder="Festival Category Drop">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Code</span>
+                        <input name="code" required class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold uppercase outline-none transition focus:border-primary" placeholder="FEST25">
+                    </label>
+                </div>
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Discount Type</span>
+                        <select name="discount_type" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary">
+                            <option value="PERCENT">Percentage</option>
+                            <option value="FLAT">Flat</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Discount Value</span>
+                        <input name="discount_value" type="number" min="0.01" step="0.01" required class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary" placeholder="25">
+                    </label>
+                </div>
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Scope</span>
+                        <select id="admin-promo-scope" name="scope" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary" onchange="syncAdminPromoTargets()">
+                            <option value="CATEGORY">Category</option>
+                            <option value="SUBCATEGORY">Subcategory</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Target</span>
+                        <select id="admin-promo-target" name="target_id" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary"></select>
+                    </label>
+                </div>
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Valid From</span>
+                        <input name="valid_from" type="datetime-local" required class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Valid To</span>
+                        <input name="valid_to" type="datetime-local" required class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary">
+                    </label>
+                </div>
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Minimum Subtotal</span>
+                        <input name="min_order_amount" type="number" min="0" step="0.01" value="0" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Usage Limit</span>
+                        <input name="usage_limit" type="number" min="0" value="0" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary">
+                    </label>
+                </div>
+                <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
+                    <input type="checkbox" name="is_active" checked class="rounded border-slate-300 text-primary focus:ring-primary">
+                    Activate immediately
+                </label>
+                <button type="submit" class="w-full rounded-2xl bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-blue-600">Create Promo Code</button>
+            </form>
+        </div>
+
+        <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-black text-slate-900">Existing Codes</h2>
+                    <p class="mt-1 text-sm text-slate-500">Users redeem these codes during checkout.</p>
+                </div>
+            </div>
+            <div class="mt-6 overflow-hidden rounded-3xl border border-slate-200">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr class="text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+                            <th class="px-5 py-4">Code</th>
+                            <th class="px-5 py-4">Target</th>
+                            <th class="px-5 py-4">Discount</th>
+                            <th class="px-5 py-4">Window</th>
+                            <th class="px-5 py-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 bg-white">
+                        {% for promo in promo_codes %}
+                            <tr class="align-top">
+                                <td class="px-5 py-4">
+                                    <p class="text-sm font-black text-slate-900">{{ promo.code }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">{{ promo.name }}</p>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <p class="text-sm font-bold text-slate-800">{{ promo.scope_label }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">{{ promo.target_name }}</p>
+                                </td>
+                                <td class="px-5 py-4 text-sm font-semibold text-slate-700">
+                                    {% if promo.discount_type == "PERCENT" %}
+                                        {{ promo.discount_value }}%
+                                    {% else %}
+                                        ₹{{ promo.discount_value }}
+                                    {% endif %}
+                                    <p class="mt-1 text-xs text-slate-500">Min subtotal: ₹{{ promo.min_order_amount }}</p>
+                                </td>
+                                <td class="px-5 py-4 text-xs font-semibold text-slate-600">
+                                    <p>{{ promo.valid_from|date:"d M Y, h:i A" }}</p>
+                                    <p class="mt-1">{{ promo.valid_to|date:"d M Y, h:i A" }}</p>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <span class="rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] {% if promo.is_active %}bg-emerald-100 text-emerald-700{% else %}bg-slate-100 text-slate-500{% endif %}">
+                                            {% if promo.is_active %}Active{% else %}Paused{% endif %}
+                                        </span>
+                                        <form method="post" action="{% url 'toggle_admin_promo_code' promo.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="rounded-xl border border-slate-200 px-3 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-600 transition hover:bg-slate-50">
+                                                {% if promo.is_active %}Disable{% else %}Enable{% endif %}
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="px-5 py-12 text-center text-sm font-semibold text-slate-500">No admin promo codes yet.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+{{ category_options|json_script:"admin-promo-categories" }}
+{{ subcategory_options|json_script:"admin-promo-subcategories" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function syncAdminPromoTargets() {
+        const scope = document.getElementById('admin-promo-scope').value;
+        const target = document.getElementById('admin-promo-target');
+        const categories = JSON.parse(document.getElementById('admin-promo-categories').textContent);
+        const subcategories = JSON.parse(document.getElementById('admin-promo-subcategories').textContent);
+        const records = scope === 'CATEGORY' ? categories : subcategories;
+
+        target.innerHTML = records.map((item) => {
+            const label = scope === 'CATEGORY' ? item.name : `${item.category__name} / ${item.name}`;
+            return `<option value="${item.id}">${label}</option>`;
+        }).join('');
+    }
+
+    syncAdminPromoTargets();
+</script>
+{% endblock %}

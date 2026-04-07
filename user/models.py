@@ -104,6 +104,8 @@ class Order(models.Model):
     razorpay_order_id = models.CharField(max_length=255, null=True, blank=True)
     razorpay_payment_id = models.CharField(max_length=255, null=True, blank=True)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    promo_code = models.CharField(max_length=50, blank=True, default="")
     payment_status = models.CharField(max_length=20)
     order_status = models.CharField(max_length=20)
     shipping_name = models.CharField(max_length=100, null=True, blank=True)

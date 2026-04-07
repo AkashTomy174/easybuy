@@ -77,6 +77,8 @@ urlpatterns = [
     path("cart/remove/<int:item_id>/", views.remove_from_cart, name="remove_from_cart"),
     path("filter/", views.filtering, name="filtering"),
     path("checkout/", views.checkout, name="checkout"),
+    path("checkout/apply-promo/", views.apply_promo_code, name="apply_promo_code"),
+    path("checkout/remove-promo/", views.remove_promo_code, name="remove_promo_code"),
     path("orders/", views.display_order, name="user_orders"),
     path("orders/cancel/<int:order_id>/", views.order_cancel, name="order_cancel"),
     path(

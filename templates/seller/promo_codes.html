@@ -1,0 +1,141 @@
+{% extends "seller/seller_base.html" %}
+{% block title %}Promo Codes | Seller{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <section class="rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm dark:border-stone-800 dark:bg-surface-dark">
+        <p class="text-xs font-black uppercase tracking-[0.3em] text-primary">Seller Promotions</p>
+        <div class="mt-3 flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-black text-stone-900 dark:text-white">Product Promo Codes</h1>
+                <p class="mt-2 max-w-2xl text-sm text-stone-500 dark:text-stone-400">Create promo codes for your own products. Customers can redeem them directly during checkout.</p>
+            </div>
+            <div class="rounded-3xl bg-primary/10 px-5 py-4 text-right">
+                <p class="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Your Codes</p>
+                <p class="mt-1 text-3xl font-black text-primary">{{ promo_codes|length }}</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="grid gap-8 xl:grid-cols-[1fr_1.2fr]">
+        <div class="rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm dark:border-stone-800 dark:bg-surface-dark">
+            <h2 class="text-xl font-black text-stone-900 dark:text-white">Create Product Code</h2>
+            <form method="post" class="mt-6 space-y-5">
+                {% csrf_token %}
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Name</span>
+                        <input name="name" required class="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary dark:border-stone-700 dark:bg-stone-900/50 dark:text-white" placeholder="Seller Launch Drop">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Code</span>
+                        <input name="code" required class="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold uppercase outline-none transition focus:border-primary dark:border-stone-700 dark:bg-stone-900/50 dark:text-white" placeholder="PHONE150">
+                    </label>
+                </div>
+                <label class="block">
+                    <span class="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Product</span>
+                    <select name="product_id" required class="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary dark:border-stone-700 dark:bg-stone-900/50 dark:text-white">
+                        <option value="">Select a product</option>
+                        {% for product in products %}
+                            <option value="{{ product.id }}">{{ product.name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Discount Type</span>
+                        <select name="discount_type" class="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary dark:border-stone-700 dark:bg-stone-900/50 dark:text-white">
+                            <option value="PERCENT">Percentage</option>
+                            <option value="FLAT">Flat</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Discount Value</span>
+                        <input name="discount_value" type="number" min="0.01" step="0.01" required class="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary dark:border-stone-700 dark:bg-stone-900/50 dark:text-white" placeholder="150">
+                    </label>
+                </div>
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Valid From</span>
+                        <input name="valid_from" type="datetime-local" required class="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary dark:border-stone-700 dark:bg-stone-900/50 dark:text-white">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Valid To</span>
+                        <input name="valid_to" type="datetime-local" required class="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary dark:border-stone-700 dark:bg-stone-900/50 dark:text-white">
+                    </label>
+                </div>
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Minimum Subtotal</span>
+                        <input name="min_order_amount" type="number" min="0" step="0.01" value="0" class="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary dark:border-stone-700 dark:bg-stone-900/50 dark:text-white">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Usage Limit</span>
+                        <input name="usage_limit" type="number" min="0" value="0" class="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary dark:border-stone-700 dark:bg-stone-900/50 dark:text-white">
+                    </label>
+                </div>
+                <label class="inline-flex items-center gap-3 rounded-2xl border border-stone-200 px-4 py-3 text-sm font-semibold text-stone-700 dark:border-stone-700 dark:text-stone-300">
+                    <input type="checkbox" name="is_active" checked class="rounded border-stone-300 text-primary focus:ring-primary">
+                    Activate immediately
+                </label>
+                <button type="submit" class="w-full rounded-2xl bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-primary-dark">Create Product Promo</button>
+            </form>
+        </div>
+
+        <div class="rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm dark:border-stone-800 dark:bg-surface-dark">
+            <h2 class="text-xl font-black text-stone-900 dark:text-white">Your Existing Codes</h2>
+            <div class="mt-6 overflow-hidden rounded-[1.75rem] border border-stone-200 dark:border-stone-800">
+                <table class="min-w-full divide-y divide-stone-200 dark:divide-stone-800">
+                    <thead class="bg-stone-50 dark:bg-stone-900/60">
+                        <tr class="text-left text-[11px] font-black uppercase tracking-[0.18em] text-stone-500">
+                            <th class="px-5 py-4">Code</th>
+                            <th class="px-5 py-4">Product</th>
+                            <th class="px-5 py-4">Discount</th>
+                            <th class="px-5 py-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-stone-200 bg-white dark:divide-stone-800 dark:bg-surface-dark">
+                        {% for promo in promo_codes %}
+                            <tr class="align-top">
+                                <td class="px-5 py-4">
+                                    <p class="text-sm font-black text-stone-900 dark:text-white">{{ promo.code }}</p>
+                                    <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">{{ promo.name }}</p>
+                                </td>
+                                <td class="px-5 py-4 text-sm font-semibold text-stone-700 dark:text-stone-200">
+                                    {{ promo.product.name }}
+                                    <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">{{ promo.valid_from|date:"d M Y" }} to {{ promo.valid_to|date:"d M Y" }}</p>
+                                </td>
+                                <td class="px-5 py-4 text-sm font-semibold text-stone-700 dark:text-stone-200">
+                                    {% if promo.discount_type == "PERCENT" %}
+                                        {{ promo.discount_value }}%
+                                    {% else %}
+                                        ₹{{ promo.discount_value }}
+                                    {% endif %}
+                                    <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">Min subtotal: ₹{{ promo.min_order_amount }}</p>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <span class="rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] {% if promo.is_active %}bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400{% else %}bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300{% endif %}">
+                                            {% if promo.is_active %}Active{% else %}Paused{% endif %}
+                                        </span>
+                                        <form method="post" action="{% url 'toggle_seller_promo_code' promo.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="rounded-xl border border-stone-200 px-3 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-stone-600 transition hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800">
+                                                {% if promo.is_active %}Disable{% else %}Enable{% endif %}
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" class="px-5 py-12 text-center text-sm font-semibold text-stone-500 dark:text-stone-400">No seller promo codes yet.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

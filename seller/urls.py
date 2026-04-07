@@ -11,6 +11,8 @@ urlpatterns = [
         name="seller_registration_success",
     ),
     path("inventory/", views.seller_inventory, name="seller_products_list"),
+    path("promotions/", views.seller_promo_codes, name="seller_promo_codes"),
+    path("promotions/toggle/<int:coupon_id>/", views.toggle_seller_promo_code, name="toggle_seller_promo_code"),
     path("sellerdashboard/", views.seller_dashboard, name="sellerdashboard"),
     path("logout/", logout_view, name="logout"),
     path("add-product/", views.add_product, name="add_product"),
