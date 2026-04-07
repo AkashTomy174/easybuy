@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.text import slugify
 from django.contrib.auth.hashers import check_password, make_password
-from decimal import Decimal
 
 
 def generate_unique_category_slug(klass, field, slug_field="slug"):
@@ -159,22 +158,22 @@ class SubCategory(models.Model):
 
 class Banner(models.Model):
     title = models.CharField(max_length=255)
-    image_url = models.URLField()
+    description = models.TextField(blank=True)
+    image = models.ImageField(upload_to="banners/", blank=True, null=True)
+    image_url = models.URLField(blank=True, null=True)
     redirect_url = models.URLField(blank=True, null=True)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     is_active = models.BooleanField(default=True)
 
-
-class AdSpace(models.Model):
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
-    price_per_day = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
-        return self.name
+        return self.title
+
+    @property
+    def hero_image_url(self):
+        if self.image:
+            return self.image.url
+        return self.image_url or ""
 
 
 class StockNotification(models.Model):
@@ -190,34 +189,3 @@ class StockNotification(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.variant}"
-
-
-class AdBooking(models.Model):
-    STATUS_CHOICES = (
-        ("PENDING", "Pending"),
-        ("APPROVED", "Approved"),
-        ("REJECTED", "Rejected"),
-        ("ACTIVE", "Active"),
-        ("EXPIRED", "Expired"),
-    )
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="ad_bookings")
-    ad_space = models.ForeignKey(
-        AdSpace, on_delete=models.CASCADE, related_name="bookings"
-    )
-    image = models.ImageField(upload_to="ads/")
-    redirect_url = models.URLField()
-    start_date = models.DateField()
-    end_date = models.DateField()
-    total_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
-    is_paid = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def save(self, *args, **kwargs):
-        if self.start_date and self.end_date and self.ad_space:
-            if self.total_cost == 0:
-                days = (self.end_date - self.start_date).days
-                if days > 0:
-                    self.total_cost = self.ad_space.price_per_day * Decimal(days)
-        super().save(*args, **kwargs)

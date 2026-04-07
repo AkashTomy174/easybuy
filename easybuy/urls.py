@@ -10,6 +10,7 @@ urlpatterns = [
     path("seller/", include("seller.urls")),
     path("easy_admin/", include("easybuy_admin.urls")),
     path("user/", include("user.urls")),
+    path("chatbot/", include("chatbot.urls")),
     path("login/", all_login, name="login"),
     path("", include("core.urls")),
 ]

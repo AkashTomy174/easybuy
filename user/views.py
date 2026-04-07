@@ -25,7 +25,7 @@ from .models import (
     ReturnRequestImage,
     PaymentTransaction,
 )
-from core.models import SubCategory, Category, Address, Notification
+from core.models import SubCategory, Category, Address, Notification, Banner
 import json
 from django.http import Http404
 from django.db.models import Q, Avg
@@ -42,9 +42,17 @@ from django.http import HttpResponse
 from decimal import Decimal as DzDecimal
 from core.whatsapp_utils import WhatsAppNotifier
 from core.services import create_notification
+from django.views.decorators.csrf import csrf_exempt
 
 
 logger = logging.getLogger(__name__)
+
+
+class RazorpayOrderError(Exception):
+    def __init__(self, payload, status_code):
+        super().__init__(payload.get("error", "Razorpay order creation failed"))
+        self.payload = payload
+        self.status_code = status_code
 
 
 def _restock_order_item(order_item):
@@ -73,6 +81,100 @@ def _deduct_order_item_stock(order_item):
     return True
 
 
+def _record_payment_transaction(order, transaction_id, status, gateway_response):
+    transaction_obj, created = PaymentTransaction.objects.get_or_create(
+        order=order,
+        transaction_id=transaction_id,
+        defaults={
+            "payment_gateway": "Razorpay",
+            "amount": order.total_amount,
+            "status": status,
+            "gateway_response": gateway_response,
+        },
+    )
+    if not created:
+        update_fields = []
+        if transaction_obj.status != status:
+            transaction_obj.status = status
+            update_fields.append("status")
+        if transaction_obj.gateway_response != gateway_response:
+            transaction_obj.gateway_response = gateway_response
+            update_fields.append("gateway_response")
+        if update_fields:
+            transaction_obj.save(update_fields=update_fields)
+    return transaction_obj
+
+
+def _finalize_online_order(
+    order, razorpay_payment_id, gateway_response, *, clear_cart=False
+):
+    with transaction.atomic():
+        order = (
+            Order.objects.select_for_update()
+            .prefetch_related("items__variant__product")
+            .get(pk=order.pk)
+        )
+
+        order_updates = []
+        if razorpay_payment_id and order.razorpay_payment_id != razorpay_payment_id:
+            order.razorpay_payment_id = razorpay_payment_id
+            order_updates.append("razorpay_payment_id")
+
+        if order.payment_status == "PAID":
+            if order_updates:
+                order.save(update_fields=order_updates)
+            _record_payment_transaction(
+                order,
+                razorpay_payment_id,
+                "PAID",
+                gateway_response,
+            )
+            if clear_cart:
+                Cart.objects.filter(user=order.user).delete()
+                logger.info("Cart cleared for user %s", order.user_id)
+            return order, False
+
+        order.payment_status = "PAID"
+        order.order_status = "CONFIRMED"
+        order.payment_method = "ONLINE"
+        order_updates.extend(["payment_status", "order_status", "payment_method"])
+        order.save(update_fields=order_updates)
+        logger.info("Order %s marked as PAID", order.order_number)
+
+        for item in order.items.all():
+            ProductVariant.objects.select_for_update().filter(pk=item.variant_id).first()
+            if not _deduct_order_item_stock(item):
+                raise ValueError(f"Insufficient stock for {item.variant.product.name}")
+            logger.info("Stock updated for variant %s: -%s", item.variant.id, item.quantity)
+
+        _record_payment_transaction(
+            order,
+            razorpay_payment_id,
+            "PAID",
+            gateway_response,
+        )
+
+        if clear_cart:
+            Cart.objects.filter(user=order.user).delete()
+            logger.info("Cart cleared for user %s", order.user_id)
+
+        _send_order_confirmation(order)
+        logger.info("Order confirmation notification sent for %s", order.order_number)
+        return order, True
+
+
+def _extract_razorpay_payment_details(payload):
+    payload = payload or {}
+    nested_payload = payload.get("payload") or {}
+    payment_entity = (nested_payload.get("payment") or {}).get("entity") or {}
+    order_entity = (nested_payload.get("order") or {}).get("entity") or {}
+    razorpay_order_id = str(
+        payment_entity.get("order_id") or order_entity.get("id") or ""
+    ).strip()
+    razorpay_payment_id = str(payment_entity.get("id") or "").strip()
+    return razorpay_order_id, razorpay_payment_id, payment_entity
+
+
 # home related diplaying mainly
 def home_view(request):
     if request.user.is_authenticated:
@@ -82,6 +184,11 @@ def home_view(request):
             return redirect("seller_dashboard")
 
     categories = Category.objects.filter(is_active=True)
+    active_banners = Banner.objects.filter(
+        is_active=True,
+        start_date__lte=timezone.now(),
+        end_date__gte=timezone.now(),
+    ).order_by("start_date", "-id")
     variants = (
         ProductVariant.objects.filter(
             product__is_active=True,
@@ -127,6 +234,7 @@ def home_view(request):
         request,
         "core/home.html",
         {
+            "active_banners": active_banners,
             "categories": categories,
             "product_data": product_data,
             "wishlists": user_wishlists,
@@ -2048,14 +2156,13 @@ def create_razorpay_order(request):
                     }
                 )
 
-            # Razorpay Gateway logic - WITH ERROR HANDLING
+            amount_paise = int(order.total_amount * 100)
+            logger.info(
+                "Creating Razorpay order for %s: amount=%s",
+                order.order_number,
+                order.total_amount,
+            )
             try:
-                amount_paise = int(order.total_amount * 100)
-
-                logger.info(
-                    f"Creating Razorpay order for {order.order_number}: ₹{order.total_amount}"
-                )
-
                 razorpay_order = client.order.create(
                     {
                         "amount": amount_paise,
@@ -2068,18 +2175,18 @@ def create_razorpay_order(request):
                     logger.error(
                         f"Razorpay API returned invalid response: {razorpay_order}"
                     )
-                    return JsonResponse(
-                        {
-                            "error": "Payment gateway error. Razorpay order creation failed"
-                        },
-                        status=500,
+                    raise RazorpayOrderError(
+                        {"error": "Payment gateway error. Razorpay order creation failed"},
+                        500,
                     )
 
                 order.razorpay_order_id = razorpay_order["id"]
-                order.save()
+                order.save(update_fields=["razorpay_order_id"])
 
                 logger.info(
-                    f"Razorpay order created: {razorpay_order['id']} for {order.order_number}"
+                    "Razorpay order created: %s for %s",
+                    razorpay_order["id"],
+                    order.order_number,
                 )
 
                 request.session["pending_order_id"] = order.id
@@ -2103,23 +2210,32 @@ def create_razorpay_order(request):
                     }
                 )
 
-            except razorpay.errors.Errors as e:
+            except (
+                razorpay.errors.BadRequestError,
+                razorpay.errors.GatewayError,
+                razorpay.errors.ServerError,
+            ) as e:
                 logger.error(f"Razorpay API Error: {str(e)}", exc_info=True)
-                return JsonResponse(
+                raise RazorpayOrderError(
                     {
                         "error": f"Payment gateway error: {str(e)}",
                         "details": "Unable to connect to Razorpay. Please try again.",
                     },
-                    status=502,
-                )
+                    502,
+                ) from e
+            except RazorpayOrderError:
+                raise
             except Exception as e:
                 logger.error(
                     f"Unexpected error creating Razorpay order: {str(e)}", exc_info=True
                 )
-                return JsonResponse(
-                    {"error": "Unexpected error. Please contact support."}, status=500
-                )
+                raise RazorpayOrderError(
+                    {"error": "Unexpected error. Please contact support."},
+                    500,
+                ) from e
 
+    except RazorpayOrderError as e:
+        return JsonResponse(e.payload, status=e.status_code)
     except Exception as e:
         logger.error(f"Error in create_razorpay_order: {str(e)}", exc_info=True)
         return JsonResponse(
@@ -2243,63 +2359,27 @@ def verify_razorpay_payment(request):
             )
             return redirect("user_orders")
 
+        clear_cart = not request.session.get("buy_now_variant_id")
+
         # Payment successful - Update order and inventory
         try:
-            with transaction.atomic():
-                order = (
-                    Order.objects.select_for_update()
-                    .prefetch_related("items__variant")
-                    .get(pk=order.pk)
-                )
-                if order.payment_status == "PAID":
-                    logger.info("Order %s already verified; returning success page", order.order_number)
-                    return redirect("order_success", order_id=order.id)
-
-                order.payment_status = "PAID"
-                order.order_status = "CONFIRMED"
-                order.payment_method = "ONLINE"
-                order.save()
-                logger.info(f"Order {order.order_number} marked as PAID")
-
-                # Update stock
-                for item in order.items.all():
-                    ProductVariant.objects.select_for_update().filter(pk=item.variant_id).first()
-                    if not _deduct_order_item_stock(item):
-                        raise ValueError(
-                            f"Insufficient stock for {item.variant.product.name}"
-                        )
-                    logger.info(
-                        f"Stock updated for variant {item.variant.id}: -{item.quantity}"
-                    )
-
-                PaymentTransaction.objects.get_or_create(
-                    order=order,
-                    transaction_id=razorpay_payment_id,
-                    defaults={
-                        "payment_gateway": "Razorpay",
-                        "amount": order.total_amount,
-                        "status": "PAID",
-                        "gateway_response": params_dict,
-                    },
-                )
-
-                # Clear cart if not buy-now
-                if not request.session.get("buy_now_variant_id"):
-                    Cart.objects.filter(user=request.user).delete()
-                    logger.info(f"Cart cleared for user {request.user.id}")
-
-                # Trigger notification
-                _send_order_confirmation(order)
+            order, was_confirmed = _finalize_online_order(
+                order,
+                razorpay_payment_id,
+                params_dict,
+                clear_cart=clear_cart,
+            )
+            if was_confirmed:
+                logger.info(f"Payment verified and order confirmed: {order.order_number}")
+            else:
                 logger.info(
-                    f"Order confirmation notification sent for {order.order_number}"
+                    "Order %s already verified; returning success page",
+                    order.order_number,
                 )
 
-                # Clear session
-                request.session.pop("buy_now_variant_id", None)
-                request.session.pop("buy_now_quantity", None)
-                request.session.pop("pending_order_id", None)
-
-            logger.info(f"Payment verified and order confirmed: {order.order_number}")
+            request.session.pop("buy_now_variant_id", None)
+            request.session.pop("buy_now_quantity", None)
+            request.session.pop("pending_order_id", None)
             return redirect("order_success", order_id=order.id)
 
         except Exception as e:
@@ -2318,6 +2398,75 @@ def verify_razorpay_payment(request):
         )
         messages.error(request, "An unexpected error occurred. Please contact support.")
         return redirect("checkout")
+
+
+@csrf_exempt
+def razorpay_webhook(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    webhook_secret = getattr(settings, "RAZORPAY_WEBHOOK_SECRET", "").strip()
+    if not webhook_secret:
+        logger.error("Razorpay webhook called without webhook secret configured.")
+        return JsonResponse({"error": "Webhook not configured"}, status=503)
+
+    signature = request.headers.get("X-Razorpay-Signature", "").strip()
+    if not signature:
+        return JsonResponse({"error": "Missing webhook signature"}, status=400)
+
+    body = request.body.decode("utf-8")
+    try:
+        client.utility.verify_webhook_signature(body, signature, webhook_secret)
+    except razorpay.errors.SignatureVerificationError:
+        logger.warning("Invalid Razorpay webhook signature.")
+        return JsonResponse({"error": "Invalid signature"}, status=400)
+
+    try:
+        payload = json.loads(body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid payload"}, status=400)
+
+    event = str(payload.get("event", "")).strip()
+    if event not in {"payment.captured", "order.paid"}:
+        return JsonResponse({"status": "ignored", "event": event}, status=200)
+
+    razorpay_order_id, razorpay_payment_id, payment_entity = (
+        _extract_razorpay_payment_details(payload)
+    )
+    if not razorpay_order_id or not razorpay_payment_id:
+        logger.warning("Webhook missing payment identifiers for event %s", event)
+        return JsonResponse({"error": "Missing payment identifiers"}, status=400)
+
+    order = Order.objects.filter(razorpay_order_id=razorpay_order_id).first()
+    if not order:
+        logger.warning(
+            "Webhook received for unknown Razorpay order %s", razorpay_order_id
+        )
+        return JsonResponse({"status": "missing_order"}, status=202)
+
+    try:
+        order, was_confirmed = _finalize_online_order(
+            order,
+            razorpay_payment_id,
+            {
+                "event": event,
+                "payment": payment_entity,
+            },
+            clear_cart=False,
+        )
+    except Exception:
+        logger.exception(
+            "Webhook failed to finalize order %s for Razorpay order %s",
+            order.order_number,
+            razorpay_order_id,
+        )
+        if order.payment_status != "PAID":
+            order.payment_status = "PARTIAL"
+            order.save(update_fields=["payment_status"])
+        return JsonResponse({"error": "Order reconciliation failed"}, status=500)
+
+    status = "confirmed" if was_confirmed else "already_confirmed"
+    return JsonResponse({"status": status, "order_id": order.id}, status=200)
 
 
 @login_required

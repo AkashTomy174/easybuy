@@ -1,0 +1,84 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}Homepage Banners | EasyBuy Admin{% endblock %}
+
+{% block header_title %}
+    <span class="text-slate-400 text-xs font-bold uppercase tracking-widest">Storefront /</span>
+    <span class="text-slate-900 font-black text-sm uppercase tracking-tight">Homepage Banners</span>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8">
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+            <h1 class="text-3xl font-black tracking-tight text-slate-900">Homepage Banners</h1>
+            <p class="mt-2 text-sm text-slate-500">Control which promotional banners appear in the homepage hero area.</p>
+        </div>
+        <a href="{% url 'add_banner' %}" class="inline-flex items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30">
+            <span class="material-symbols-outlined text-sm">add_photo_alternate</span>
+            Add Banner
+        </a>
+    </div>
+
+    <div class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm shadow-slate-200/50">
+        <table class="w-full border-collapse text-left">
+            <thead>
+                <tr class="border-b border-slate-100 bg-slate-50/80">
+                    <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Banner</th>
+                    <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Link</th>
+                    <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Schedule</th>
+                    <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for banner in banners %}
+                <tr class="align-top">
+                    <td class="px-6 py-5">
+                        <div class="flex items-start gap-4">
+                            <img src="{{ banner.hero_image_url }}" alt="{{ banner.title }}" class="h-16 w-28 rounded-2xl object-cover ring-1 ring-slate-200">
+                            <div class="min-w-0">
+                                <p class="text-sm font-black text-slate-900">{{ banner.title }}</p>
+                                {% if banner.description %}
+                                <p class="mt-1 line-clamp-2 text-xs text-slate-500">{{ banner.description }}</p>
+                                {% endif %}
+                                <p class="mt-1 break-all text-[11px] text-slate-400">
+                                    {% if banner.image %}
+                                        {{ banner.image.name }}
+                                    {% else %}
+                                        {{ banner.image_url }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        {% if banner.redirect_url %}
+                        <a href="{{ banner.redirect_url }}" target="_blank" rel="noreferrer" class="break-all text-sm font-semibold text-primary hover:underline">{{ banner.redirect_url }}</a>
+                        {% else %}
+                        <span class="text-sm text-slate-400">No redirect link</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-5">
+                        <p class="text-sm font-semibold text-slate-700">{{ banner.start_date|date:"M d, Y h:i A" }}</p>
+                        <p class="mt-1 text-xs text-slate-400">to {{ banner.end_date|date:"M d, Y h:i A" }}</p>
+                    </td>
+                    <td class="px-6 py-5">
+                        <form action="{% url 'toggle_banner_status' banner.id %}" method="post" class="inline-flex">
+                            {% csrf_token %}
+                            <button type="submit" class="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all {% if banner.is_active %}border-emerald-100 bg-emerald-50 text-emerald-600 hover:bg-emerald-100{% else %}border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200{% endif %}">
+                                <span class="h-2 w-2 rounded-full {% if banner.is_active %}bg-emerald-500{% else %}bg-slate-300{% endif %}"></span>
+                                {% if banner.is_active %}Live{% else %}Hidden{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="px-6 py-16 text-center text-sm text-slate-400">No banners yet. Add one to power the homepage hero.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

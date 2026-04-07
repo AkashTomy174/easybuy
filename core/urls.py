@@ -28,8 +28,6 @@ urlpatterns = [
     path("product/<slug:slug>/", product_detail, name="product_detail"),
     path("addtocart/<int:id>/", addtocart, name="addtocart"),
     path("filter/", filtering, name="filtering"),
-    path("ads/", views.ad_space_list, name="ad_space_list"),
-    path("ads/book/<int:space_id>/", views.book_ad, name="book_ad"),
     path(
         "stock-notify/<int:variant_id>/",
         views.toggle_stock_notification,

@@ -6,7 +6,8 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from core.decorators import role_required
-from core.models import Category, User,SubCategory
+from core.forms import BannerForm
+from core.models import Banner, Category, User,SubCategory
 from seller.models import SellerProfile, Product
 from user.models import OrderItem
 from django.db.models import Sum, F
@@ -288,6 +289,49 @@ def add_subcategory(request):
             messages.error(request, "Category and name are required.")
     categories = Category.objects.all()
     return render(request, "admin/add_subcategory.html", {"categories": categories})
+
+
+@login_required
+@role_required(allowed_roles=["ADMIN"])
+def banner_list(request):
+    banners = Banner.objects.order_by("-is_active", "start_date", "-id")
+    return render(
+        request,
+        "admin/banner_list.html",
+        {"banners": banners, "active_menu": "banners"},
+    )
+
+
+@login_required
+@role_required(allowed_roles=["ADMIN"])
+def add_banner(request):
+    if request.method == "POST":
+        form = BannerForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Banner added successfully.")
+            return redirect("admin_banner_list")
+    else:
+        form = BannerForm()
+
+    return render(
+        request,
+        "admin/add_banner.html",
+        {"form": form, "active_menu": "banners"},
+    )
+
+
+@login_required
+@role_required(allowed_roles=["ADMIN"])
+def toggle_banner_status(request, id):
+    if request.method != "POST":
+        return redirect("admin_banner_list")
+    banner = get_object_or_404(Banner, id=id)
+    banner.is_active = not banner.is_active
+    banner.save(update_fields=["is_active"])
+    state = "activated" if banner.is_active else "hidden"
+    messages.success(request, f"Banner '{banner.title}' has been {state}.")
+    return redirect("admin_banner_list")
 
 
 @login_required

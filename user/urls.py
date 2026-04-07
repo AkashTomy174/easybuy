@@ -18,6 +18,11 @@ urlpatterns = [
         views.log_razorpay_failure,
         name="log_razorpay_failure",
     ),
+    path(
+        "razorpay-webhook/",
+        views.razorpay_webhook,
+        name="razorpay_webhook",
+    ),
     path("products/", all_products, name="all_products"),
     path("profile/", views.profile_settings, name="profile_settings"),
     path("profile/addresses/", views.manage_addresses, name="manage_addresses"),

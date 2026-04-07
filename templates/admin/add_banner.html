@@ -1,0 +1,82 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}Add Banner | EasyBuy Admin{% endblock %}
+
+{% block header_title %}
+    <span class="text-slate-400 text-xs font-bold uppercase tracking-widest">Storefront /</span>
+    <span class="text-slate-900 font-black text-sm uppercase tracking-tight">Add Banner</span>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl">
+    <div class="mb-8">
+        <h1 class="text-3xl font-black tracking-tight text-slate-900">Add Homepage Banner</h1>
+        <p class="mt-2 text-sm text-slate-500">Upload a banner image and choose the time window when it should be shown.</p>
+    </div>
+
+    <div class="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm shadow-slate-200/50">
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <div>
+                <label for="{{ form.title.id_for_label }}" class="mb-2 block text-sm font-semibold text-slate-900">Banner Title</label>
+                {{ form.title }}
+                {% if form.title.errors %}<p class="mt-2 text-sm text-rose-600">{{ form.title.errors|join:", " }}</p>{% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="mb-2 block text-sm font-semibold text-slate-900">Banner Text</label>
+                {{ form.description }}
+                {% if form.description.errors %}<p class="mt-2 text-sm text-rose-600">{{ form.description.errors|join:", " }}</p>{% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.image.id_for_label }}" class="mb-2 block text-sm font-semibold text-slate-900">Banner Image</label>
+                {{ form.image }}
+                {% if form.image.errors %}<p class="mt-2 text-sm text-rose-600">{{ form.image.errors|join:", " }}</p>{% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.redirect_url.id_for_label }}" class="mb-2 block text-sm font-semibold text-slate-900">Redirect URL</label>
+                {{ form.redirect_url }}
+                {% if form.redirect_url.errors %}<p class="mt-2 text-sm text-rose-600">{{ form.redirect_url.errors|join:", " }}</p>{% endif %}
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+                <div>
+                    <label for="{{ form.start_date.id_for_label }}" class="mb-2 block text-sm font-semibold text-slate-900">Start Date</label>
+                    {{ form.start_date }}
+                    {% if form.start_date.errors %}<p class="mt-2 text-sm text-rose-600">{{ form.start_date.errors|join:", " }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.end_date.id_for_label }}" class="mb-2 block text-sm font-semibold text-slate-900">End Date</label>
+                    {{ form.end_date }}
+                    {% if form.end_date.errors %}<p class="mt-2 text-sm text-rose-600">{{ form.end_date.errors|join:", " }}</p>{% endif %}
+                </div>
+            </div>
+
+            <label class="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                {{ form.is_active }}
+                Publish this banner immediately
+            </label>
+
+            <div class="flex flex-wrap gap-3 pt-2">
+                <button type="submit" class="inline-flex items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30">
+                    <span class="material-symbols-outlined text-sm">save</span>
+                    Save Banner
+                </button>
+                <a href="{% url 'admin_banner_list' %}" class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-slate-700 transition-all hover:bg-slate-50">
+                    <span class="material-symbols-outlined text-sm">arrow_back</span>
+                    Back to Banners
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

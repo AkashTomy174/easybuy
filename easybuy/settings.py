@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "user",
     "easybuy_admin",
     "seller",
+    "chatbot",
     "django.contrib.sites",
     "allauth",
     "allauth.account",
@@ -166,6 +167,11 @@ TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
 TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886")
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+OPENAI_ENABLED = env_bool("OPENAI_ENABLED", bool(OPENAI_API_KEY))
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
+OPENAI_TIMEOUT_SECONDS = int(os.getenv("OPENAI_TIMEOUT_SECONDS", "20"))
+
 
 WHATSAPP_NOTIFICATIONS_ENABLED = os.getenv(
     "WHATSAPP_NOTIFICATIONS_ENABLED", "true"
@@ -175,6 +181,7 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
+RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip()
 RAZORPAY_TEST_MODE = True
 
 if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:

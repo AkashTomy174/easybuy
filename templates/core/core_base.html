@@ -483,39 +483,8 @@
     </div>
 
     <!-- Main Content -->
-    <main class="flex-1 content-bg flex justify-center overflow-x-hidden">
-        <!-- Left Ad Rail (Visible on extra large screens) -->
-        <aside class="hidden 2xl:block w-48 flex-shrink-0 sticky top-24 self-start px-2 py-6 z-30">
-            {% if global_left_ad %}
-            <a href="{{ global_left_ad.redirect_url }}" target="_blank" class="block w-full relative group rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
-                <img src="{{ global_left_ad.image.url }}" alt="Ad" class="w-full h-auto object-cover">
-                {% if global_left_ad.status != 'ACTIVE' %}
-                    <div class="absolute top-2 right-2 px-2 py-0.5 bg-yellow-500/90 backdrop-blur-md rounded text-[8px] font-bold text-white uppercase tracking-wider">Preview</div>
-                {% else %}
-                    <div class="absolute top-2 right-2 px-2 py-0.5 bg-black/60 backdrop-blur-md rounded text-[8px] font-bold text-white uppercase tracking-wider">Sponsored</div>
-                {% endif %}
-            </a>
-            {% endif %}
-        </aside>
-
-        <!-- Main Page Content -->
-        <div class="flex-1 w-full max-w-[100vw] 2xl:max-w-7xl mx-auto">
-            {% block content %}{% endblock %}
-        </div>
-
-        <!-- Right Ad Rail (Visible on extra large screens) -->
-        <aside class="hidden 2xl:block w-48 flex-shrink-0 sticky top-24 self-start px-2 py-6 z-30">
-            {% if global_right_ad %}
-            <a href="{{ global_right_ad.redirect_url }}" target="_blank" class="block w-full relative group rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
-                <img src="{{ global_right_ad.image.url }}" alt="Ad" class="w-full h-auto object-cover">
-                {% if global_right_ad.status != 'ACTIVE' %}
-                    <div class="absolute top-2 right-2 px-2 py-0.5 bg-yellow-500/90 backdrop-blur-md rounded text-[8px] font-bold text-white uppercase tracking-wider">Preview</div>
-                {% else %}
-                    <div class="absolute top-2 right-2 px-2 py-0.5 bg-black/60 backdrop-blur-md rounded text-[8px] font-bold text-white uppercase tracking-wider">Sponsored</div>
-                {% endif %}
-            </a>
-            {% endif %}
-        </aside>
+    <main class="flex-1 content-bg overflow-x-hidden">
+        {% block content %}{% endblock %}
     </main>
 
     <!-- Global Wishlist Selection Modal -->
@@ -645,7 +614,6 @@
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Seller Dashboard</a></li>
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Seller Policies</a></li>
                         <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="#">Success Stories</a></li>
-                        <li><a class="text-sm text-stone-500 dark:text-stone-400 hover:text-primary transition-colors" href="{% url 'ad_space_list' %}">Advertise with Us</a></li>
                     </ul>
                 </div>
             </div>
@@ -670,6 +638,63 @@
             </div>
         </div>
     </footer>
+</div>
+
+<div
+    id="chatbot-widget"
+    class="fixed bottom-6 right-6 z-[60]"
+    data-start-url="{% url 'chatbot_start' %}"
+    data-message-url="{% url 'chatbot_message' %}"
+>
+    <button
+        id="chatbot-toggle"
+        type="button"
+        class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary-dark text-white shadow-2xl shadow-primary/30 transition-transform hover:scale-105"
+        aria-label="Open chat assistant"
+    >
+        <span class="material-symbols-outlined text-3xl">smart_toy</span>
+    </button>
+
+    <div
+        id="chatbot-panel"
+        class="hidden mt-4 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-2xl dark:border-stone-700 dark:bg-surface-dark sm:w-[25rem]"
+    >
+        <div class="flex items-center justify-between bg-gradient-to-r from-primary to-primary-dark px-5 py-4 text-white">
+            <div>
+                <p class="text-sm font-black uppercase tracking-[0.2em] text-white/80">EasyBuy</p>
+                <h3 class="text-lg font-bold">Shopping Assistant</h3>
+            </div>
+            <button
+                id="chatbot-close"
+                type="button"
+                class="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+                aria-label="Close chat assistant"
+            >
+                <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+        </div>
+
+        <div id="chatbot-messages" class="h-[24rem] space-y-4 overflow-y-auto bg-stone-50 px-4 py-4 dark:bg-stone-900/60"></div>
+
+        <div class="border-t border-stone-200 bg-white px-4 py-3 dark:border-stone-700 dark:bg-surface-dark">
+            <div id="chatbot-quick-replies" class="mb-3 flex flex-wrap gap-2"></div>
+            <form id="chatbot-form" class="flex items-end gap-2">
+                <textarea
+                    id="chatbot-input"
+                    rows="1"
+                    class="max-h-28 min-h-[48px] flex-1 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-900 outline-none transition-colors focus:border-primary dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+                    placeholder="Ask about products, orders, returns, or support..."
+                ></textarea>
+                <button
+                    id="chatbot-send"
+                    type="submit"
+                    class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/30 transition-transform hover:scale-[1.02] hover:bg-primary-dark"
+                >
+                    <span class="material-symbols-outlined">send</span>
+                </button>
+            </form>
+        </div>
+    </div>
 </div>
 
 {% block extra_js %}{% endblock %}
@@ -1187,6 +1212,240 @@ function toggleStockNotify(variantId, buttonElement = null) {
         }
     });
 }
+
+function escapeHtml(value) {
+    return (value || '').replace(/[&<>"']/g, function(char) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char];
+    });
+}
+
+const chatbotState = {
+    sessionId: null,
+    initialized: false,
+    loading: false,
+};
+
+function chatbotElements() {
+    return {
+        root: document.getElementById('chatbot-widget'),
+        panel: document.getElementById('chatbot-panel'),
+        messages: document.getElementById('chatbot-messages'),
+        quickReplies: document.getElementById('chatbot-quick-replies'),
+        input: document.getElementById('chatbot-input'),
+        send: document.getElementById('chatbot-send'),
+    };
+}
+
+function setChatbotLoading(isLoading) {
+    const { send, input } = chatbotElements();
+    chatbotState.loading = isLoading;
+    if (send) {
+        send.disabled = isLoading;
+    }
+    if (input) {
+        input.disabled = isLoading;
+    }
+}
+
+function scrollChatbotToBottom() {
+    const { messages } = chatbotElements();
+    if (messages) {
+        messages.scrollTop = messages.scrollHeight;
+    }
+}
+
+function renderChatbotQuickReplies(replies) {
+    const { quickReplies } = chatbotElements();
+    if (!quickReplies) return;
+
+    quickReplies.innerHTML = '';
+    (replies || []).forEach(reply => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-bold text-stone-700 transition-colors hover:border-primary hover:text-primary dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200';
+        button.textContent = reply;
+        button.addEventListener('click', function() {
+            sendChatbotMessage(reply);
+        });
+        quickReplies.appendChild(button);
+    });
+}
+
+function appendChatbotMessage(message) {
+    const { messages } = chatbotElements();
+    if (!messages || !message) return;
+
+    const wrapper = document.createElement('div');
+    const isBot = message.role !== 'user';
+    wrapper.className = isBot ? 'flex justify-start' : 'flex justify-end';
+
+    const bubble = document.createElement('div');
+    bubble.className = isBot
+        ? 'max-w-[85%] rounded-3xl rounded-tl-md bg-white px-4 py-3 text-sm text-stone-800 shadow-sm dark:bg-stone-800 dark:text-stone-100'
+        : 'max-w-[85%] rounded-3xl rounded-tr-md bg-primary px-4 py-3 text-sm text-white shadow-lg shadow-primary/20';
+    bubble.innerHTML = `<p class="leading-relaxed">${escapeHtml(message.content)}</p>`;
+    wrapper.appendChild(bubble);
+    messages.appendChild(wrapper);
+
+    const payload = message.payload || {};
+    if (isBot && payload.products && payload.products.length) {
+        const cards = document.createElement('div');
+        cards.className = 'mt-2 grid gap-3';
+        payload.products.forEach(product => {
+            const card = document.createElement('a');
+            card.href = product.url;
+            card.className = 'block rounded-2xl border border-stone-200 bg-white p-3 shadow-sm transition-transform hover:-translate-y-0.5 hover:border-primary dark:border-stone-700 dark:bg-stone-800';
+            card.innerHTML = `
+                <div class="flex gap-3">
+                    <div class="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-stone-100 dark:bg-stone-700">
+                        ${product.image_url ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" class="h-full w-full object-cover">` : '<div class="flex h-full w-full items-center justify-center text-stone-400"><span class="material-symbols-outlined">image</span></div>'}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-xs font-black uppercase tracking-[0.2em] text-stone-400">${escapeHtml(product.brand)}</p>
+                        <h4 class="truncate text-sm font-bold text-stone-900 dark:text-white">${escapeHtml(product.name)}</h4>
+                        <p class="mt-1 text-sm font-bold text-primary">₹${escapeHtml(product.price)}</p>
+                    </div>
+                </div>
+            `;
+            cards.appendChild(card);
+        });
+        messages.appendChild(cards);
+    }
+
+    if (payload.quick_replies) {
+        renderChatbotQuickReplies(payload.quick_replies);
+    }
+
+    scrollChatbotToBottom();
+}
+
+function renderChatbotMessages(messages) {
+    const { messages: container } = chatbotElements();
+    if (!container) return;
+    container.innerHTML = '';
+    messages.forEach(appendChatbotMessage);
+    scrollChatbotToBottom();
+}
+
+async function initializeChatbot(forceRefresh = false) {
+    const { root } = chatbotElements();
+    if (!root || (chatbotState.initialized && !forceRefresh)) return;
+
+    try {
+        const response = await fetch(root.dataset.startUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        const data = await response.json();
+        chatbotState.sessionId = data.session_id;
+        chatbotState.initialized = true;
+        renderChatbotMessages(data.messages || []);
+        renderChatbotQuickReplies(data.quick_replies || []);
+    } catch (error) {
+        console.error('Chatbot init failed:', error);
+        showToast('Unable to start chat right now.', 'error');
+    }
+}
+
+async function sendChatbotMessage(rawMessage) {
+    const { root, input } = chatbotElements();
+    const message = (rawMessage || (input ? input.value : '') || '').trim();
+
+    if (!message || chatbotState.loading || !root) return;
+
+    if (!chatbotState.initialized) {
+        await initializeChatbot();
+    }
+
+    setChatbotLoading(true);
+    if (input) {
+        input.value = '';
+        input.style.height = '48px';
+    }
+
+    appendChatbotMessage({ role: 'user', content: message, payload: {} });
+
+    try {
+        const response = await fetch(root.dataset.messageUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                session_id: chatbotState.sessionId,
+                message: message
+            })
+        });
+        const data = await response.json();
+        chatbotState.sessionId = data.session_id;
+        appendChatbotMessage(data.bot_message);
+    } catch (error) {
+        console.error('Chatbot send failed:', error);
+        showToast('Unable to send message right now.', 'error');
+    } finally {
+        setChatbotLoading(false);
+        if (input) {
+            input.focus();
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('chatbot-toggle');
+    const close = document.getElementById('chatbot-close');
+    const panel = document.getElementById('chatbot-panel');
+    const form = document.getElementById('chatbot-form');
+    const input = document.getElementById('chatbot-input');
+
+    if (toggle && panel) {
+        toggle.addEventListener('click', async function() {
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) {
+                await initializeChatbot();
+                if (input) {
+                    input.focus();
+                }
+            }
+        });
+    }
+
+    if (close && panel) {
+        close.addEventListener('click', function() {
+            panel.classList.add('hidden');
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            sendChatbotMessage();
+        });
+    }
+
+    if (input) {
+        input.addEventListener('input', function() {
+            input.style.height = 'auto';
+            input.style.height = `${Math.min(input.scrollHeight, 112)}px`;
+        });
+        input.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendChatbotMessage();
+            }
+        });
+    }
+});
 </script>
 
 <!-- UI/UX Enhancement Scripts -->

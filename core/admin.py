@@ -11,8 +11,6 @@ from .models import (
     Otp,
     NotificationConfig,
     NotificationDelivery,
-    AdSpace,
-    AdBooking,
 )
 
 
@@ -26,11 +24,3 @@ admin.site.register(Banner)
 admin.site.register(Otp)
 admin.site.register(NotificationDelivery)
 admin.site.register(NotificationConfig)
-
-
-@admin.register(AdSpace)
-class AdSpaceAdmin(admin.ModelAdmin):
-    list_display = ["name", "price_per_day", "is_active"]
-
-
-admin.site.register(AdBooking)

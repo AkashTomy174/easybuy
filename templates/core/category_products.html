@@ -186,64 +186,66 @@
 
         <!-- Products Grid -->
         <section class="flex-1">
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div class="grid grid-cols-3 gap-2 sm:gap-4 xl:grid-cols-3">
                 {% for item in page_obj %}
                 {% with item.variant as variant %}
                 {% with variant.product as p %}
-                <div class="group flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 product-card-shadow transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-primary/30 relative">
+                <div class="group relative flex flex-col rounded-2xl border border-stone-200 bg-white p-2 product-card-shadow transition-all hover:border-primary/30 hover:shadow-2xl hover:-translate-y-2 dark:border-stone-700 dark:bg-surface-dark sm:rounded-3xl sm:p-4">
                     
-                    <a href="{% url 'product_detail_user' p.slug %}" class="relative aspect-square overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 mb-4 block">
+                    <a href="{% url 'product_detail_user' p.slug %}" class="relative mb-2 block aspect-square overflow-hidden rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 sm:mb-4 sm:rounded-2xl">
                         {% if item.image and item.image.image %}
                             <img src="{{ item.image.image.url }}" alt="{{ p.name }}" class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
                         {% else %}
                             <div class="flex h-full w-full items-center justify-center">
-                                <span class="material-symbols-outlined text-5xl text-stone-300">image_not_supported</span>
+                                <span class="material-symbols-outlined text-3xl text-stone-300 sm:text-5xl">image_not_supported</span>
                             </div>
                         {% endif %}
 
-                        <button onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ variant.id }}, this); return false;" class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-md flex items-center justify-center text-stone-400 hover:text-accent-terracotta transition-colors shadow-sm {% if item.in_wishlist %}text-accent-terracotta{% endif %}">
-                            <span class="material-symbols-outlined text-[20px]">
+                        <button onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ variant.id }}, this); return false;" class="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-stone-400 shadow-sm transition-colors hover:text-accent-terracotta dark:bg-black/50 sm:top-4 sm:right-4 sm:h-10 sm:w-10 {% if item.in_wishlist %}text-accent-terracotta{% endif %}">
+                            <span class="material-symbols-outlined text-sm sm:text-[20px]">
                                 {% if item.in_wishlist %}favorite{% else %}favorite_border{% endif %}
                             </span>
                         </button>
 
                         <!-- Stock Badge -->
                         {% if variant.stock_quantity <= 0 %}
-                            <div class="absolute bottom-0 left-0 right-0 bg-red-500/90 text-white text-xs font-bold py-1 text-center backdrop-blur-sm">
+                            <div class="absolute bottom-0 left-0 right-0 bg-red-500/90 py-1 text-center text-[9px] font-bold text-white backdrop-blur-sm sm:text-xs">
                                 OUT OF STOCK
                             </div>
                         {% endif %}
                     </a>
 
-                    <div class="px-2 flex flex-col flex-1">
-                        <span class="text-[10px] font-black uppercase text-accent-terracotta tracking-[0.2em] mb-2">{{ p.brand|default:"EasyBuy" }}</span>
+                    <div class="flex flex-1 flex-col px-1 sm:px-2">
+                        <span class="mb-1 text-[8px] font-black uppercase tracking-[0.16em] text-accent-terracotta sm:mb-2 sm:text-[10px] sm:tracking-[0.2em]">{{ p.brand|default:"EasyBuy" }}</span>
                         <a href="{% url 'product_detail_user' p.slug %}">
-                            <h3 class="font-bold text-stone-900 dark:text-white text-lg leading-tight line-clamp-2 mb-4 group-hover:text-primary transition-colors">
+                            <h3 class="mb-2 line-clamp-2 text-[11px] font-bold leading-tight text-stone-900 transition-colors group-hover:text-primary dark:text-white sm:mb-4 sm:text-lg">
                                 {{ p.name }}
                             </h3>
                         </a>
                         
-                        <div class="mt-auto flex items-center justify-between gap-2 pt-4 border-t border-stone-100 dark:border-stone-700">
-                            <div class="flex flex-col">
-                                <span class="text-2xl font-black text-stone-900 dark:text-white tracking-tighter">₹{{ variant.selling_price }}</span>
+                        <div class="mt-auto grid h-10 grid-cols-[1fr_auto] items-center gap-2 border-t border-stone-100 pt-2 dark:border-stone-700 sm:h-12 sm:gap-3 sm:pt-4">
+                            <div class="flex flex-col justify-center">
+                                <span class="text-sm font-black leading-none text-stone-900 dark:text-white sm:text-2xl">₹{{ variant.selling_price }}</span>
                                 {% if variant.mrp > variant.selling_price %}
-                                    <span class="text-xs font-medium text-stone-400 line-through">₹{{ variant.mrp }}</span>
+                                    <span class="text-[9px] font-medium leading-none text-stone-400 line-through sm:text-xs">₹{{ variant.mrp }}</span>
                                 {% endif %}
                             </div>
                             {% if variant.stock_quantity > 0 %}
                             <button data-addtocart-btn data-variant-id="{{ variant.id }}" data-product-image="{% if item.image and item.image.image %}{{ item.image.image.url }}{% endif %}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;"
-                                    class="h-10 px-4 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary-dark transition-all flex items-center gap-1 shadow-sm">
-                                <span class="material-symbols-outlined">add_shopping_cart</span>
-                                Add
+                                    class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-white transition-all hover:bg-primary-dark sm:h-10 sm:w-auto sm:gap-1 sm:px-4 sm:rounded-2xl sm:text-sm sm:font-bold">
+                                <span class="material-symbols-outlined text-base sm:text-[20px]">add_shopping_cart</span>
+                                <span class="hidden sm:inline">Add</span>
                             </button>
                             {% else %}
                             {% if user.is_authenticated %}
-                            <button data-stock-notify-btn data-variant-id="{{ variant.id }}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; toggleStockNotify(btn.dataset.variantId, btn); return false;" class="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/50 transition-all hover:scale-105">
-                                <span class="material-symbols-outlined text-lg">notifications_active</span>
+                            <button data-stock-notify-btn data-variant-id="{{ variant.id }}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; toggleStockNotify(btn.dataset.variantId, btn); return false;" class="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transition-all hover:shadow-xl hover:shadow-blue-500/50 sm:h-10 sm:w-auto sm:gap-1 sm:px-4 sm:rounded-2xl sm:text-sm sm:font-bold">
+                                <span class="material-symbols-outlined text-base sm:text-lg">notifications_active</span>
+                                <span class="hidden sm:inline">Notify</span>
                             </button>
                             {% else %}
-                            <button disabled class="h-12 w-12 rounded-full bg-stone-300 text-stone-500 flex items-center justify-center cursor-not-allowed" title="Login to get notified">
-                                <span class="material-symbols-outlined">notifications_off</span>
+                            <button disabled class="flex h-8 w-8 items-center justify-center rounded-xl bg-stone-300 text-stone-500 cursor-not-allowed sm:h-10 sm:w-auto sm:gap-1 sm:px-4 sm:rounded-2xl sm:text-sm sm:font-bold" title="Login to get notified">
+                                <span class="material-symbols-outlined text-base sm:text-[20px]">notifications_off</span>
+                                <span class="hidden sm:inline">Notify</span>
                             </button>
                             {% endif %}
                             {% endif %}

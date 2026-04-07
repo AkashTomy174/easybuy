@@ -1,31 +1,29 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.conf import settings
-from django.contrib.auth import authenticate, login, logout
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.utils import timezone
-from django.core.mail import send_mail
 from datetime import timedelta
+import logging
 import random
 import string
-import logging
+
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
 from django.db import transaction
-from .models import Category, User, Otp, AdSpace, AdBooking
-from django.utils import timezone
-from .models import Notification, NotificationDelivery, NotificationConfig
-from .forms import AdBookingForm
-from django.db.models import Q
 from django.http import JsonResponse
-from .models import StockNotification
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+
 from seller.models import ProductVariant
+
+from .models import Category, NotificationConfig, NotificationDelivery, Otp, StockNotification, User
 from .services import create_notification
+
+
+logger = logging.getLogger(__name__)
 
 
 def generate_otp():
     return "".join(random.choices(string.digits, k=6))
-
-
-logger = logging.getLogger(__name__)
 
 
 def _login_context():
@@ -79,9 +77,9 @@ def all_login(request):
             role = user.role
             if role == "CUSTOMER":
                 return redirect("home")
-            elif role == "ADMIN":
+            if role == "ADMIN":
                 return redirect("admin_dashboard")
-            elif role == "SELLER":
+            if role == "SELLER":
                 return redirect("seller_dashboard")
         else:
             messages.error(request, "Invalid username or password.")
@@ -166,9 +164,9 @@ def register_view(request):
         if send_otp_email(email, otp_code):
             messages.success(request, f"OTP sent to {email}. Please verify.")
             return render(request, "core/verify_otp.html", {"email": email})
-        else:
-            messages.error(request, "Failed to send OTP. Please try again.")
-            return redirect("register")
+
+        messages.error(request, "Failed to send OTP. Please try again.")
+        return redirect("register")
 
     if "pending_registration" in request.session:
         del request.session["pending_registration"]
@@ -202,8 +200,6 @@ def verify_otp(request):
         user.is_active = True
         user.save()
 
-        # Ensure related per-user records exist before redirecting into
-        # templates that read wishlist/cart counts for authenticated users.
         from user.models import Cart, NotificationPreference, Wishlist
 
         Cart.objects.get_or_create(user=user)
@@ -232,81 +228,14 @@ def logout_view(request):
     return redirect("home")
 
 
-# notifcation related things
-
-from .services import create_notification
-
-
 def place_order_view(request):
     user = request.user
-    # ... your order creation logic ...
     create_notification(
         user=user,
         type="order_success",
         title="Order Placed!",
         message="Your order has been successfully placed.",
     )
-    # return response immediately
-
-
-@login_required
-def ad_space_list(request):
-    spaces = AdSpace.objects.filter(is_active=True)
-
-    # Fetch active ads for sidebars
-    today = timezone.now().date()
-
-    # Show ACTIVE ads to everyone, plus YOUR own ads (Pending/Active) for preview
-    filter_query = Q(status="ACTIVE", start_date__lte=today, end_date__gte=today)
-    if request.user.is_authenticated:
-        filter_query |= Q(user=request.user, end_date__gte=today)
-
-    active_ads = (
-        AdBooking.objects.filter(filter_query)
-        .select_related("ad_space")
-        .distinct()
-        .order_by("-created_at")
-    )
-
-    left_ad = active_ads.filter(ad_space__name__icontains="left").first()
-    if not left_ad:
-        left_ad = active_ads.first()
-
-    right_ad = active_ads.filter(ad_space__name__icontains="right").first()
-    if not right_ad:
-        if left_ad:
-            right_ad = active_ads.exclude(id=left_ad.id).first()
-        else:
-            right_ad = active_ads.last()
-
-    return render(
-        request,
-        "core/ad_space_list.html",
-        {"spaces": spaces, "left_ad": left_ad, "right_ad": right_ad},
-    )
-
-
-@login_required
-def book_ad(request, space_id):
-    space = get_object_or_404(AdSpace, id=space_id, is_active=True)
-
-    if request.method == "POST":
-        form = AdBookingForm(request.POST, request.FILES)
-        if form.is_valid():
-            booking = form.save(commit=False)
-            booking.user = request.user
-            booking.ad_space = space
-            # Trigger calculation in save method
-            booking.save()
-            messages.success(
-                request,
-                f"Ad booking request submitted for {space.name}. Total cost: ₹{booking.total_cost}",
-            )
-            return redirect("ad_space_list")
-    else:
-        form = AdBookingForm()
-
-    return render(request, "core/book_ad.html", {"form": form, "space": space})
 
 
 @login_required
@@ -345,4 +274,3 @@ def returns_view(request):
 
 def track_order_view(request):
     return render(request, "core/track_order.html")
-
