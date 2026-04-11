@@ -5,16 +5,21 @@ import string
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils.encoding import force_bytes, force_str
 from django.utils import timezone
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from seller.models import ProductVariant
 
+from .forms import EasyBuyPasswordChangeForm, EasyBuySetPasswordForm, ForgotPasswordForm
 from .models import Category, NotificationConfig, NotificationDelivery, Otp, StockNotification, User
 from .services import create_notification
 
@@ -36,6 +41,19 @@ def _login_context():
         google_login_enabled = False
 
     return {"google_login_enabled": google_login_enabled}
+
+
+def _account_home_url(user):
+    if not getattr(user, "is_authenticated", False):
+        return reverse("home")
+    if user.role == "ADMIN":
+        return reverse("admin_dashboard")
+    if user.role == "SELLER":
+        seller_profile = getattr(user, "seller_profile", None)
+        if seller_profile and seller_profile.status == "APPROVED":
+            return reverse("seller_dashboard")
+        return reverse("seller_waiting")
+    return reverse("profile_settings")
 
 
 def send_otp_email(email, otp):
@@ -62,6 +80,38 @@ def send_otp_email(email, otp):
         return False
 
 
+def send_password_reset_email(request, user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    reset_url = request.build_absolute_uri(
+        reverse("reset_password", kwargs={"uidb64": uid, "token": token})
+    )
+    subject = "Reset Your EasyBuy Password"
+    message = f"""
+    Hello {user.username},
+
+    We received a request to reset your EasyBuy password.
+    Open this link to choose a new password:
+    {reset_url}
+
+    If you did not request a password reset, you can ignore this email.
+
+    EasyBuy Team
+    """
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+        return True
+    except Exception as exc:
+        logger.error("Error sending password reset email: %s", exc)
+        return False
+
+
 def all_login(request):
     if request.method == "POST":
         username = request.POST.get("username")
@@ -80,7 +130,10 @@ def all_login(request):
             if role == "ADMIN":
                 return redirect("admin_dashboard")
             if role == "SELLER":
-                return redirect("seller_dashboard")
+                seller_profile = getattr(user, "seller_profile", None)
+                if seller_profile and seller_profile.status == "APPROVED":
+                    return redirect("seller_dashboard")
+                return redirect("seller_waiting")
         else:
             messages.error(request, "Invalid username or password.")
             return render(request, "core/login.html", _login_context())
@@ -219,6 +272,78 @@ def verify_otp(request):
         messages.error(request, "Invalid OTP. Please try again.")
 
     return render(request, "core/verify_otp.html", {"email": email})
+
+
+def forgot_password_view(request):
+    form = ForgotPasswordForm(request.POST or None)
+
+    if request.method == "POST" and form.is_valid():
+        email = form.cleaned_data["email"].strip()
+        user = (
+            User.objects.filter(email__iexact=email, is_active=True)
+            .order_by("id")
+            .first()
+        )
+
+        if user and not send_password_reset_email(request, user):
+            messages.error(
+                request,
+                "We could not send the reset email right now. Please try again.",
+            )
+        else:
+            messages.success(
+                request,
+                "If that email is registered, a password reset link has been sent.",
+            )
+            form = ForgotPasswordForm()
+
+    return render(request, "core/forgot_password.html", {"form": form})
+
+
+def reset_password_view(request, uidb64, token):
+    user = None
+    validlink = False
+
+    try:
+        user_id = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=user_id)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        validlink = True
+
+    form = EasyBuySetPasswordForm(user, request.POST or None) if validlink else None
+
+    if request.method == "POST" and validlink and form.is_valid():
+        form.save()
+        messages.success(
+            request, "Your password has been reset. Please sign in with the new password."
+        )
+        return redirect("all_login")
+
+    return render(
+        request,
+        "core/reset_password.html",
+        {"form": form, "validlink": validlink},
+    )
+
+
+@login_required
+def change_password_view(request):
+    form = EasyBuyPasswordChangeForm(request.user, request.POST or None)
+
+    if request.method == "POST" and form.is_valid():
+        user = form.save()
+        update_session_auth_hash(request, user)
+        messages.success(request, "Your password has been changed successfully.")
+        return redirect("change_password")
+
+    return render(
+        request,
+        "core/change_password.html",
+        {"form": form, "account_home_url": _account_home_url(request.user)},
+    )
 
 
 @login_required

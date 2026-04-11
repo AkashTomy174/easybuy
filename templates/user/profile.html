@@ -29,6 +29,11 @@
                         <span class="material-symbols-outlined text-[20px]">person</span>
                         <span class="text-sm font-bold">Personal Info</span>
                     </a>
+                    <a href="{% url 'change_password' %}" 
+                       class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800">
+                        <span class="material-symbols-outlined text-[20px]">password</span>
+                        <span class="text-sm font-bold">Password</span>
+                    </a>
                     <a href="{% url 'manage_addresses' %}" 
                        class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800">
                         <span class="material-symbols-outlined text-[20px]">location_on</span>
@@ -128,6 +133,10 @@
                             <span class="material-symbols-outlined">save</span>
                             Update Profile
                         </button>
+                        <a href="{% url 'change_password' %}" class="flex-1 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-stone-200 dark:hover:bg-stone-700 transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">password</span>
+                            Change Password
+                        </a>
                         <a href="{% url 'manage_addresses' %}" class="flex-1 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-stone-200 dark:hover:bg-stone-700 transition-all flex items-center justify-center gap-2">
                             <span class="material-symbols-outlined">location_on</span>
                             Manage Addresses

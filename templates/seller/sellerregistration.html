@@ -51,7 +51,7 @@
                         <label for="id_seller_password" class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Password *</label>
                         <input id="id_seller_password" type="password" name="password" required
                             class="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
-                            placeholder="••••••••" autocomplete="new-password"/>
+                            placeholder="Create a secure password" autocomplete="new-password"/>
                     </div>
                 </div>
             </fieldset>
@@ -65,6 +65,7 @@
                 <div class="space-y-1">
                     <label for="id_store_name" class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Store Name *</label>
                     <input id="id_store_name" type="text" name="store_name" required
+                        value="{{ store_name|default:'' }}"
                         class="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                         placeholder="Your Store Name"/>
                 </div>
@@ -80,12 +81,14 @@
                     <div class="space-y-1">
                         <label for="id_gst_number" class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">GST Number *</label>
                         <input id="id_gst_number" type="text" name="gst_number" required
+                            value="{{ gst_number|default:'' }}"
                             class="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                             placeholder="22AAAAA0000A1Z5"/>
                     </div>
                     <div class="space-y-1">
                         <label for="id_pan_number" class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">PAN Number *</label>
                         <input id="id_pan_number" type="text" name="pan_number" required
+                            value="{{ pan_number|default:'' }}"
                             class="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                             placeholder="AAAAA1234A"/>
                     </div>
@@ -102,12 +105,14 @@
                     <div class="space-y-1">
                         <label for="id_bank_account" class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Account Number *</label>
                         <input id="id_bank_account" type="text" name="bank_account_number" required
+                            value="{{ bank_account_number|default:'' }}"
                             class="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                             placeholder="1234567890" autocomplete="off"/>
                     </div>
                     <div class="space-y-1">
                         <label for="id_ifsc_code" class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">IFSC Code *</label>
                         <input id="id_ifsc_code" type="text" name="ifsc_code" required
+                            value="{{ ifsc_code|default:'' }}"
                             class="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                             placeholder="SBIN0001234"/>
                     </div>
@@ -124,7 +129,7 @@
                     <label for="id_business_address" class="text-xs font-bold uppercase tracking-wider text-stone-400 px-1">Business Address *</label>
                     <textarea id="id_business_address" name="business_address" required rows="3"
                         class="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
-                        placeholder="Enter your complete business address"></textarea>
+                        placeholder="Enter your complete business address">{{ business_address|default:'' }}</textarea>
                 </div>
             </fieldset>
 
@@ -169,7 +174,7 @@
 function updateFileName(input) {
     const label = document.getElementById('doc-file-name');
     if (input.files && input.files.length > 0) {
-        label.textContent = '✓ ' + input.files[0].name;
+        label.textContent = 'Selected: ' + input.files[0].name;
         label.classList.remove('hidden');
     } else {
         label.classList.add('hidden');

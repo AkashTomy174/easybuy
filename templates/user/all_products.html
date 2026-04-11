@@ -9,8 +9,14 @@
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
     .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #525252; }
     
-    /* Mobile filter toggle */
-    .filter-toggle:checked + .filter-panel { display: block; }
+    .mobile-filter-panel {
+        display: none;
+    }
+    @media (min-width: 1024px) {
+        .mobile-filter-panel {
+            display: block !important;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -21,39 +27,51 @@
         <span class="text-xs font-black uppercase tracking-[0.3em] text-accent-terracotta mb-2 block">Premium Selection</span>
         <h1 class="text-3xl md:text-4xl font-black text-stone-900 dark:text-white tracking-tight">Our Entire Collection</h1>
         <!-- Mobile Filter Toggle -->
-        <div class="lg:hidden mt-4">
-            <label for="filter-toggle" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white font-bold text-sm">
-                <span class="material-symbols-outlined">filter_list</span>
-                Filters
-            </label>
-            <input type="checkbox" id="filter-toggle" class="hidden filter-toggle">
+        <div class="mt-4 lg:hidden">
+            <button type="button" onclick="toggleMobileFilters()" class="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-white px-4 py-3 text-sm font-black text-primary shadow-lg shadow-primary/10">
+                <span class="material-symbols-outlined">tune</span>
+                Filter and Sort
+            </button>
         </div>
     </div>
 </section>
 
 <!-- Main Content with Sidebar -->
 <div class="max-w-7xl mx-auto px-4 lg:px-12 py-8">
+    <div id="mobile-filter-backdrop" class="hidden fixed inset-0 z-30 bg-black/40 backdrop-blur-sm lg:hidden" onclick="toggleMobileFilters(false)"></div>
     <div class="flex flex-col lg:flex-row gap-8">
         
         <!-- Filter Sidebar -->
-        <aside class="w-full lg:w-72 flex-shrink-0{% if not request.GET %} lg:block{% endif %}">
-            <div class="bg-white dark:bg-surface-dark rounded-3xl shadow-card p-6 {% if request.GET %}{% else %}sticky top-24{% endif %}">
-                <form method="GET" id="filterForm">
+        <aside id="mobile-filter-panel" class="mobile-filter-panel w-full lg:w-80 flex-shrink-0">
+            <div class="bg-white dark:bg-surface-dark rounded-3xl shadow-card p-5 sm:p-6 sticky top-24 border border-stone-200 dark:border-stone-700 max-lg:fixed max-lg:inset-x-4 max-lg:top-20 max-lg:bottom-4 max-lg:z-40 max-lg:overflow-y-auto">
+                <div class="mb-5 flex items-center justify-between rounded-[1.75rem] border border-stone-200 bg-gradient-to-br from-stone-50 to-white p-4 dark:border-stone-700 dark:from-stone-800 dark:to-stone-900 lg:mb-6">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-[0.2em] text-stone-400">Filters</p>
+                        <h2 class="mt-1 text-lg font-black text-stone-900 dark:text-white">Refine products</h2>
+                        <p class="mt-2 text-sm text-stone-500 dark:text-stone-400">Use grouped controls to narrow by product, category, brand, budget, and sort order.</p>
+                    </div>
+                    <button type="button" onclick="toggleMobileFilters(false)" class="flex h-10 w-10 items-center justify-center rounded-2xl border border-stone-200 text-stone-500 dark:border-stone-700 dark:text-stone-300 lg:hidden">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <form method="GET" id="filterForm" class="space-y-4">
                     <!-- Search -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Search Products</label>
+                    <div class="rounded-[1.75rem] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-900/50">
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Search</p>
+                        <label class="mt-2 block text-sm font-bold text-stone-900 dark:text-white mb-2">Search Products</label>
                         <div class="relative">
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">search</span>
+                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">search</span>
                             <input type="text" name="q" value="{{ selected_product }}"
-                                class="w-full h-11 pl-10 pr-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                                placeholder="Product name...">
+                                class="w-full h-12 pl-11 pr-4 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
+                                placeholder="Search by name...">
                         </div>
                     </div>
 
                     <!-- Category -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Category</label>
-                        <select name="category" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
+                    <div class="rounded-[1.75rem] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-900/50">
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Browse</p>
+                        <label class="mt-2 block text-sm font-bold text-stone-900 dark:text-white mb-2">Category</label>
+                        <select name="category" class="w-full h-12 px-4 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
                             <option value="">All Categories</option>
                             {% for cat in categories %}
                             <option value="{{ cat.slug }}" {% if selected_category == cat.slug|stringformat:"s" %}selected{% endif %}>
@@ -64,9 +82,9 @@
                     </div>
 
                     <!-- Subcategory -->
-                    <div class="mb-6">
+                    <div class="rounded-[1.75rem] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-900/50">
                         <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Subcategory</label>
-                        <select name="subcategory" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
+                        <select name="subcategory" class="w-full h-12 px-4 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
                             <option value="">All Subcategories</option>
                             {% for sub in subcategories %}
                             <option value="{{ sub.slug }}" {% if selected_subcategory == sub.slug|stringformat:"s" %}selected{% endif %}>
@@ -77,26 +95,30 @@
                     </div>
 
                     <!-- Brand Checkboxes -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-3">Brand</label>
+                    <div class="rounded-[1.75rem] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-900/50">
+                        <div class="mb-3 flex items-start justify-between gap-3">
+                            <label class="block text-sm font-bold text-stone-900 dark:text-white">Brand</label>
+                            <span class="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-stone-500 shadow-sm dark:bg-stone-800 dark:text-stone-300">Multi-select</span>
+                        </div>
                         <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
                             {% for brand in all_brands %}
-                            <label class="flex items-center gap-3 cursor-pointer group">
+                            <label class="flex items-center gap-3 cursor-pointer rounded-2xl border border-stone-200 bg-white px-4 py-3 transition-colors hover:border-primary/40 dark:border-stone-700 dark:bg-stone-800 group">
                                 <input type="checkbox" name="brand" value="{{ brand }}" 
                                     {% if brand in selected_brands %}checked{% endif %}
                                     class="w-5 h-5 rounded-lg border-2 border-stone-300 dark:border-stone-600 text-primary focus:ring-primary/20 accent-primary">
                                 <span class="text-sm font-medium text-stone-600 dark:text-stone-300 group-hover:text-primary transition-colors">{{ brand }}</span>
                             </label>
                             {% empty %}
-                            <p class="text-sm text-stone-400 italic">No brands available</p>
+                            <p class="rounded-2xl border border-dashed border-stone-200 px-4 py-5 text-sm text-stone-400 dark:border-stone-700">No brands available</p>
                             {% endfor %}
                         </div>
                     </div>
 
                     <!-- Rating Filter -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Minimum Rating</label>
-                        <select name="rating" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
+                    <div class="rounded-[1.75rem] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-900/50">
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Preferences</p>
+                        <label class="mt-2 block text-sm font-bold text-stone-900 dark:text-white mb-2">Minimum Rating</label>
+                        <select name="rating" class="w-full h-12 px-4 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
                             <option value="">All Ratings</option>
                             <option value="4" {% if selected_rating == '4' %}selected{% endif %}>⭐ 4+ Stars</option>
                             <option value="3" {% if selected_rating == '3' %}selected{% endif %}>⭐ 3+ Stars</option>
@@ -106,9 +128,9 @@
                     </div>
 
                     <!-- Availability Filter -->
-                    <div class="mb-6">
+                    <div class="rounded-[1.75rem] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-900/50">
                         <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Availability</label>
-                        <select name="availability" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
+                        <select name="availability" class="w-full h-12 px-4 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
                             <option value="">All Products</option>
                             <option value="in_stock" {% if selected_availability == 'in_stock' %}selected{% endif %}>In Stock</option>
                             <option value="out_of_stock" {% if selected_availability == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
@@ -116,8 +138,9 @@
                     </div>
 
                     <!-- Price Range -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Price Range</label>
+                    <div class="rounded-[1.75rem] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-900/50">
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Budget</p>
+                        <label class="mt-2 block text-sm font-bold text-stone-900 dark:text-white mb-2">Price Range</label>
                         <div class="relative h-10 mt-2" id="slider-container">
                             <!-- Track -->
                             <div class="absolute top-1/2 -translate-y-1/2 left-2 right-2 h-1.5 bg-stone-200 dark:bg-stone-700 rounded-full"></div>
@@ -255,9 +278,10 @@
                     </script>
 
                     <!-- Sort -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Sort By</label>
-                        <select name="sort" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
+                    <div class="rounded-[1.75rem] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-900/50">
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Order</p>
+                        <label class="mt-2 block text-sm font-bold text-stone-900 dark:text-white mb-2">Sort By</label>
+                        <select name="sort" class="w-full h-12 px-4 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
                             <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest First</option>
                             <option value="most_popular" {% if selected_sort == 'most_popular' %}selected{% endif %}>Most Popular</option>
                             <option value="best_rated" {% if selected_sort == 'best_rated' %}selected{% endif %}>Best Rated</option>
@@ -269,12 +293,13 @@
                     </div>
 
                     <!-- Buttons -->
-                    <div class="flex gap-3">
+                    <div class="sticky bottom-0 flex flex-col gap-3 rounded-[1.75rem] border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur dark:border-stone-700 dark:bg-surface-dark/95 sm:flex-row">
                         <button type="submit" class="flex-1 h-12 rounded-2xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors shadow-button">
                             Apply Filters
                         </button>
-                        <a href="{% url 'all_products' %}" class="h-12 px-4 rounded-2xl border-2 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors flex items-center justify-center">
+                        <a href="{% url 'all_products' %}" class="h-12 px-4 rounded-2xl border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors flex items-center justify-center gap-2">
                             <span class="material-symbols-outlined">refresh</span>
+                            Reset
                         </a>
                     </div>
                 </form>
@@ -284,21 +309,35 @@
         <!-- Products Grid -->
         <div class="flex-1">
             <!-- Results Count & Active Filters -->
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div class="text-sm font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest">
-                    SHOWING <span class="text-stone-900 dark:text-white">{{ page_obj.start_index }}-{{ page_obj.end_index }}</span> OF {{ page_obj.paginator.count }} PRODUCTS
+            <div class="mb-6 rounded-[1.75rem] border border-stone-200 bg-white/80 p-4 shadow-sm dark:border-stone-700 dark:bg-surface-dark/80 sm:p-5">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Results</p>
+                        <p class="mt-1 text-sm font-medium text-stone-500">Showing <span class="font-bold text-stone-900 dark:text-white">{{ page_obj.start_index }}-{{ page_obj.end_index }}</span> of {{ page_obj.paginator.count }} products</p>
+                    </div>
+                    {% if selected_category or selected_subcategory or selected_brands or selected_min_price or selected_max_price or selected_product or selected_rating or selected_availability %}
+                    <a href="{% url 'all_products' %}" class="inline-flex items-center gap-2 rounded-full border border-stone-200 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-stone-600 transition-colors hover:border-primary hover:text-primary dark:border-stone-700 dark:text-stone-300">
+                        <span class="material-symbols-outlined text-base">refresh</span>
+                        Clear all
+                    </a>
+                    {% endif %}
                 </div>
                 
                 <!-- Active Filters -->
                 {% if selected_category or selected_subcategory or selected_brands or selected_min_price or selected_max_price or selected_product or selected_rating or selected_availability %}
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="mt-4 flex flex-wrap items-center gap-2">
                     <span class="text-sm text-stone-500">Active filters:</span>
                     {% if selected_category %}
-                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
                         {{ selected_category }}
 <a href="?{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for b in selected_brands %}brand={{ b }}&{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}q={{ selected_product }}&{% endif %}{% if selected_rating %}rating={{ selected_rating }}&{% endif %}{% if selected_availability %}availability={{ selected_availability }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}" class="ml-1">
                             <span class="material-symbols-outlined text-[14px]">close</span>
                         </a>
+                    </span>
+                    {% endif %}
+                    {% if selected_subcategory %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-stone-100 text-stone-700 text-xs font-medium dark:bg-stone-800 dark:text-stone-200">
+                        {{ selected_subcategory }}
                     </span>
                     {% endif %}
                     {% if selected_rating %}
@@ -315,6 +354,11 @@
 <a href="?{% if selected_category %}category={{ selected_category }}&{% endif %}{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for b in selected_brands %}brand={{ b }}&{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}q={{ selected_product }}&{% endif %}{% if selected_rating %}rating={{ selected_rating }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}" class="ml-1">
                             <span class="material-symbols-outlined text-[14px]">close</span>
                         </a>
+                    </span>
+                    {% endif %}
+                    {% if selected_min_price or selected_max_price %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-stone-100 text-stone-700 text-xs font-medium dark:bg-stone-800 dark:text-stone-200">
+                        Rs {{ selected_min_price|default:"0" }} - Rs {{ selected_max_price|default:"100000" }}
                     </span>
                     {% endif %}
                     {% if selected_brands %}
@@ -347,7 +391,7 @@
                     {% endif %}
                     
                     <!-- Product Image -->
-                    <a href="{% url 'product_detail_user' variant.product.slug %}" class="relative mb-2 block aspect-square w-full overflow-hidden rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 sm:mb-4 sm:rounded-2xl">
+                    <a href="{% url 'product_detail_user' variant.product.slug %}?variant={{ variant.id }}" class="relative mb-2 block aspect-square w-full overflow-hidden rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 sm:mb-4 sm:rounded-2xl">
                         {% if product_image and product_image.image %}
                         <img src="{{ product_image.image.url }}" alt="{{ variant.product.name }}" 
                              class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
@@ -375,7 +419,7 @@
                     </a>
 
                     <!-- Product Info -->
-                    <a href="{% url 'product_detail_user' variant.product.slug %}" class="block flex flex-1 flex-col px-1 sm:px-2">
+                    <a href="{% url 'product_detail_user' variant.product.slug %}?variant={{ variant.id }}" class="block flex flex-1 flex-col px-1 sm:px-2">
                         <span class="mb-1 text-[8px] font-black uppercase tracking-[0.16em] text-stone-400 dark:text-stone-500 sm:text-[10px] sm:tracking-[0.2em]">{{ variant.product.brand }}</span>
                         <h3 class="line-clamp-2 text-[11px] font-bold leading-tight text-stone-900 transition-colors group-hover:text-primary dark:text-white sm:line-clamp-1 sm:text-lg">
                             {{ variant.product.name }}
@@ -472,6 +516,17 @@
 </div>
 
 <script>
+function toggleMobileFilters(forceState) {
+    const panel = document.getElementById('mobile-filter-panel');
+    const backdrop = document.getElementById('mobile-filter-backdrop');
+    if (!panel || window.innerWidth >= 1024) return;
+
+    const shouldOpen = typeof forceState === 'boolean' ? forceState : panel.style.display !== 'block';
+    panel.style.display = shouldOpen ? 'block' : 'none';
+    backdrop.classList.toggle('hidden', !shouldOpen);
+    document.body.classList.toggle('overflow-hidden', shouldOpen);
+}
+
 // Real-time filtering functions
 function updateSubcategories() {
     const categorySelect = document.querySelector('select[name="category"]');
@@ -596,6 +651,11 @@ function updateBrands() {
 
 // Initialize event listeners
 document.addEventListener('DOMContentLoaded', function() {
+    const panel = document.getElementById('mobile-filter-panel');
+    if (panel && window.innerWidth < 1024) {
+        panel.style.display = 'none';
+    }
+
     const categorySelect = document.querySelector('select[name="category"]');
     const subcategorySelect = document.querySelector('select[name="subcategory"]');
     const searchInput = document.querySelector('input[name="q"]');
@@ -634,6 +694,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     console.log('Real-time filtering initialized');
+});
+
+window.addEventListener('resize', function() {
+    const panel = document.getElementById('mobile-filter-panel');
+    const backdrop = document.getElementById('mobile-filter-backdrop');
+    if (!panel || !backdrop) return;
+
+    if (window.innerWidth >= 1024) {
+        panel.style.display = 'block';
+        backdrop.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    } else if (!backdrop.classList.contains('hidden')) {
+        panel.style.display = 'block';
+    } else {
+        panel.style.display = 'none';
+    }
 });
 </script>
 

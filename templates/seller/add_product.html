@@ -8,7 +8,7 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div>
             <h1 class="text-4xl font-black tracking-tight text-stone-900 dark:text-white">Add Product</h1>
-            <p class="text-stone-500 mt-2 font-medium">Create the foundation for your new item.</p>
+            <p class="text-stone-500 mt-2 font-medium">Create the foundation for your new item. Once variants are added, EasyBuy will review the listing before it goes live.</p>
         </div>
         <a href="{% url 'seller_products_list' %}" class="text-sm font-bold text-stone-400 hover:text-primary transition-colors flex items-center gap-2">
             <span class="material-symbols-outlined text-lg">arrow_back</span>
@@ -43,7 +43,7 @@
                         <option value="">Select a category</option>
                         {% for subcategory in subcategories %}
                             <option value="{{ subcategory.id }}" {% if request.POST.subcategory == subcategory.id|stringformat:"s" %}selected{% endif %}>
-                                {{ subcategory.category.name }} › {{ subcategory.name }}
+                                {{ subcategory.category.name }} | {{ subcategory.name }}
                             </option>
                         {% endfor %}
                     </select>

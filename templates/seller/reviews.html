@@ -3,9 +3,15 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto">
-    <div class="mb-8">
-        <h1 class="text-3xl font-black text-stone-900 dark:text-white">Product Reviews</h1>
-        <p class="text-stone-500 mt-2">Manage customer reviews for your products</p>
+    <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-black text-stone-900 dark:text-white">Product Reviews</h1>
+            <p class="text-stone-500 mt-2">Manage customer reviews for your products and reply with confidence.</p>
+        </div>
+        <div class="rounded-2xl bg-primary/10 px-4 py-3 text-right">
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Visible reviews</p>
+            <p class="mt-1 text-2xl font-black text-primary">{{ page_obj.paginator.count }}</p>
+        </div>
     </div>
 
     {% if messages %}
@@ -37,7 +43,7 @@
                     <!-- User Name & Date -->
                     <div class="flex items-center gap-3 mb-2">
                         <h3 class="font-black text-lg text-stone-900 dark:text-white">{{ review.user.first_name }} {{ review.user.last_name }}</h3>
-                        <span class="text-stone-300 dark:text-stone-600">•</span>
+                        <span class="text-stone-300 dark:text-stone-600">|</span>
                         <span class="text-sm text-stone-500 dark:text-stone-400">{{ review.created_at|date:"F d, Y" }}</span>
                     </div>
 
@@ -108,7 +114,7 @@
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-2">
                                     <span class="text-sm font-black text-amber-900 dark:text-amber-400 uppercase tracking-wider">Seller Response</span>
-                                    <span class="text-stone-300 dark:text-stone-600">•</span>
+                                    <span class="text-stone-300 dark:text-stone-600">|</span>
                                     <span class="text-xs text-stone-500 dark:text-stone-400">{{ review.replied_at|date:"F d, Y" }}</span>
                                 </div>
                                 <p class="text-base leading-relaxed text-stone-700 dark:text-stone-300">{{ review.seller_reply }}</p>

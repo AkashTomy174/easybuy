@@ -4,83 +4,102 @@
 {% block content %}
 <div class="min-h-screen bg-stone-50 dark:bg-stone-900">
     {% if error %}
-        <div class="text-center py-20">
+        <div class="py-20 text-center">
             <span class="material-symbols-outlined text-7xl text-stone-300">search_off</span>
-            <h1 class="text-2xl font-bold mt-4">{{ error }}</h1>
-            <a href="{% url 'all_products' %}" class="text-primary underline mt-4 inline-block font-bold">Back to Shopping</a>
+            <h1 class="mt-4 text-2xl font-bold">{{ error }}</h1>
+            <a href="{% url 'all_products' %}" class="mt-4 inline-block font-bold text-primary underline">Back to Shopping</a>
         </div>
     {% else %}
     <div class="mx-auto max-w-7xl px-4 py-8 lg:px-12">
-        <nav class="flex items-center gap-2 text-sm mb-8">
+        <nav class="mb-8 flex items-center gap-2 text-sm">
             <a href="{% url 'home' %}" class="text-stone-500">Home</a>
             <span class="material-symbols-outlined text-sm">chevron_right</span>
-            <span class="text-stone-900 dark:text-white font-bold">{{ product.name|truncatewords:5 }}</span>
+            <span class="font-bold text-stone-900 dark:text-white">{{ product.name|truncatewords:5 }}</span>
         </nav>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div class="grid grid-cols-1 gap-12 lg:grid-cols-2">
             <div class="space-y-4">
-                <div class="relative aspect-square rounded-[2.5rem] overflow-hidden bg-white shadow-xl border border-stone-200 dark:border-stone-700">
-                    {% with product.variants.first.images.first as primary_img %}
-                        {% if primary_img %}
-                            <img src="{{ primary_img.image.url }}" id="main-product-image" class="w-full h-full object-cover">
-                        {% else %}
-                            <div class="flex h-full items-center justify-center bg-stone-100">
-                                <span class="material-symbols-outlined text-7xl text-stone-300">image</span>
-                            </div>
-                        {% endif %}
+                <div class="relative aspect-square overflow-hidden rounded-[2.5rem] border border-stone-200 bg-white shadow-xl dark:border-stone-700">
+                    {% with selected_variant.images.first as primary_img %}
+                    <img
+                        id="main-product-image"
+                        src="{% if primary_img and primary_img.image %}{{ primary_img.image.url }}{% endif %}"
+                        alt="{{ product.name }}"
+                        class="h-full w-full object-cover {% if not primary_img or not primary_img.image %}hidden{% endif %}"
+                    >
+                    <div
+                        id="main-product-image-fallback"
+                        class="flex h-full items-center justify-center bg-stone-100 {% if primary_img and primary_img.image %}hidden{% endif %}"
+                    >
+                        <span class="material-symbols-outlined text-7xl text-stone-300">image</span>
+                    </div>
                     {% endwith %}
                 </div>
+                <div id="variant-image-strip" class="grid grid-cols-4 gap-3 sm:grid-cols-5"></div>
             </div>
 
             <div class="flex flex-col space-y-6">
                 <div>
-                    <h1 class="text-3xl font-bold text-stone-900 dark:text-white mb-2">{{ product.name }}</h1>
+                    <h1 class="mb-2 text-3xl font-bold text-stone-900 dark:text-white">{{ product.name }}</h1>
                     <div class="flex items-center gap-4">
-                        <span class="text-4xl font-black text-primary" id="current-price">₹0</span>
-                        <span class="text-xl text-stone-400 line-through hidden" id="original-price"></span>
+                        <span class="text-4xl font-black text-primary" id="current-price">&#8377;0</span>
+                        <span class="hidden text-xl text-stone-400 line-through" id="original-price"></span>
                     </div>
                     <div id="stock-status" class="mt-2 font-bold"></div>
                 </div>
 
-                <div class="bg-white dark:bg-stone-800 p-6 rounded-3xl border border-stone-200 dark:border-stone-700">
-                    <h3 class="text-sm font-black uppercase tracking-widest mb-4">Select Variant</h3>
+                <div class="rounded-3xl border border-stone-200 bg-white p-6 dark:border-stone-700 dark:bg-stone-800">
+                    <div class="mb-4 flex items-center justify-between gap-3">
+                        <h3 class="text-sm font-black uppercase tracking-widest">Select Variant</h3>
+                        <span id="variant-image-count" class="rounded-full bg-stone-100 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-stone-500 dark:bg-stone-700 dark:text-stone-200">
+                            {{ selected_variant.images.all|length }} Images
+                        </span>
+                    </div>
                     <div class="flex flex-wrap gap-3">
                         {% for variant in product.variants.all %}
-                        <button type="button"
-                            class="variant-btn px-6 py-3 rounded-xl border-2 border-stone-200 dark:border-stone-700 font-bold transition-all hover:border-primary"
+                        <button
+                            type="button"
+                            class="variant-btn rounded-xl border-2 border-stone-200 px-6 py-3 font-bold transition-all hover:border-primary dark:border-stone-700"
                             data-variant-id="{{ variant.id }}"
                             data-price="{{ variant.selling_price }}"
                             data-mrp="{{ variant.mrp|default:0 }}"
                             data-stock="{{ variant.stock_quantity }}"
-                            data-image="{% if variant.images.first %}{{ variant.images.first.image.url }}{% else %}/static/images/no-image.png{% endif %}"
-                            onclick="selectVariant('{{ variant.id }}', '{{ variant.selling_price }}', '{{ variant.mrp }}', '{{ variant.stock_quantity }}', '{% if variant.images.first %}{{ variant.images.first.image.url }}{% else %}/static/images/no-image.png{% endif %}')">
-                            {{ variant.sku_code|default:variant.id }}
+                            data-images="{% for image in variant.images.all %}{% if image.image %}{{ image.image.url }}{% if not forloop.last %}||{% endif %}{% endif %}{% endfor %}"
+                            data-selected="{% if selected_variant and selected_variant.id == variant.id %}true{% else %}false{% endif %}"
+                        >
+                            <span class="block text-left text-sm">{{ variant.selection_label }}</span>
+                            {% if variant.selection_label == product.name %}
+                            <span class="mt-1 block text-left text-[10px] font-black uppercase tracking-wide text-stone-400">Option {{ forloop.counter }}</span>
+                            {% endif %}
                         </button>
+                        {% empty %}
+                        <div class="w-full rounded-2xl border border-dashed border-stone-200 bg-stone-50 px-4 py-6 text-center text-sm font-semibold text-stone-400 dark:border-stone-700 dark:bg-stone-900/30">
+                            No variants have been added to this product yet.
+                        </div>
                         {% endfor %}
                     </div>
                 </div>
 
-                <!-- Wishlist Selector - Only for authenticated users -->
                 {% if request.user.is_authenticated %}
                 <div class="wishlist-section">
                     {% include "user/wishlist_selector.html" with selected_variant_id=selectedVariantId %}
                 </div>
                 {% endif %}
 
-                <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex flex-col gap-4 sm:flex-row">
                     {% if request.user.is_authenticated %}
-                    <button id="notify-btn" onclick="toggleStockNotify('{{ selected_variant.id }}', this)" class="flex-1 h-16 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all">
+                    <button id="notify-btn" class="flex h-16 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 font-bold text-white transition-all hover:bg-blue-700">
                         <span class="material-symbols-outlined">notifications_active</span> Notify Me
                     </button>
                     {% else %}
-                    <button id="notify-btn" disabled class="flex-1 h-16 bg-stone-300 text-stone-500 rounded-2xl font-bold flex items-center justify-center gap-2 cursor-not-allowed" title="Login to get notified">
+                    <button id="notify-btn" disabled class="flex h-16 flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-stone-300 font-bold text-stone-500" title="Login to get notified">
                         <span class="material-symbols-outlined">notifications_off</span> Notify Me
                     </button>
                     {% endif %}
-                    <button id="add-to-cart-btn" class="flex-1 h-16 bg-stone-900 dark:bg-white dark:text-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90">
+                    <button id="add-to-cart-btn" class="flex h-16 flex-1 items-center justify-center gap-2 rounded-2xl bg-stone-900 font-bold text-white hover:opacity-90 dark:bg-white dark:text-black">
                         <span class="material-symbols-outlined">shopping_cart</span> Add to Cart
                     </button>
-                    <button id="buynow-btn" class="flex-1 h-16 bg-primary text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90">
+                    <button id="buynow-btn" class="flex h-16 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-white hover:opacity-90">
                         <span class="material-symbols-outlined">bolt</span> Buy Now
                     </button>
                 </div>
@@ -95,52 +114,127 @@
 </div>
 
 <script>
-    // Global State
     let selectedVariantId = null;
     let selectedVariantStock = 0;
-    window.selectedVariantId = null; // Global for wishlist selector
+    window.selectedVariantId = null;
 
-    function selectVariant(id, price, mrp, stock, imageUrl) {
+    function getVariantImages(button) {
+        const rawImages = button?.getAttribute('data-images') || '';
+        return rawImages
+            .split('||')
+            .map((url) => url.trim())
+            .filter(Boolean);
+    }
+
+    function setMainImage(imageUrl) {
+        const mainImage = document.getElementById('main-product-image');
+        const fallback = document.getElementById('main-product-image-fallback');
+
+        if (!mainImage || !fallback) {
+            return;
+        }
+
+        if (imageUrl) {
+            mainImage.src = imageUrl;
+            mainImage.classList.remove('hidden');
+            fallback.classList.add('hidden');
+            mainImage.classList.add('animate-pulse');
+            mainImage.onload = () => mainImage.classList.remove('animate-pulse');
+        } else {
+            mainImage.removeAttribute('src');
+            mainImage.classList.add('hidden');
+            fallback.classList.remove('hidden');
+        }
+    }
+
+    function renderVariantGallery(imageUrls) {
+        const strip = document.getElementById('variant-image-strip');
+        const countBadge = document.getElementById('variant-image-count');
+
+        if (!strip || !countBadge) {
+            return;
+        }
+
+        strip.innerHTML = '';
+        countBadge.textContent = `${imageUrls.length} Image${imageUrls.length === 1 ? '' : 's'}`;
+
+        if (!imageUrls.length) {
+            strip.innerHTML = `
+                <div class="col-span-full rounded-3xl border border-dashed border-stone-200 bg-white px-4 py-8 text-center text-sm font-semibold text-stone-400 dark:border-stone-700 dark:bg-stone-800">
+                    No preview images uploaded for this variant yet.
+                </div>
+            `;
+            setMainImage('');
+            return;
+        }
+
+        imageUrls.forEach((url, index) => {
+            const thumb = document.createElement('button');
+            thumb.type = 'button';
+            thumb.className = `group relative aspect-square overflow-hidden rounded-2xl border-2 bg-white shadow-sm transition-all ${
+                index === 0
+                    ? 'border-primary ring-2 ring-primary/15'
+                    : 'border-stone-200 hover:border-primary/50 dark:border-stone-700'
+            }`;
+            thumb.innerHTML = `
+                <img src="${url}" alt="Variant preview ${index + 1}" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
+                ${index === 0 ? '<span class="absolute left-2 top-2 rounded-full bg-stone-900 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white">Main</span>' : ''}
+            `;
+            thumb.addEventListener('click', () => {
+                setMainImage(url);
+                strip.querySelectorAll('button').forEach((btn) => {
+                    btn.classList.remove('border-primary', 'ring-2', 'ring-primary/15');
+                    btn.classList.add('border-stone-200');
+                });
+                thumb.classList.remove('border-stone-200');
+                thumb.classList.add('border-primary', 'ring-2', 'ring-primary/15');
+            });
+            strip.appendChild(thumb);
+        });
+
+        setMainImage(imageUrls[0]);
+    }
+
+    function selectVariant(button) {
+        const id = button.getAttribute('data-variant-id');
+        const price = button.getAttribute('data-price');
+        const mrp = button.getAttribute('data-mrp');
+        const stock = button.getAttribute('data-stock');
+        const imageUrls = getVariantImages(button);
+
         selectedVariantId = id;
-        selectedVariantStock = parseInt(stock) || 0;
-        window.selectedVariantId = id; // Update global for wishlist
+        selectedVariantStock = parseInt(stock, 10) || 0;
+        window.selectedVariantId = id;
 
-        // 1. Highlight Button
-        document.querySelectorAll('.variant-btn').forEach(btn => {
+        document.querySelectorAll('.variant-btn').forEach((btn) => {
             btn.classList.remove('border-primary', 'text-primary', 'bg-primary/5');
-            if (btn.getAttribute('data-variant-id') == id) {
+            if (btn === button) {
                 btn.classList.add('border-primary', 'text-primary', 'bg-primary/5');
             }
         });
 
-        // 2. Update Price
-        document.getElementById('current-price').innerText = '₹' + price;
+        document.getElementById('current-price').innerText = `\u20B9${price}`;
         const origPrice = document.getElementById('original-price');
         if (parseFloat(mrp) > parseFloat(price)) {
-            origPrice.innerText = '₹' + mrp;
+            origPrice.innerText = `\u20B9${mrp}`;
             origPrice.classList.remove('hidden');
         } else {
             origPrice.classList.add('hidden');
         }
 
-        // 3. Update Stock
         const status = document.getElementById('stock-status');
         if (selectedVariantStock > 0) {
-            status.innerHTML = `<span class="text-green-600">✓ In Stock (${selectedVariantStock} available)</span>`;
+            status.innerHTML = `<span class="text-green-600">In Stock (${selectedVariantStock} available)</span>`;
         } else {
-            status.innerHTML = `<span class="text-red-600">✕ Out of Stock</span>`;
+            status.innerHTML = `<span class="text-red-600">Out of Stock</span>`;
         }
 
-        // 4. Update Main Image
-        const mainImage = document.getElementById('main-product-image');
-        if (mainImage && imageUrl) {
-            mainImage.src = imageUrl;
-            mainImage.classList.add('animate-pulse');
-            mainImage.onload = () => mainImage.classList.remove('animate-pulse');
-        }
-
-        // 5. Update Buttons based on stock
+        renderVariantGallery(imageUrls);
         updateButtonsForStock(selectedVariantStock);
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('variant', id);
+        window.history.replaceState({}, '', url.toString());
     }
 
     function updateButtonsForStock(stock) {
@@ -149,55 +243,83 @@
         const notifyBtn = document.getElementById('notify-btn');
 
         if (stock <= 0) {
-            // Out of stock - show notify button
             if (addToCartBtn) addToCartBtn.style.display = 'none';
             if (buyNowBtn) buyNowBtn.style.display = 'none';
-            if (notifyBtn) notifyBtn.style.display = 'block';
+            if (notifyBtn) notifyBtn.style.display = 'flex';
         } else {
-            // In stock - show add to cart and buy now
-            if (addToCartBtn) addToCartBtn.style.display = 'block';
-            if (buyNowBtn) buyNowBtn.style.display = 'block';
+            if (addToCartBtn) addToCartBtn.style.display = 'flex';
+            if (buyNowBtn) buyNowBtn.style.display = 'flex';
             if (notifyBtn) notifyBtn.style.display = 'none';
         }
     }
 
     function handleAddToCart() {
-        if (!selectedVariantId) { alert("Please select a variant"); return; }
-        if (selectedVariantStock <= 0) { alert("Out of stock"); return; }
+        if (!selectedVariantId) {
+            alert('Please select a variant');
+            return;
+        }
+        if (selectedVariantStock <= 0) {
+            alert('Out of stock');
+            return;
+        }
 
         const btn = document.getElementById('add-to-cart-btn');
         const img = document.getElementById('main-product-image');
-        const productImageUrl = img ? img.src : null;
+        const productImageUrl = img && !img.classList.contains('hidden') ? img.src : null;
 
-        // Use the global standard addToCart function defined in core_base.html.
-        // This handles the request, updates the UI, and plays animations without redirecting.
         addToCart(selectedVariantId, btn, productImageUrl);
     }
 
     function handleBuyNow() {
-        if (!selectedVariantId) { alert("Please select a variant"); return; }
-        if (selectedVariantStock <= 0) { alert("Out of stock"); return; }
+        if (!selectedVariantId) {
+            alert('Please select a variant');
+            return;
+        }
+        if (selectedVariantStock <= 0) {
+            alert('Out of stock');
+            return;
+        }
 
         const url = "{% url 'buy_now' 0 %}".replace('0', selectedVariantId);
         window.location.href = url;
     }
 
+    function handleNotifyMe() {
+        if (!selectedVariantId) {
+            alert('Please select a variant');
+            return;
+        }
+        toggleStockNotify(selectedVariantId, document.getElementById('notify-btn'));
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-        const firstBtn = document.querySelector('.variant-btn');
-        if (firstBtn) {
-            selectVariant(
-                firstBtn.getAttribute('data-variant-id'),
-                firstBtn.getAttribute('data-price'),
-                firstBtn.getAttribute('data-mrp'),
-                firstBtn.getAttribute('data-stock')
-            );
+        const variantButtons = document.querySelectorAll('.variant-btn');
+        const firstButton = document.querySelector('.variant-btn[data-selected="true"]') || variantButtons[0];
+
+        variantButtons.forEach((button) => {
+            button.addEventListener('click', () => selectVariant(button));
+        });
+
+        if (firstButton) {
+            selectVariant(firstButton);
+        } else {
+            renderVariantGallery([]);
+            updateButtonsForStock(0);
         }
 
-        document.getElementById('add-to-cart-btn').addEventListener('click', handleAddToCart);
-        document.getElementById('buynow-btn').addEventListener('click', handleBuyNow);
+        const addToCartBtn = document.getElementById('add-to-cart-btn');
+        const buyNowBtn = document.getElementById('buynow-btn');
+        const notifyBtn = document.getElementById('notify-btn');
 
-        // Initial button state
-        updateButtonsForStock({{ selected_variant.stock_quantity|default:0 }});
+        if (addToCartBtn) {
+            addToCartBtn.addEventListener('click', handleAddToCart);
+        }
+        if (buyNowBtn) {
+            buyNowBtn.addEventListener('click', handleBuyNow);
+        }
+        if (notifyBtn && !notifyBtn.disabled) {
+            notifyBtn.addEventListener('click', handleNotifyMe);
+        }
     });
 </script>
 {% endblock %}

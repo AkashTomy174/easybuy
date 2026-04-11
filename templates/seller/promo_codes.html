@@ -18,8 +18,13 @@
     </section>
 
     <section class="grid gap-8 xl:grid-cols-[1fr_1.2fr]">
-        <div class="rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm dark:border-stone-800 dark:bg-surface-dark">
+            <div class="rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm dark:border-stone-800 dark:bg-surface-dark">
             <h2 class="text-xl font-black text-stone-900 dark:text-white">Create Product Code</h2>
+            {% if not products %}
+            <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                Add at least one product before creating a promo code.
+            </div>
+            {% endif %}
             <form method="post" class="mt-6 space-y-5">
                 {% csrf_token %}
                 <div class="grid gap-5 md:grid-cols-2">
@@ -78,7 +83,7 @@
                     <input type="checkbox" name="is_active" checked class="rounded border-stone-300 text-primary focus:ring-primary">
                     Activate immediately
                 </label>
-                <button type="submit" class="w-full rounded-2xl bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-primary-dark">Create Product Promo</button>
+                <button type="submit" {% if not products %}disabled{% endif %} class="w-full rounded-2xl bg-primary px-5 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none">Create Product Promo</button>
             </form>
         </div>
 
@@ -109,9 +114,9 @@
                                     {% if promo.discount_type == "PERCENT" %}
                                         {{ promo.discount_value }}%
                                     {% else %}
-                                        ₹{{ promo.discount_value }}
+                                        Rs. {{ promo.discount_value }}
                                     {% endif %}
-                                    <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">Min subtotal: ₹{{ promo.min_order_amount }}</p>
+                                    <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">Min subtotal: Rs. {{ promo.min_order_amount }}</p>
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center gap-3">

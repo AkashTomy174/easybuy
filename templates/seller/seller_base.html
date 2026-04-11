@@ -5,7 +5,6 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>{% block title %}Seller | EasyBuy{% endblock %}</title>
 
-    <!-- Combined Google Fonts (single request) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>
@@ -14,7 +13,6 @@
             theme: {
                 extend: {
                     colors: {
-                        /* Matches core_base.html token set */
                         "primary": "#4a7c43",
                         "primary-dark": "#2d5a27",
                         "primary-light": "#6b9e5f",
@@ -28,131 +26,169 @@
         }
     </script>
     <style type="text/tailwindcss">
-        :root { --cream-bg: #fdfaf6; }
-        .content-bg { background: linear-gradient(180deg, #f8f6f3 0%, #fdfaf6 100%); }
-        .dark .content-bg { background: linear-gradient(180deg, #1a1c19 0%, #232622 100%); }
+        :root {
+            --cream-bg: #fdfaf6;
+            --shell-bg: linear-gradient(180deg, #f8f6f3 0%, #fdfaf6 100%);
+        }
+        .content-bg { background: var(--shell-bg); }
+        .seller-panel { @apply rounded-[28px] border border-stone-200 bg-white/90 shadow-sm backdrop-blur dark:border-stone-800 dark:bg-surface-dark/90; }
+        .seller-nav-link { @apply flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-all; }
+        .seller-nav-active { @apply bg-primary text-white shadow-lg shadow-primary/20; }
+        .seller-nav-idle { @apply text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="font-display bg-[var(--cream-bg)] dark:bg-background-dark text-slate-800 dark:text-slate-100 min-h-screen">
+<body class="min-h-screen bg-[var(--cream-bg)] font-display text-slate-800 dark:bg-background-dark dark:text-slate-100">
+{% with seller=seller_profile|default:request.user.seller_profile %}
+<div class="min-h-screen lg:grid lg:grid-cols-[280px_minmax(0,1fr)]">
+    <aside class="hidden border-r border-stone-200 bg-white/85 px-5 py-6 backdrop-blur lg:flex lg:flex-col dark:border-stone-800 dark:bg-surface-dark/90">
+        <a href="{% url 'seller_dashboard' %}" class="flex items-center gap-3 px-3">
+            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg shadow-primary/20">
+                <span class="material-symbols-outlined">storefront</span>
+            </div>
+            <div>
+                <p class="text-xs font-black uppercase tracking-[0.25em] text-stone-400">EasyBuy</p>
+                <p class="text-lg font-black text-stone-900 dark:text-white">Seller Studio</p>
+            </div>
+        </a>
 
-<div class="flex h-screen overflow-hidden">
-    <!-- Sidebar Navigation -->
-    <aside class="w-64 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-md border-r border-stone-200 dark:border-stone-800 flex flex-col hidden lg:flex">
-    <div class="p-6 flex items-center gap-3">
-        <div class="bg-gradient-to-br from-primary to-primary-dark p-2 rounded-xl text-white shadow-lg shadow-primary/20">
-            <span class="material-symbols-outlined">storefront</span>
+        <div class="mt-8 seller-panel p-4">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-[0.2em] text-stone-400">Store</p>
+                    <p class="mt-2 text-base font-black text-stone-900 dark:text-white">{% block header_store_name %}{{ seller.store_name }}{% endblock %}</p>
+                    <p class="mt-1 text-xs text-stone-500">@{{ user.username }}</p>
+                </div>
+                <span class="rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] {% if seller.status == 'APPROVED' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400{% elif seller.status == 'REJECTED' %}bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400{% else %}bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400{% endif %}">
+                    {{ seller.status }}
+                </span>
+            </div>
         </div>
-    </div>
 
-    <nav class="flex-1 px-4 space-y-1">
-        <a href="{% url 'sellerdashboard' %}"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'dashboard' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
-            <span class="material-symbols-outlined">dashboard</span>
-            <span>Dashboard</span>
-        </a>
-
-        <a href="{% url 'seller_products_list' %}"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'inventory' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
-            <span class="material-symbols-outlined">inventory_2</span>
-            <span>Inventory</span>
-        </a>
-
-        <a href="{% url 'select_product_for_variant' %}"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'manage_variants' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
-            <span class="material-symbols-outlined">layers</span>
-            <span>Manage Variants</span>
-        </a>
-
-        <a href="{% url 'add_product' %}"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'add_product' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
-            <span class="material-symbols-outlined">add_box</span>
-            <span>Add Product</span>
-        </a>
-
-        <a href="{% url 'seller_orders' %}"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'orders' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
-            <span class="material-symbols-outlined">receipt_long</span>
-            <span>Orders</span>
-        </a>
-
-        <a href="{% url 'seller_promo_codes' %}"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'promotions' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
-            <span class="material-symbols-outlined">sell</span>
-            <span>Promo Codes</span>
-        </a>
-
-        <a href="{% url 'seller_returns' %}" class="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all {% if active_menu == 'returns' %}bg-primary text-white shadow-lg shadow-primary/20{% else %}text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800{% endif %}">
-            <span class="material-symbols-outlined">assignment_return</span>
-            <span class="font-bold">Returns</span>
-        </a>
-
-
-        <a href="{% url 'seller_reviews' %}"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl {% if active_menu == 'reviews' %}bg-primary/10 text-primary font-semibold{% else %}text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors{% endif %}">
-            <span class="material-symbols-outlined">rate_review</span>
-            <span>Reviews</span>
-        </a>
-    </nav>
-
-    </aside>
-            <!-- <a href="#"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
-                <span class="material-symbols-outlined">analytics</span>
-                <span>Analytics</span>
+        <nav class="mt-6 space-y-2">
+            <a href="{% url 'sellerdashboard' %}" class="seller-nav-link {% if active_menu == 'dashboard' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span>Dashboard</span>
             </a>
-            <a href="#"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
-                <span class="material-symbols-outlined">payments</span>
-                <span>Payments</span>
-            </a> -->
+            <a href="{% url 'seller_products_list' %}" class="seller-nav-link {% if active_menu == 'inventory' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">
+                <span class="material-symbols-outlined">inventory_2</span>
+                <span>Inventory</span>
+            </a>
+            <a href="{% url 'select_product_for_variant' %}" class="seller-nav-link {% if active_menu == 'manage_variants' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">
+                <span class="material-symbols-outlined">layers</span>
+                <span>Variants</span>
+            </a>
+            <a href="{% url 'add_product' %}" class="seller-nav-link {% if active_menu == 'add_product' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">
+                <span class="material-symbols-outlined">add_box</span>
+                <span>Add Product</span>
+            </a>
+            <a href="{% url 'seller_orders' %}" class="seller-nav-link {% if active_menu == 'orders' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">
+                <span class="material-symbols-outlined">receipt_long</span>
+                <span>Orders</span>
+            </a>
+            <a href="{% url 'seller_returns' %}" class="seller-nav-link {% if active_menu == 'returns' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">
+                <span class="material-symbols-outlined">assignment_return</span>
+                <span>Returns</span>
+            </a>
+            <a href="{% url 'seller_promo_codes' %}" class="seller-nav-link {% if active_menu == 'promotions' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">
+                <span class="material-symbols-outlined">sell</span>
+                <span>Promo Codes</span>
+            </a>
+            <a href="{% url 'seller_reviews' %}" class="seller-nav-link {% if active_menu == 'reviews' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">
+                <span class="material-symbols-outlined">rate_review</span>
+                <span>Reviews</span>
+            </a>
         </nav>
 
+        <div class="mt-auto seller-panel p-4">
+            <p class="text-xs font-black uppercase tracking-[0.2em] text-stone-400">Quick focus</p>
+            <p class="mt-2 text-sm font-semibold text-stone-700 dark:text-stone-200">Keep inventory fresh, ship on time, and respond to customer feedback promptly.</p>
+            <form method="POST" action="{% url 'logout' %}" class="mt-4">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-stone-200 px-4 py-3 text-sm font-black text-stone-700 transition hover:bg-stone-100 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800">
+                    <span class="material-symbols-outlined text-base">logout</span>
+                    Logout
+                </button>
+            </form>
+        </div>
     </aside>
 
-    <!-- Main Content Area -->
-    <main class="flex-1 flex flex-col overflow-y-auto">
-        <!-- Top Bar -->
-        <header class="h-16 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 flex items-center justify-between px-8 sticky top-0 z-10">
-            <div class="flex items-center gap-4 flex-1">
-               
-            </div>
-            <div class="flex items-center gap-3">
-                <button class="p-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl relative" aria-label="Notifications">
-                    <span class="material-symbols-outlined">notifications</span>
-                    <span class="absolute top-2 right-2.5 w-2 h-2 bg-red-500 border-2 border-white dark:border-surface-dark rounded-full"></span>
-                </button>
-
-                <!-- Logout — uses POST to comply with Django 5+ LogoutView -->
-                <form method="POST" action="{% url 'logout' %}" class="inline">
-                    {% csrf_token %}
-                    <button type="submit"
-                            class="p-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl transition-colors"
-                            title="Logout" aria-label="Logout">
-                        <span class="material-symbols-outlined">logout</span>
-                    </button>
-                </form>
-
-                <div class="h-8 w-px bg-stone-200 dark:bg-stone-800 mx-1"></div>
+    <main class="content-bg min-h-screen">
+        <header class="sticky top-0 z-30 border-b border-stone-200 bg-white/90 backdrop-blur dark:border-stone-800 dark:bg-surface-dark/90">
+            <div class="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
                 <div class="flex items-center gap-3">
-                    <div class="text-right hidden sm:block">
-                        <p class="text-sm font-bold text-stone-900 dark:text-white">{% block header_store_name %}{{ data1.store_name}}{% endblock %}</p>
-                        <p class="text-xs text-stone-500">@{{ user.username }}</p>
+                    <button type="button" class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-stone-200 bg-white text-stone-600 lg:hidden dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" onclick="toggleSellerMobileNav()">
+                        <span class="material-symbols-outlined">menu</span>
+                    </button>
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-[0.2em] text-stone-400">Seller portal</p>
+                        <p class="text-lg font-black text-stone-900 dark:text-white">{% block mobile_title %}{{ seller.store_name }}{% endblock %}</p>
                     </div>
-                    <div class="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'add_product' %}" class="hidden rounded-2xl bg-primary px-4 py-3 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dark sm:inline-flex">
+                        Add product
+                    </a>
+                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-sm font-black text-white">
                         {{ user.username|make_list|first|upper }}
                     </div>
                 </div>
             </div>
+
+            <div class="border-t border-stone-200 px-4 py-3 lg:hidden dark:border-stone-800">
+                <div id="seller-mobile-nav" class="hidden flex-col gap-2">
+                    <a href="{% url 'sellerdashboard' %}" class="seller-nav-link {% if active_menu == 'dashboard' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">Dashboard</a>
+                    <a href="{% url 'seller_products_list' %}" class="seller-nav-link {% if active_menu == 'inventory' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">Inventory</a>
+                    <a href="{% url 'select_product_for_variant' %}" class="seller-nav-link {% if active_menu == 'manage_variants' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">Variants</a>
+                    <a href="{% url 'seller_orders' %}" class="seller-nav-link {% if active_menu == 'orders' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">Orders</a>
+                    <a href="{% url 'seller_returns' %}" class="seller-nav-link {% if active_menu == 'returns' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">Returns</a>
+                    <a href="{% url 'seller_promo_codes' %}" class="seller-nav-link {% if active_menu == 'promotions' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">Promo Codes</a>
+                    <a href="{% url 'seller_reviews' %}" class="seller-nav-link {% if active_menu == 'reviews' %}seller-nav-active{% else %}seller-nav-idle{% endif %}">Reviews</a>
+                    <form method="POST" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="seller-nav-link seller-nav-idle w-full">Logout</button>
+                    </form>
+                </div>
+            </div>
         </header>
 
-        <!-- Page Content -->
-        <div class="p-8 content-bg min-h-full">
+        <div class="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            {% if seller and seller.status != 'APPROVED' %}
+            <section class="mb-6 rounded-[24px] border border-amber-200 bg-amber-50 px-5 py-4 shadow-sm">
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-amber-600">hourglass_top</span>
+                    <div>
+                        <p class="text-sm font-black text-amber-900">Your seller account is still under review.</p>
+                        <p class="mt-1 text-sm text-amber-800">Some seller tools stay locked until the EasyBuy team approves your application.</p>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            {% if messages %}
+            <section class="mb-6 space-y-3">
+                {% for message in messages %}
+                <div class="rounded-[22px] border px-5 py-4 text-sm font-semibold shadow-sm {% if message.tags == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800{% elif message.tags == 'error' %}border-rose-200 bg-rose-50 text-rose-800{% else %}border-sky-200 bg-sky-50 text-sky-800{% endif %}">
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined text-lg">{% if message.tags == 'success' %}check_circle{% elif message.tags == 'error' %}error{% else %}info{% endif %}</span>
+                        <span>{{ message }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </section>
+            {% endif %}
+
             {% block content %}{% endblock %}
         </div>
     </main>
 </div>
+{% endwith %}
 
+<script>
+    function toggleSellerMobileNav() {
+        document.getElementById('seller-mobile-nav').classList.toggle('hidden');
+    }
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

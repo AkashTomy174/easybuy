@@ -10,181 +10,434 @@
 
 {% block extra_css %}
 <style>
-    .doc-canvas { background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 20px 20px; }
+    .doc-canvas {
+        background-color: #e2e8f0;
+        background-image: radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.5) 1px, transparent 0);
+        background-size: 20px 20px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Approve Form -->
 <form id="approveForm" method="POST" action="{% url 'approve_seller' details.id %}">
     {% csrf_token %}
 </form>
 
-<!-- Reject Modal -->
-<div id="rejectModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-    <div class="bg-white w-full max-w-md rounded-xl border border-slate-200 shadow-2xl">
-        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
-            <h3 class="font-bold text-lg">Reject Application</h3>
-            <button type="button" onclick="toggleModal('rejectModal')" class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+<div id="approveModal" class="hidden fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-lg overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+        <div class="border-b border-slate-100 px-6 py-5">
+            <p class="text-[11px] font-black uppercase tracking-[0.24em] text-emerald-600">Approve seller</p>
+            <h3 class="mt-2 text-2xl font-black tracking-tight text-slate-900">Approve {{ details.store_name }}?</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-500">This will allow the seller to access the marketplace and begin listing products.</p>
+        </div>
+        <div class="space-y-4 px-6 py-6">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-emerald-500">verified_user</span>
+                    <div>
+                        <p class="text-sm font-bold text-slate-900">{{ review.completed_items }}/{{ review.total_items }} review items are complete.</p>
+                        <p class="mt-1 text-xs leading-5 text-slate-500">
+                            {% if review.missing_count %}
+                            {{ review.missing_count }} item{{ review.missing_count|pluralize }} still appear incomplete, so double-check the document before confirming.
+                            {% else %}
+                            No missing fields were detected in the profile snapshot.
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% if next_pending %}
+            <div class="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                <p class="text-xs font-black uppercase tracking-[0.2em] text-sky-700">Up next</p>
+                <p class="mt-2 text-sm font-bold text-slate-900">{{ next_pending.store_name }}</p>
+                <p class="mt-1 text-xs text-slate-500">You can continue directly to the next seller after approval.</p>
+            </div>
+            {% endif %}
+        </div>
+        <div class="flex gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
+            <button type="button" onclick="toggleModal('approveModal')" class="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100">
+                Cancel
+            </button>
+            <button type="button" onclick="document.getElementById('approveForm').submit();" class="flex-1 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700">
+                Confirm approval
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="rejectModal" class="hidden fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-lg overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+        <div class="border-b border-slate-100 px-6 py-5">
+            <p class="text-[11px] font-black uppercase tracking-[0.24em] text-rose-600">Reject seller</p>
+            <h3 class="mt-2 text-2xl font-black tracking-tight text-slate-900">Reject {{ details.store_name }}</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-500">Add a clear reason so the seller knows what must be corrected before reapplying.</p>
         </div>
         <form method="POST" action="{% url 'reject_seller' details.id %}">
             {% csrf_token %}
-            <div class="p-6">
-                <p class="text-sm text-slate-500 mb-4">Provide a reason for rejecting <strong>{{ details.store_name }}</strong>.</p>
-                <textarea name="reason" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none" rows="3" placeholder="Incomplete documentation..." required></textarea>
+            <div class="space-y-5 px-6 py-6">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Quick reasons</p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <button type="button" onclick="fillRejectReason('Business document is missing or unreadable.')" class="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600">Missing document</button>
+                        <button type="button" onclick="fillRejectReason('Submitted tax identifiers do not match the business details provided.')" class="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600">Mismatch in tax details</button>
+                        <button type="button" onclick="fillRejectReason('Bank account information is incomplete or invalid.')" class="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600">Invalid bank details</button>
+                        <button type="button" onclick="fillRejectReason('Business address or contact information is incomplete.')" class="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600">Incomplete contact info</button>
+                    </div>
+                </div>
+                <div>
+                    <label for="rejectReason" class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Rejection reason</label>
+                    <textarea id="rejectReason" name="reason" rows="5" class="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-rose-300 focus:bg-white focus:ring-4 focus:ring-rose-100" placeholder="Explain what is missing or incorrect..." required></textarea>
+                </div>
             </div>
-            <div class="p-4 bg-slate-50 flex gap-3">
-                <button type="button" onclick="toggleModal('rejectModal')" class="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold">Cancel</button>
-                <button type="submit" class="flex-1 px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700">Confirm Reject</button>
+            <div class="flex gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
+                <button type="button" onclick="toggleModal('rejectModal')" class="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100">
+                    Cancel
+                </button>
+                <button type="submit" class="flex-1 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-black text-white transition hover:bg-rose-700">
+                    Confirm rejection
+                </button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Seller Info Card -->
-<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-    <div class="flex items-center gap-5">
-        <div class="size-16 bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden">
-            <span class="material-symbols-outlined text-3xl text-slate-300">storefront</span>
-        </div>
+<section class="overflow-hidden rounded-[30px] border border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_45%,#eef6ff_100%)] shadow-sm">
+    <div class="grid gap-6 px-6 py-7 xl:grid-cols-[1.3fr_0.7fr] xl:px-8">
         <div>
-            <h2 class="text-xl font-black text-slate-900 leading-tight">{{ details.store_name }}</h2>
-            <span class="inline-block mt-1 px-2 py-0.5 rounded bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-widest border border-amber-100">
-                {{ details.status|default:"PENDING" }}
-            </span>
+            <div class="flex flex-wrap items-center gap-3">
+                <span class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] text-primary">
+                    Seller review
+                </span>
+                <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] {{ review.wait_tone }}">
+                    <span class="h-2 w-2 rounded-full bg-current opacity-70"></span>
+                    {{ review.wait_label }}
+                </span>
+            </div>
+            <div class="mt-5 flex items-start gap-4">
+                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] bg-primary/10 text-2xl font-black text-primary">
+                    {{ review.owner_initial }}
+                </div>
+                <div>
+                    <h1 class="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">{{ details.store_name }}</h1>
+                    <p class="mt-2 text-sm font-semibold text-slate-600">{{ details.user.username }} | {{ details.user.email|default:"No email address" }}</p>
+                    <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
+                        Review the profile snapshot, verify the uploaded document, and then approve or reject with a documented reason.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+            <div class="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Queue position</p>
+                <p class="mt-3 text-3xl font-black text-slate-900">
+                    {% if queue_position %}{{ queue_position }}/{{ pending_count }}{% else %}{{ details.status }}{% endif %}
+                </p>
+                <p class="mt-1 text-xs text-slate-500">
+                    {% if queue_position %}
+                    Ordered by earliest submission
+                    {% else %}
+                    This seller is no longer in the pending queue
+                    {% endif %}
+                </p>
+            </div>
+            <div class="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Profile complete</p>
+                <p class="mt-3 text-3xl font-black text-slate-900">{{ review.completion_percentage }}%</p>
+                <p class="mt-1 text-xs text-slate-500">{{ review.completed_items }}/{{ review.total_items }} fields accounted for</p>
+            </div>
+            <div class="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Document</p>
+                <p class="mt-3 text-3xl font-black text-slate-900">{% if review.has_document %}Yes{% else %}No{% endif %}</p>
+                <p class="mt-1 text-xs text-slate-500">{{ review.document_name }}</p>
+            </div>
         </div>
     </div>
-    <div class="flex gap-3">
-        <button type="button" onclick="handleApprove()" class="px-6 py-2.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 shadow-lg shadow-primary/20 flex items-center gap-2 transition-all active:scale-95">
-            <span class="material-symbols-outlined text-sm">check_circle</span> Approve Seller
-        </button>
-        <button type="button" onclick="toggleModal('rejectModal')" class="px-6 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg text-xs font-bold hover:bg-rose-100 flex items-center gap-2 transition-colors active:scale-95">
-            <span class="material-symbols-outlined text-sm">block</span> Reject
-        </button>
+    <div class="flex flex-col gap-3 border-t border-slate-200 bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between xl:px-8">
+        <div class="flex flex-wrap items-center gap-3">
+            {% if next_pending %}
+            <a href="{% url 'seller_details' next_pending.id %}" class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
+                <span class="material-symbols-outlined text-base">arrow_forward</span>
+                Jump to next seller
+            </a>
+            {% endif %}
+            <a href="{% url 'seller_veri' %}" class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
+                <span class="material-symbols-outlined text-base">west</span>
+                Back to queue
+            </a>
+        </div>
+        <div class="flex flex-col gap-3 sm:flex-row">
+            <button type="button" onclick="toggleModal('rejectModal')" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-black text-rose-600 transition hover:bg-rose-100">
+                <span class="material-symbols-outlined text-base">block</span>
+                Reject seller
+            </button>
+            <button type="button" onclick="toggleModal('approveModal')" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:bg-primary/90">
+                <span class="material-symbols-outlined text-base">how_to_reg</span>
+                Approve seller
+            </button>
+        </div>
     </div>
-</div>
+</section>
 
-<!-- Details Grid -->
-<div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
-    <!-- Sidebar Info -->
-    <div class="xl:col-span-3 space-y-6">
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="p-4 border-b border-slate-100 bg-slate-50/50">
-                <h3 class="font-bold text-[10px] uppercase tracking-widest text-slate-500">Verification Files</h3>
+{% if review.missing_fields %}
+<section class="mt-6 rounded-[24px] border border-amber-200 bg-amber-50 px-5 py-4 shadow-sm">
+    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-amber-600">warning</span>
+            <div>
+                <h2 class="text-base font-black text-amber-900">Review carefully before approving</h2>
+                <p class="mt-1 text-sm text-amber-800">This application still has {{ review.missing_count }} incomplete review item{{ review.missing_count|pluralize }}.</p>
             </div>
-            <div class="p-2 space-y-1">
-                {% if details.doc %}
-                <a href="{{ details.doc.url }}" target="_blank" class="w-full text-left p-3 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-between hover:bg-primary/10 transition-colors">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-primary">description</span>
-                        <span class="text-sm font-bold text-slate-900">Business Document</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            {% for missing in review.missing_fields %}
+            <span class="rounded-full border border-amber-200 bg-white px-3 py-2 text-xs font-bold text-amber-800">{{ missing }}</span>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<section class="mt-8 grid gap-8 2xl:grid-cols-[360px_minmax(0,1fr)]">
+    <aside class="space-y-6">
+        <div class="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm 2xl:sticky 2xl:top-6">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Decision summary</p>
+                    <h2 class="mt-2 text-xl font-black tracking-tight text-slate-900">Approval readiness</h2>
+                </div>
+                <span class="material-symbols-outlined text-3xl text-slate-300">task_alt</span>
+            </div>
+            <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="flex items-end justify-between gap-3">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Confidence score</p>
+                        <p class="mt-2 text-4xl font-black text-slate-900">{{ review.completion_percentage }}%</p>
                     </div>
-                    <span class="material-symbols-outlined text-primary text-sm">visibility</span>
-                </a>
-                {% else %}
-                <div class="w-full text-left p-3 rounded-lg bg-slate-50 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-slate-400">description</span>
-                    <span class="text-sm font-medium text-slate-500">No document</span>
+                    <div class="text-right">
+                        <p class="text-xs font-bold text-slate-500">{{ review.completed_items }}/{{ review.total_items }} complete</p>
+                        <p class="mt-1 text-xs text-slate-500">{{ review.days_waiting }} day{{ review.days_waiting|pluralize }} waiting</p>
+                    </div>
+                </div>
+                <div class="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
+                    <div class="h-full rounded-full bg-[linear-gradient(90deg,#137fec,#20c4f4)]" style="width: {{ review.completion_percentage }}%;"></div>
+                </div>
+            </div>
+
+            <div class="mt-5 space-y-3">
+                <div class="rounded-2xl border {% if review.has_document %}border-emerald-200 bg-emerald-50{% else %}border-rose-200 bg-rose-50{% endif %} p-4">
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined {% if review.has_document %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                            {% if review.has_document %}description{% else %}error{% endif %}
+                        </span>
+                        <div>
+                            <p class="text-sm font-bold text-slate-900">Business document</p>
+                            <p class="mt-1 text-xs leading-5 text-slate-600">
+                                {% if review.has_document %}
+                                Uploaded as {{ review.document_name }}.
+                                {% else %}
+                                No document has been uploaded with this application.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border {% if review.missing_count %}border-amber-200 bg-amber-50{% else %}border-emerald-200 bg-emerald-50{% endif %} p-4">
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined {% if review.missing_count %}text-amber-600{% else %}text-emerald-600{% endif %}">
+                            {% if review.missing_count %}playlist_remove{% else %}checklist{% endif %}
+                        </span>
+                        <div>
+                            <p class="text-sm font-bold text-slate-900">Review checklist</p>
+                            <p class="mt-1 text-xs leading-5 text-slate-600">
+                                {% if review.missing_count %}
+                                {{ review.missing_count }} item{{ review.missing_count|pluralize }} still need attention.
+                                {% else %}
+                                No missing fields detected in the profile details.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {% if next_pending %}
+                <div class="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                    <p class="text-xs font-black uppercase tracking-[0.2em] text-sky-700">Next in line</p>
+                    <p class="mt-2 text-sm font-bold text-slate-900">{{ next_pending.store_name }}</p>
+                    <a href="{% url 'seller_details' next_pending.id %}" class="mt-3 inline-flex items-center gap-2 text-xs font-black text-sky-700 transition hover:text-sky-900">
+                        Review next seller
+                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                    </a>
                 </div>
                 {% endif %}
             </div>
         </div>
+    </aside>
 
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-            <h3 class="font-bold text-sm mb-6 flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary text-lg">info</span> Seller Details
-            </h3>
-            <div class="space-y-5">
+    <div class="space-y-6">
+        <div class="rounded-[24px] border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Store Name</label>
-                    <p class="text-sm font-semibold">{{ details.store_name }}</p>
+                    <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Seller profile</p>
+                    <h2 class="mt-2 text-xl font-black tracking-tight text-slate-900">Identity and payout details</h2>
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Owner</label>
-                    <p class="text-sm font-semibold">{{ details.user.username }}</p>
+                <div class="text-sm text-slate-500">
+                    Submitted on {{ details.created_at|date:"M d, Y | h:i A" }}
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Email</label>
-                    <p class="text-sm font-bold text-primary truncate">{{ details.user.email }}</p>
+            </div>
+            <div class="grid gap-4 px-6 py-6 md:grid-cols-2">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Store name</p>
+                    <p class="mt-2 text-sm font-bold text-slate-900">{{ details.store_name }}</p>
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Phone</label>
-                    <p class="text-sm font-semibold">{{ details.user.phone_number|default:"Not provided" }}</p>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Owner</p>
+                    <p class="mt-2 text-sm font-bold text-slate-900">{{ details.user.username }}</p>
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">GST Number</label>
-                    <p class="text-sm font-semibold">{{ details.gst_number|default:"Not provided" }}</p>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Email</p>
+                    <p class="mt-2 break-all text-sm font-bold text-slate-900">{{ details.user.email|default:"Not provided" }}</p>
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">PAN Number</label>
-                    <p class="text-sm font-semibold">{{ details.pan_number|default:"Not provided" }}</p>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Phone number</p>
+                    <p class="mt-2 text-sm font-bold text-slate-900">{{ details.user.phone_number|default:"Not provided" }}</p>
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Bank Account</label>
-                    <p class="text-sm font-semibold">{{ details.bank_account_number|default:"Not provided" }}</p>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">GST number</p>
+                    <p class="mt-2 text-sm font-bold text-slate-900">{{ details.gst_number|default:"Not provided" }}</p>
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">IFSC Code</label>
-                    <p class="text-sm font-semibold">{{ details.ifsc_code|default:"Not provided" }}</p>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">PAN number</p>
+                    <p class="mt-2 text-sm font-bold text-slate-900">{{ details.pan_number|default:"Not provided" }}</p>
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Business Address</label>
-                    <p class="text-sm font-semibold">{{ details.business_address|default:"Not provided" }}</p>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Bank account</p>
+                    <p class="mt-2 text-sm font-bold text-slate-900">{{ details.bank_account_number|default:"Not provided" }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">IFSC code</p>
+                    <p class="mt-2 text-sm font-bold text-slate-900">{{ details.ifsc_code|default:"Not provided" }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Business address</p>
+                    <p class="mt-2 text-sm font-bold text-slate-900">{{ details.business_address|default:"Not provided" }}</p>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Document Viewer -->
-    <div class="xl:col-span-9">
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[750px]">
+        <div class="rounded-[24px] border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Checklist</p>
+                    <h2 class="mt-2 text-xl font-black tracking-tight text-slate-900">Review every required item</h2>
+                </div>
+                <p class="text-sm text-slate-500">Use this as a structured pass before approving.</p>
+            </div>
+            <div class="grid gap-4 px-6 py-6 md:grid-cols-2">
+                {% for field in review.checklist %}
+                <div class="rounded-2xl border {% if field.completed %}border-emerald-200 bg-emerald-50{% else %}border-rose-200 bg-rose-50{% endif %} p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">{{ field.label }}</p>
+                            <p class="mt-2 text-sm font-bold text-slate-900">{{ field.value }}</p>
+                        </div>
+                        <span class="material-symbols-outlined {% if field.completed %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                            {% if field.completed %}check_circle{% else %}cancel{% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Uploaded document</p>
+                    <h2 class="mt-2 text-xl font-black tracking-tight text-slate-900">Primary verification file</h2>
+                </div>
+                {% if details.doc %}
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ details.doc.url }}" download class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
+                        <span class="material-symbols-outlined text-base">download</span>
+                        Download
+                    </a>
+                    <a href="{{ details.doc.url }}" target="_blank" class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
+                        <span class="material-symbols-outlined text-base">open_in_new</span>
+                        Open separately
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
             {% if details.doc %}
-            <div class="p-4 border-b border-slate-200 flex items-center justify-between px-6 bg-slate-50/30">
-                <div class="flex items-center gap-3">
-                    <span class="material-symbols-outlined text-slate-400">file_present</span>
-                    <span class="text-sm font-bold text-slate-700">Uploaded Document</span>
+            <div class="grid gap-5 border-b border-slate-100 bg-slate-50 px-6 py-5 md:grid-cols-3">
+                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">File type</p>
+                    <p class="mt-2 text-sm font-bold text-slate-900">{{ review.document_extension }}</p>
                 </div>
-                <div class="flex gap-1">
-                    <a href="{{ details.doc.url }}" download class="p-2 hover:bg-slate-200 rounded-lg" title="Download">
-                        <span class="material-symbols-outlined text-xl">download</span>
-                    </a>
-                    <a href="{{ details.doc.url }}" target="_blank" class="p-2 hover:bg-slate-200 rounded-lg" title="Fullscreen">
-                        <span class="material-symbols-outlined text-xl">fullscreen</span>
-                    </a>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Filename</p>
+                    <p class="mt-2 break-all text-sm font-bold text-slate-900">{{ review.document_name }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Review tip</p>
+                    <p class="mt-2 text-sm font-bold text-slate-900">Match tax, address, and business identity details.</p>
                 </div>
             </div>
-            <div class="flex-1 bg-slate-100 p-12 overflow-auto flex justify-center doc-canvas">
-                {% with doc_url=details.doc.url %}
-                {% if doc_url|lower|slice:"-4:" == ".pdf" %}
-                <iframe src="{{ doc_url }}" class="w-full h-full rounded-lg shadow-lg" style="min-height: 800px;"></iframe>
+            <div class="doc-canvas min-h-[720px] overflow-auto bg-slate-100 p-4 sm:p-6 xl:p-8">
+                {% if review.document_extension == 'PDF' %}
+                <iframe src="{{ details.doc.url }}" class="min-h-[820px] w-full rounded-[22px] border border-slate-200 bg-white shadow-xl shadow-slate-300/40"></iframe>
                 {% else %}
-                <img src="{{ doc_url }}" alt="Seller Document" class="max-w-full h-auto rounded-lg shadow-lg object-contain"/>
+                <div class="flex min-h-[640px] items-center justify-center rounded-[24px] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-300/40">
+                    <img src="{{ details.doc.url }}" alt="Seller Document" class="max-h-[900px] w-auto max-w-full rounded-2xl object-contain" />
+                </div>
                 {% endif %}
-                {% endwith %}
             </div>
             {% else %}
-            <div class="flex-1 flex items-center justify-center bg-slate-50">
-                <div class="text-center p-8">
-                    <span class="material-symbols-outlined text-6xl text-slate-300">description</span>
-                    <p class="text-slate-500 mt-4">No document uploaded</p>
+            <div class="flex min-h-[420px] items-center justify-center bg-slate-50 px-6 py-12">
+                <div class="max-w-md text-center">
+                    <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                        <span class="material-symbols-outlined text-4xl">upload_file</span>
+                    </div>
+                    <h3 class="mt-6 text-2xl font-black tracking-tight text-slate-900">No document uploaded</h3>
+                    <p class="mt-3 text-sm leading-6 text-slate-500">This seller has not attached a verification file, so the application should be reviewed carefully before any approval decision.</p>
+                    <button type="button" onclick="toggleModal('rejectModal')" class="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-5 py-3 text-sm font-black text-white transition hover:bg-rose-700">
+                        <span class="material-symbols-outlined text-base">block</span>
+                        Reject with reason
+                    </button>
                 </div>
             </div>
             {% endif %}
         </div>
     </div>
-</div>
+</section>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     function toggleModal(id) {
-        document.getElementById(id).classList.toggle('hidden');
+        const modal = document.getElementById(id);
+        modal.classList.toggle('hidden');
+        document.body.classList.toggle('overflow-hidden', !modal.classList.contains('hidden'));
     }
 
-    function handleApprove() {
-        if (confirm("Are you sure you want to approve this seller?")) {
-            document.getElementById('approveForm').submit();
-        }
+    function fillRejectReason(message) {
+        const textarea = document.getElementById('rejectReason');
+        textarea.value = message;
+        textarea.focus();
     }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            ['approveModal', 'rejectModal'].forEach(function (id) {
+                const modal = document.getElementById(id);
+                if (!modal.classList.contains('hidden')) {
+                    modal.classList.add('hidden');
+                }
+            });
+            document.body.classList.remove('overflow-hidden');
+        }
+    });
 </script>
 {% endblock %}

@@ -4,7 +4,7 @@
 <div class="max-w-5xl mx-auto py-12 px-4">
     <div class="mb-10 text-center">
         <h1 class="text-4xl font-black text-stone-900 tracking-tight">Manage Inventory</h1>
-        <p class="text-stone-500 font-medium mt-2 text-lg">Select a product to add or manage its variants</p>
+        <p class="text-stone-500 font-medium mt-2 text-lg">Select a product to add or manage its variants, pricing, and stock.</p>
     </div>
 
     <div class="mb-8 relative max-w-2xl mx-auto">
@@ -27,9 +27,17 @@
 
                 <div class="flex-1">
                     <h3 class="font-black text-stone-900 text-xl mb-1 truncate">{{ product.name }}</h3>
-                    <p class="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">
-                        {{ product.variants.count }} Existing Variants
-                    </p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">
+                            {{ product.variants.count }} Existing Variants
+                        </p>
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide {% if product.approval_status == 'APPROVED' %}bg-emerald-50 text-emerald-700{% elif product.approval_status == 'REJECTED' %}bg-rose-50 text-rose-700{% else %}bg-amber-50 text-amber-700{% endif %}">
+                            {{ product.approval_status }}
+                        </span>
+                    </div>
+                    {% if product.approval_status == 'REJECTED' and product.rejection_reason %}
+                    <p class="mt-2 text-xs font-medium text-rose-600">{{ product.rejection_reason|truncatechars:90 }}</p>
+                    {% endif %}
                 </div>
 
                 <a href="{% url 'add_variant' product.id %}" 

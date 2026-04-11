@@ -3,192 +3,203 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 lg:px-12 py-8">
-    <!-- Page Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-black text-stone-900 dark:text-white">Filter Products</h1>
-        <p class="mt-2 text-stone-500">Find exactly what you're looking for</p>
+    <div class="mb-8 rounded-[2rem] border border-stone-200 bg-white/80 p-6 shadow-sm dark:border-stone-700 dark:bg-surface-dark/80 sm:p-8">
+        <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div>
+                <span class="text-xs font-black uppercase tracking-[0.3em] text-accent-terracotta">Smart Filtering</span>
+                <h1 class="mt-3 text-3xl font-black text-stone-900 dark:text-white">Filter Products</h1>
+                <p class="mt-2 max-w-2xl text-sm text-stone-500 sm:text-base">Browse with cleaner controls, tighter grouping, and a more comfortable mobile layout.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-2xl bg-stone-50 px-4 py-3 dark:bg-stone-800">
+                    <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Results</p>
+                    <p class="mt-1 text-2xl font-black text-stone-900 dark:text-white">{{ products|length }}</p>
+                </div>
+                <div class="rounded-2xl bg-primary/10 px-4 py-3">
+                    <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-500">Mode</p>
+                    <p class="mt-1 text-sm font-black text-primary">{% if selected_category or selected_subcategory or selected_brands or selected_min_price or selected_max_price or selected_product %}Filtered{% else %}Browse all{% endif %}</p>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="flex flex-col lg:flex-row gap-8">
-        <!-- Filter Sidebar -->
-        <aside class="w-full lg:w-72 flex-shrink-0">
-            <div class="bg-white dark:bg-surface-dark rounded-3xl shadow-card p-6 sticky top-24">
-                <form method="GET" id="filterForm">
-                    <!-- Search -->
-                    <!-- <div class="mb-6">
-                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Search Products</label>
-                        <div class="relative">
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">search</span>
-                            <input type="text" name="product" value="{{ selected_product }}" 
-                                class="w-full h-11 pl-10 pr-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                                placeholder="Product name...">
+    <div class="flex flex-col gap-8 lg:flex-row">
+        <aside class="w-full flex-shrink-0 lg:w-80">
+            <div class="sticky top-24 rounded-3xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-700 dark:bg-surface-dark sm:p-6">
+                <div class="mb-6 rounded-[1.75rem] border border-stone-200 bg-gradient-to-br from-stone-50 to-white p-4 dark:border-stone-700 dark:from-stone-800 dark:to-stone-900">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-[0.2em] text-stone-400">Controls</p>
+                            <h2 class="mt-1 text-lg font-black text-stone-900 dark:text-white">Refine your results</h2>
+                            <p class="mt-2 text-sm text-stone-500 dark:text-stone-400">Shape the collection by department, brand, budget, and sort order.</p>
                         </div>
-                    </div> -->
-
-                    <!-- Category -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Category</label>
-                        <select name="category" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
-                            <option value="">All Categories</option>
-                            {% for cat in categories %}
-                            <option value="{{ cat.slug }}" {% if selected_category == cat.slug|stringformat:"s" %}selected{% endif %}>
-                                {{ cat.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
+                        <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                            <span class="material-symbols-outlined">tune</span>
+                        </span>
                     </div>
-
-                    <!-- Subcategory -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Subcategory</label>
-                        <select name="subcategory" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
-                            <option value="">All Subcategories</option>
-                            {% for sub in subcategories %}
-                            <option value="{{ sub.slug }}" {% if selected_subcategory == sub.slug|stringformat:"s" %}selected{% endif %}>
-                                {{ sub.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
+                    {% if selected_category or selected_subcategory or selected_brands or selected_min_price or selected_max_price or selected_product %}
+                    <div class="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-primary/5 px-4 py-3">
+                        <div>
+                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-primary/70">Current state</p>
+                            <p class="mt-1 text-sm font-bold text-stone-900 dark:text-white">Filters are active</p>
+                        </div>
+                        <a href="{% url 'filtering' %}" class="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary hover:text-white dark:bg-stone-900">
+                            <span class="material-symbols-outlined text-base">refresh</span>
+                            Reset
+                        </a>
                     </div>
+                    {% endif %}
+                </div>
 
-                    <!-- Brand Checkboxes -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-3">Brand</label>
-                        <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                <form method="GET" id="filterForm" class="space-y-4">
+                    <section class="rounded-[1.75rem] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-900/50">
+                        <div class="mb-4">
+                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Browse</p>
+                            <h3 class="mt-1 text-sm font-black text-stone-900 dark:text-white">Category and section</h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="mb-2 block text-sm font-bold text-stone-900 dark:text-white">Category</label>
+                                <select name="category" class="w-full h-12 rounded-2xl border border-stone-200 bg-white px-4 text-sm font-medium transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-stone-700 dark:bg-stone-800">
+                                    <option value="">All Categories</option>
+                                    {% for cat in categories %}
+                                    <option value="{{ cat.slug }}" {% if selected_category == cat.slug|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="mb-2 block text-sm font-bold text-stone-900 dark:text-white">Subcategory</label>
+                                <select name="subcategory" class="w-full h-12 rounded-2xl border border-stone-200 bg-white px-4 text-sm font-medium transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-stone-700 dark:bg-stone-800">
+                                    <option value="">All Subcategories</option>
+                                    {% for sub in subcategories %}
+                                    <option value="{{ sub.slug }}" {% if selected_subcategory == sub.slug|stringformat:"s" %}selected{% endif %}>{{ sub.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="rounded-[1.75rem] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-900/50">
+                        <div class="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Brands</p>
+                                <h3 class="mt-1 text-sm font-black text-stone-900 dark:text-white">Pick your favorites</h3>
+                            </div>
+                            <span class="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-stone-500 shadow-sm dark:bg-stone-800 dark:text-stone-300">Multi-select</span>
+                        </div>
+                        <div class="grid max-h-56 grid-cols-1 gap-2 overflow-y-auto pr-1 custom-scrollbar">
                             {% for brand in all_brands %}
-                            <label class="flex items-center gap-3 cursor-pointer group">
-                                <input type="checkbox" name="brand" value="{{ brand }}" 
-                                    {% if brand in selected_brands %}checked{% endif %}
-                                    class="w-5 h-5 rounded-lg border-2 border-stone-300 dark:border-stone-600 text-primary focus:ring-primary/20 accent-primary">
-                                <span class="text-sm font-medium text-stone-600 dark:text-stone-300 group-hover:text-primary transition-colors">{{ brand }}</span>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="brand" value="{{ brand }}" {% if brand in selected_brands %}checked{% endif %} class="peer sr-only">
+                                <span class="flex items-center justify-between rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-600 transition-all hover:border-primary/40 hover:text-primary dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-primary/20">
+                                    <span class="truncate">{{ brand }}</span>
+                                    <span class="material-symbols-outlined text-[18px] opacity-40 transition peer-checked:opacity-100">done</span>
+                                </span>
                             </label>
                             {% empty %}
-                            <p class="text-sm text-stone-400 italic">No brands available</p>
+                            <p class="rounded-2xl border border-dashed border-stone-200 px-4 py-5 text-sm text-stone-400 dark:border-stone-700">No brands available right now.</p>
                             {% endfor %}
                         </div>
-                    </div>
+                    </section>
 
-                    <!-- Price Range -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Price Range</label>
-                        <div class="relative h-8 select-none" style="padding: 12px 0;">
-                            <!-- Background Track -->
-                            <div class="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-1.5 bg-stone-200 dark:bg-stone-700 rounded-full"></div>
-                            <!-- Active Range Track -->
-                            <div id="price-range-track" class="absolute top-1/2 -translate-y-1/2 h-1.5 bg-primary rounded-full pointer-events-none" style="left: 0%; width: 100%;"></div>
-                            
-                            <!-- Range Inputs (invisible but handle interaction) -->
-                            <input type="range" name="min" min="0" max="100000" step="500" value="{{ selected_min_price|default:"0" }}"
-                                class="absolute w-full h-full opacity-0 cursor-pointer z-30 range-input"
-                                id="price-min-slider">
-                            <input type="range" name="max" min="0" max="100000" step="500" value="{{ selected_max_price|default:"100000" }}"
-                                class="absolute w-full h-full opacity-0 cursor-pointer z-30 range-input"
-                                id="price-max-slider">
-                            
-                            <!-- Visual Thumbs (pointer-events: none to allow clicks through to inputs) -->
-                            <div id="price-min-thumb" class="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-primary rounded-full shadow-md z-20 pointer-events-none" style="left: 0%;"></div>
-                            <div id="price-max-thumb" class="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-primary rounded-full shadow-md z-20 pointer-events-none" style="left: 100%;"></div>
+                    <section class="rounded-[1.75rem] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-900/50">
+                        <div class="mb-4">
+                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Budget</p>
+                            <h3 class="mt-1 text-sm font-black text-stone-900 dark:text-white">Set your price range</h3>
                         </div>
-                        <div class="flex items-center justify-between text-sm text-stone-500 mt-1">
-                            <span>₹<span id="price-min-val">{{ selected_min_price|default:"0" }}</span></span>
-                            <span>₹<span id="price-max-val">{{ selected_max_price|default:"100000" }}</span></span>
+                        <div class="mb-4 grid grid-cols-2 gap-3">
+                            <div class="rounded-2xl bg-white px-4 py-3 shadow-sm dark:bg-stone-800">
+                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Min</p>
+                                <p class="mt-1 text-base font-black text-stone-900 dark:text-white">Rs <span id="price-min-val">{{ selected_min_price|default:"0" }}</span></p>
+                            </div>
+                            <div class="rounded-2xl bg-white px-4 py-3 shadow-sm dark:bg-stone-800">
+                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Max</p>
+                                <p class="mt-1 text-base font-black text-stone-900 dark:text-white">Rs <span id="price-max-val">{{ selected_max_price|default:"100000" }}</span></p>
+                            </div>
                         </div>
-                    </div>
+                        <div class="relative h-8 select-none py-3">
+                            <div class="absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-stone-200 dark:bg-stone-700"></div>
+                            <div id="price-range-track" class="pointer-events-none absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-primary" style="left: 0%; width: 100%;"></div>
+                            <input type="range" name="min" min="0" max="100000" step="500" value="{{ selected_min_price|default:"0" }}" class="range-input absolute h-full w-full cursor-pointer opacity-0 z-30" id="price-min-slider">
+                            <input type="range" name="max" min="0" max="100000" step="500" value="{{ selected_max_price|default:"100000" }}" class="range-input absolute h-full w-full cursor-pointer opacity-0 z-30" id="price-max-slider">
+                            <div id="price-min-thumb" class="pointer-events-none absolute top-1/2 z-20 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-primary bg-white shadow-md" style="left: 0%;"></div>
+                            <div id="price-max-thumb" class="pointer-events-none absolute top-1/2 z-20 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-primary bg-white shadow-md" style="left: 100%;"></div>
+                        </div>
+                        <p class="mt-3 text-xs text-stone-500 dark:text-stone-400">Drag both handles to focus on the price band that matches your budget.</p>
+                    </section>
 
-                    <script>
-                    (function() {
-                        var minSlider = document.getElementById('price-min-slider');
-                        var maxSlider = document.getElementById('price-max-slider');
-                        var minThumb = document.getElementById('price-min-thumb');
-                        var maxThumb = document.getElementById('price-max-thumb');
-                        var rangeTrack = document.getElementById('price-range-track');
-                        var minVal = document.getElementById('price-min-val');
-                        var maxVal = document.getElementById('price-max-val');
-                        
-                        function updateSlider() {
-                            var minValInt = parseInt(minSlider.value);
-                            var maxValInt = parseInt(maxSlider.value);
-                            
-                            if (minValInt > maxValInt) {
-                                if (event && event.target === minSlider) {
-                                    minSlider.value = maxValInt;
-                                } else if (event && event.target === maxSlider) {
-                                    maxSlider.value = minValInt;
-                                } else {
-                                    var temp = minSlider.value;
-                                    minSlider.value = maxSlider.value;
-                                    maxSlider.value = temp;
-                                }
-                            }
-                            
-                            var minPercent = (minSlider.value / 100000) * 100;
-                            var maxPercent = (maxSlider.value / 100000) * 100;
-                            
-                            minThumb.style.left = minPercent + '%';
-                            maxThumb.style.left = maxPercent + '%';
-                            rangeTrack.style.left = minPercent + '%';
-                            rangeTrack.style.width = (maxPercent - minPercent) + '%';
-                            
-                            minVal.textContent = minSlider.value;
-                            maxVal.textContent = maxSlider.value;
-                        }
-                        
-                        minSlider.addEventListener('input', updateSlider);
-                        maxSlider.addEventListener('input', updateSlider);
-                        
-                        // Initialize on load
-                        updateSlider();
-                    })();
-                    </script>
-
-                    <!-- Sort -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-stone-900 dark:text-white mb-2">Sort By</label>
-                        <select name="sort" class="w-full h-11 px-4 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all">
+                    <section class="rounded-[1.75rem] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-700 dark:bg-stone-900/50">
+                        <div class="mb-4">
+                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Order</p>
+                            <h3 class="mt-1 text-sm font-black text-stone-900 dark:text-white">Sort the results</h3>
+                        </div>
+                        <label class="mb-2 block text-sm font-bold text-stone-900 dark:text-white">Sort By</label>
+                        <select name="sort" class="w-full h-12 rounded-2xl border border-stone-200 bg-white px-4 text-sm font-medium transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-stone-700 dark:bg-stone-800">
                             <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest First</option>
                             <option value="price_low" {% if selected_sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
                             <option value="price_high" {% if selected_sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
                             <option value="name_asc" {% if selected_sort == 'name_asc' %}selected{% endif %}>Name: A to Z</option>
                             <option value="name_desc" {% if selected_sort == 'name_desc' %}selected{% endif %}>Name: Z to A</option>
                         </select>
-                    </div>
+                    </section>
 
-                    <!-- Buttons -->
-                    <div class="flex gap-3">
-                        <button type="submit" class="flex-1 h-12 rounded-2xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors shadow-button">
-                            Apply Filters
-                        </button>
-                        <a href="{% url 'filtering' %}" class="h-12 px-4 rounded-2xl border-2 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors flex items-center justify-center">
-                            <span class="material-symbols-outlined">refresh</span>
-                        </a>
+                    <div class="sticky bottom-0 rounded-[1.75rem] border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur dark:border-stone-700 dark:bg-surface-dark/95">
+                        <div class="flex flex-col gap-3 sm:flex-row">
+                            <button type="submit" class="h-12 flex-1 rounded-2xl bg-primary text-white font-bold shadow-button transition-colors hover:bg-primary-dark">
+                                Apply Filters
+                            </button>
+                            <a href="{% url 'filtering' %}" class="flex h-12 items-center justify-center gap-2 rounded-2xl border border-stone-200 px-4 font-bold text-stone-600 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800">
+                                <span class="material-symbols-outlined">refresh</span>
+                                Reset
+                            </a>
+                        </div>
                     </div>
                 </form>
             </div>
         </aside>
 
-        <!-- Products Grid -->
         <div class="flex-1">
-            <!-- Results Count & Active Filters -->
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <p class="text-sm font-medium text-stone-500">
-                    Showing <span class="font-bold text-stone-900 dark:text-white">{{ products|length }}</span> products
-                </p>
-                
-                <!-- Active Filters -->
+            <div class="mb-6 rounded-[1.75rem] border border-stone-200 bg-white/80 p-4 shadow-sm dark:border-stone-700 dark:bg-surface-dark/80 sm:p-5">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-stone-400">Results</p>
+                        <p class="mt-1 text-sm font-medium text-stone-500">Showing <span class="font-bold text-stone-900 dark:text-white">{{ products|length }}</span> products</p>
+                    </div>
+                    {% if selected_category or selected_subcategory or selected_brands or selected_min_price or selected_max_price or selected_product %}
+                    <a href="{% url 'filtering' %}" class="inline-flex items-center gap-2 rounded-full border border-stone-200 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-stone-600 transition-colors hover:border-primary hover:text-primary dark:border-stone-700 dark:text-stone-300">
+                        <span class="material-symbols-outlined text-base">refresh</span>
+                        Clear all
+                    </a>
+                    {% endif %}
+                </div>
+
                 {% if selected_category or selected_subcategory or selected_brands or selected_min_price or selected_max_price or selected_product %}
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="mt-4 flex flex-wrap items-center gap-2">
                     <span class="text-sm text-stone-500">Active filters:</span>
                     {% if selected_category %}
-                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                    <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
                         {{ selected_category }}
-                        <a href="?{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for b in selected_brands %}brand={{ b }}&{% endif %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}product={{ selected_product }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}">
+                        <a href="?{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for b in selected_brands %}brand={{ b }}&{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}product={{ selected_product }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}">
                             <span class="material-symbols-outlined text-[14px]">close</span>
                         </a>
                     </span>
                     {% endif %}
+                    {% if selected_subcategory %}
+                    <span class="inline-flex items-center gap-1 rounded-full bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-700 dark:bg-stone-800 dark:text-stone-200">
+                        {{ selected_subcategory }}
+                        <a href="?{% if selected_category %}category={{ selected_category }}&{% endif %}{% for b in selected_brands %}brand={{ b }}&{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}product={{ selected_product }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}">
+                            <span class="material-symbols-outlined text-[14px]">close</span>
+                        </a>
+                    </span>
+                    {% endif %}
+                    {% if selected_min_price or selected_max_price %}
+                    <span class="inline-flex items-center gap-1 rounded-full bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-700 dark:bg-stone-800 dark:text-stone-200">
+                        Rs {{ selected_min_price|default:"0" }} - Rs {{ selected_max_price|default:"100000" }}
+                    </span>
+                    {% endif %}
                     {% if selected_brands %}
                     {% for b in selected_brands %}
-                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                    <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
                         {{ b }}
                         <a href="?{% if selected_category %}category={{ selected_category }}&{% endif %}{% if selected_subcategory %}subcategory={{ selected_subcategory }}&{% endif %}{% for br in selected_brands %}{% if br != b %}brand={{ br }}&{% endif %}{% endfor %}{% if selected_min_price %}min={{ selected_min_price }}&{% endif %}{% if selected_max_price %}max={{ selected_max_price }}&{% endif %}{% if selected_product %}product={{ selected_product }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}{% endif %}">
                             <span class="material-symbols-outlined text-[14px]">close</span>
@@ -200,58 +211,52 @@
                 {% endif %}
             </div>
 
-            <!-- Products Grid -->
             {% if products %}
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {% for item in products %}
-                <div class="group relative flex flex-col rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark p-4 shadow-sm transition-all hover:shadow-2xl hover:-translate-y-1">
-                    
-                    <a href="{% url 'product_detail_user' item.variant.product.slug %}" class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800 mb-4 block">
+                <div class="group relative flex flex-col rounded-3xl border border-stone-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-1 hover:shadow-2xl dark:border-stone-700 dark:bg-surface-dark">
+                    <a href="{% url 'product_detail_user' item.variant.product.slug %}?variant={{ item.variant.id }}" class="relative mb-4 block aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800">
                         {% if item.image and item.image.image %}
-                            <img src="{{ item.image.image.url }}" 
-                                alt="{{ item.variant.product.name }}" 
-                                class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110">
+                        <img src="{{ item.image.image.url }}" alt="{{ item.variant.product.name }}" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110">
                         {% else %}
-                            <div class="flex h-full w-full items-center justify-center bg-stone-100 dark:bg-stone-800">
-                                <span class="material-symbols-outlined text-stone-400 text-5xl">image</span>
-                            </div>
-                        {% endif %}
-                        
-                        {% if item.variant.stock_quantity <= 0 %}
-                        <div class="absolute inset-0 bg-stone-900/60 flex items-center justify-center">
-                            <span class="px-4 py-2 bg-stone-800 text-white text-sm font-bold rounded-xl">Out of Stock</span>
+                        <div class="flex h-full w-full items-center justify-center bg-stone-100 dark:bg-stone-800">
+                            <span class="material-symbols-outlined text-5xl text-stone-400">image</span>
                         </div>
                         {% endif %}
-                        
-                        <button onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ item.variant.id }}, this); return false;" 
-                                class="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 backdrop-blur-sm transition-all hover:bg-white hover:text-accent-terracotta dark:bg-black/50 {% if item.in_wishlist %}text-accent-terracotta{% else %}text-stone-400{% endif %}">
+
+                        {% if item.variant.stock_quantity <= 0 %}
+                        <div class="absolute inset-0 flex items-center justify-center bg-stone-900/60">
+                            <span class="rounded-xl bg-stone-800 px-4 py-2 text-sm font-bold text-white">Out of Stock</span>
+                        </div>
+                        {% endif %}
+
+                        <button onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ item.variant.id }}, this); return false;" class="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-sm transition-all hover:bg-white hover:text-accent-terracotta dark:bg-black/50 {% if item.in_wishlist %}text-accent-terracotta{% endif %}">
                             <span class="material-symbols-outlined text-[20px]">{% if item.in_wishlist %}favorite{% else %}favorite_border{% endif %}</span>
                         </button>
                     </a>
 
                     <div class="flex flex-1 flex-col px-2">
-                        <p class="text-xs font-medium text-stone-400 uppercase tracking-wide">{{ item.variant.product.brand }}</p>
-                        <a href="{% url 'product_detail_user' item.variant.product.slug %}">
-                            <h3 class="mt-1 font-bold text-stone-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors">
+                        <p class="text-xs font-medium uppercase tracking-wide text-stone-400">{{ item.variant.product.brand }}</p>
+                        <a href="{% url 'product_detail_user' item.variant.product.slug %}?variant={{ item.variant.id }}">
+                            <h3 class="mt-1 line-clamp-2 font-bold text-stone-900 transition-colors group-hover:text-primary dark:text-white">
                                 {{ item.variant.product.name }}
                             </h3>
                         </a>
-                        
+
                         <div class="mt-4 flex items-center justify-between">
                             <div class="flex flex-col">
-                                <span class="text-xl font-black text-primary">₹{{ item.variant.selling_price }}</span>
+                                <span class="text-xl font-black text-primary">&#8377;{{ item.variant.selling_price }}</span>
                                 {% if item.variant.mrp > item.variant.selling_price %}
-                                <span class="text-xs text-stone-400 line-through">₹{{ item.variant.mrp }}</span>
+                                <span class="text-xs text-stone-400 line-through">&#8377;{{ item.variant.mrp }}</span>
                                 {% endif %}
                             </div>
-                            
 
                             {% if item.variant.stock_quantity > 0 %}
-                            <button type="button" data-addtocart-btn data-variant-id="{{ item.variant.id }}" data-product-image="{% if item.image and item.image.image %}{{ item.image.image.url }}{% endif %}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all">
+                            <button type="button" data-addtocart-btn data-variant-id="{{ item.variant.id }}" data-product-image="{% if item.image and item.image.image %}{{ item.image.image.url }}{% endif %}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; addToCart(btn.dataset.variantId, btn, btn.dataset.productImage); return false;" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-dark">
                                 <span class="material-symbols-outlined text-lg">shopping_cart</span>
                             </button>
                             {% else %}
-                            <button disabled class="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-300 text-stone-500 cursor-not-allowed">
+                            <button disabled class="flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-2xl bg-stone-300 text-stone-500">
                                 <span class="material-symbols-outlined text-lg">remove_shopping_cart</span>
                             </button>
                             {% endif %}
@@ -261,14 +266,13 @@
                 {% endfor %}
             </div>
             {% else %}
-            <!-- No Results -->
-            <div class="text-center py-16">
-                <div class="w-24 h-24 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div class="py-16 text-center">
+                <div class="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-stone-100 dark:bg-stone-800">
                     <span class="material-symbols-outlined text-5xl text-stone-400">search_off</span>
                 </div>
-                <h3 class="text-xl font-bold text-stone-900 dark:text-white mb-2">No Products Found</h3>
-                <p class="text-stone-500 mb-6">Try adjusting your filters to find what you're looking for</p>
-                <a href="{% url 'filtering' %}" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors">
+                <h3 class="mb-2 text-xl font-bold text-stone-900 dark:text-white">No Products Found</h3>
+                <p class="mb-6 text-stone-500">Try adjusting your filters to find what you're looking for</p>
+                <a href="{% url 'filtering' %}" class="inline-flex items-center gap-2 rounded-2xl bg-primary px-6 py-3 font-bold text-white transition-colors hover:bg-primary-dark">
                     <span class="material-symbols-outlined">refresh</span>
                     Clear All Filters
                 </a>
@@ -293,4 +297,57 @@
     background: #525252;
 }
 </style>
+
+<script>
+(function() {
+    var minSlider = document.getElementById('price-min-slider');
+    var maxSlider = document.getElementById('price-max-slider');
+    var minThumb = document.getElementById('price-min-thumb');
+    var maxThumb = document.getElementById('price-max-thumb');
+    var rangeTrack = document.getElementById('price-range-track');
+    var minVal = document.getElementById('price-min-val');
+    var maxVal = document.getElementById('price-max-val');
+    var sliderMax = 100000;
+
+    function updateSlider(source) {
+        var minValue = parseInt(minSlider.value || '0', 10);
+        var maxValue = parseInt(maxSlider.value || String(sliderMax), 10);
+
+        if (minValue > maxValue) {
+            if (source === 'min') {
+                minValue = maxValue;
+                minSlider.value = maxValue;
+            } else if (source === 'max') {
+                maxValue = minValue;
+                maxSlider.value = minValue;
+            } else {
+                minSlider.value = maxValue;
+                maxSlider.value = minValue;
+                minValue = parseInt(minSlider.value, 10);
+                maxValue = parseInt(maxSlider.value, 10);
+            }
+        }
+
+        var minPercent = (minValue / sliderMax) * 100;
+        var maxPercent = (maxValue / sliderMax) * 100;
+
+        minThumb.style.left = minPercent + '%';
+        maxThumb.style.left = maxPercent + '%';
+        rangeTrack.style.left = minPercent + '%';
+        rangeTrack.style.width = (maxPercent - minPercent) + '%';
+
+        minVal.textContent = minValue;
+        maxVal.textContent = maxValue;
+    }
+
+    minSlider.addEventListener('input', function() {
+        updateSlider('min');
+    });
+    maxSlider.addEventListener('input', function() {
+        updateSlider('max');
+    });
+
+    updateSlider();
+})();
+</script>
 {% endblock %}

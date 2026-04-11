@@ -192,7 +192,7 @@
                 {% with variant.product as p %}
                 <div class="group relative flex flex-col rounded-2xl border border-stone-200 bg-white p-2 product-card-shadow transition-all hover:border-primary/30 hover:shadow-2xl hover:-translate-y-2 dark:border-stone-700 dark:bg-surface-dark sm:rounded-3xl sm:p-4">
                     
-                    <a href="{% url 'product_detail_user' p.slug %}" class="relative mb-2 block aspect-square overflow-hidden rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 sm:mb-4 sm:rounded-2xl">
+                    <a href="{% url 'product_detail_user' p.slug %}?variant={{ variant.id }}" class="relative mb-2 block aspect-square overflow-hidden rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 sm:mb-4 sm:rounded-2xl">
                         {% if item.image and item.image.image %}
                             <img src="{{ item.image.image.url }}" alt="{{ p.name }}" class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
                         {% else %}
@@ -217,7 +217,7 @@
 
                     <div class="flex flex-1 flex-col px-1 sm:px-2">
                         <span class="mb-1 text-[8px] font-black uppercase tracking-[0.16em] text-accent-terracotta sm:mb-2 sm:text-[10px] sm:tracking-[0.2em]">{{ p.brand|default:"EasyBuy" }}</span>
-                        <a href="{% url 'product_detail_user' p.slug %}">
+                        <a href="{% url 'product_detail_user' p.slug %}?variant={{ variant.id }}">
                             <h3 class="mb-2 line-clamp-2 text-[11px] font-bold leading-tight text-stone-900 transition-colors group-hover:text-primary dark:text-white sm:mb-4 sm:text-lg">
                                 {{ p.name }}
                             </h3>

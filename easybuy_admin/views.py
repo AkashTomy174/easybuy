@@ -18,10 +18,103 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 import json
 from django.db.models import Q
 
 User = get_user_model()
+
+
+SELLER_REVIEW_FIELDS = (
+    ("gst_number", "GST number"),
+    ("pan_number", "PAN number"),
+    ("bank_account_number", "Bank account"),
+    ("ifsc_code", "IFSC code"),
+    ("business_address", "Business address"),
+    ("user__email", "Email address"),
+    ("user__phone_number", "Phone number"),
+    ("doc", "Business document"),
+)
+
+
+def _has_value(value):
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    return bool(value)
+
+
+def _build_seller_review(seller):
+    checklist = []
+    completed_items = 0
+
+    for field_name, label in SELLER_REVIEW_FIELDS:
+        if field_name.startswith("user__"):
+            value = getattr(seller.user, field_name.split("__", 1)[1], None)
+        else:
+            value = getattr(seller, field_name, None)
+
+        is_complete = _has_value(value)
+        if is_complete:
+            completed_items += 1
+
+        display_value = "On file" if field_name == "doc" and is_complete else value
+        checklist.append(
+            {
+                "label": label,
+                "completed": is_complete,
+                "value": display_value or "Missing",
+            }
+        )
+
+    total_items = len(checklist) or 1
+    completion_percentage = round((completed_items / total_items) * 100)
+    missing_fields = [item["label"] for item in checklist if not item["completed"]]
+    days_waiting = max((timezone.now() - seller.created_at).days, 0)
+
+    if days_waiting >= 7:
+        wait_tone = "bg-rose-50 text-rose-700 border border-rose-200"
+        wait_label = f"Urgent - {days_waiting}d in queue"
+    elif days_waiting >= 3:
+        wait_tone = "bg-amber-50 text-amber-700 border border-amber-200"
+        wait_label = f"Needs review - {days_waiting}d waiting"
+    else:
+        wait_tone = "bg-sky-50 text-sky-700 border border-sky-200"
+        wait_label = "New today" if days_waiting == 0 else f"Fresh - {days_waiting}d waiting"
+
+    if missing_fields:
+        attention_note = f"Missing {len(missing_fields)} item{'s' if len(missing_fields) != 1 else ''}"
+    elif days_waiting >= 5:
+        attention_note = "Ready to clear from the queue"
+    else:
+        attention_note = "Application looks complete"
+
+    document_name = ""
+    if getattr(seller, "doc", None):
+        document_name = Path(seller.doc.name).name
+
+    return {
+        "seller": seller,
+        "owner_name": seller.user.username,
+        "owner_initial": (seller.user.username or seller.store_name or "?")[:1].upper(),
+        "completion_percentage": completion_percentage,
+        "completed_items": completed_items,
+        "total_items": total_items,
+        "checklist": checklist,
+        "missing_fields": missing_fields,
+        "missing_count": len(missing_fields),
+        "has_document": bool(getattr(seller, "doc", None)),
+        "document_name": document_name or "No file uploaded",
+        "document_extension": Path(document_name).suffix.replace(".", "").upper() or "FILE",
+        "days_waiting": days_waiting,
+        "wait_label": wait_label,
+        "wait_tone": wait_tone,
+        "is_complete": len(missing_fields) == 0,
+        "needs_attention": bool(missing_fields) or days_waiting >= 7,
+        "attention_note": attention_note,
+        "missing_preview": ", ".join(missing_fields[:3]),
+    }
 
 
 @login_required
@@ -193,11 +286,69 @@ def reject_seller(request, id):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def seller_veri(request):
-    unverified = SellerProfile.objects.filter(status="PENDING")
+    search_query = (request.GET.get("search") or "").strip()
+    sort_key = (request.GET.get("sort") or "oldest").strip().lower()
+
+    unverified = SellerProfile.objects.select_related("user").filter(status="PENDING")
+
+    if search_query:
+        unverified = unverified.filter(
+            Q(store_name__icontains=search_query)
+            | Q(user__username__icontains=search_query)
+            | Q(user__email__icontains=search_query)
+            | Q(gst_number__icontains=search_query)
+            | Q(pan_number__icontains=search_query)
+        )
+
+    if sort_key == "newest":
+        unverified = unverified.order_by("-created_at", "-id")
+    elif sort_key == "store":
+        unverified = unverified.order_by("store_name", "id")
+    else:
+        unverified = unverified.order_by("created_at", "id")
+
+    queue_items = [_build_seller_review(seller) for seller in unverified]
+
+    if sort_key == "attention":
+        queue_items.sort(
+            key=lambda item: (
+                not item["needs_attention"],
+                -item["missing_count"],
+                -item["days_waiting"],
+                item["seller"].created_at,
+                item["seller"].id,
+            ),
+            reverse=False,
+        )
+
+    pending_count = len(queue_items)
+    ready_count = sum(1 for item in queue_items if item["is_complete"])
+    attention_count = sum(1 for item in queue_items if item["needs_attention"])
+    with_docs_count = sum(1 for item in queue_items if item["has_document"])
+    oldest_wait_days = max((item["days_waiting"] for item in queue_items), default=0)
+
     return render(
         request,
         "admin/seller_veri.html",
-        {"unverified": unverified, "active_menu": "verification"},
+        {
+            "queue_items": queue_items,
+            "active_menu": "verification",
+            "search_query": search_query,
+            "sort_key": sort_key,
+            "stats": {
+                "pending_count": pending_count,
+                "ready_count": ready_count,
+                "attention_count": attention_count,
+                "with_docs_count": with_docs_count,
+                "oldest_wait_days": oldest_wait_days,
+                "average_completion": round(
+                    sum(item["completion_percentage"] for item in queue_items)
+                    / pending_count
+                )
+                if pending_count
+                else 0,
+            },
+        },
     )
 
 
@@ -205,10 +356,37 @@ def seller_veri(request):
 @role_required(allowed_roles=["ADMIN"])
 def detailed_view(request, id):
     details = SellerProfile.objects.select_related("user").get(pk=id)
+    review = _build_seller_review(details)
+    pending_queue = SellerProfile.objects.filter(status="PENDING").order_by(
+        "created_at", "id"
+    )
+    pending_count = pending_queue.count()
+    queue_position = None
+    next_pending = None
+
+    if details.status == "PENDING":
+        queue_position = (
+            pending_queue.filter(
+                Q(created_at__lt=details.created_at)
+                | Q(created_at=details.created_at, id__lte=details.id)
+            ).count()
+        )
+        next_pending = pending_queue.filter(
+            Q(created_at__gt=details.created_at)
+            | Q(created_at=details.created_at, id__gt=details.id)
+        ).first()
+
     return render(
         request,
         "admin/details_view.html",
-        {"details": details, "active_menu": "verification"},
+        {
+            "details": details,
+            "review": review,
+            "active_menu": "verification",
+            "queue_position": queue_position,
+            "pending_count": pending_count,
+            "next_pending": next_pending,
+        },
     )
 
 
@@ -366,9 +544,12 @@ def all_sellers(request):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def approve_product(request):
-    products = Product.objects.select_related("seller", "subcategory").filter(
-        approval_status="PENDING"
-    ).order_by("-created_at")
+    products = (
+        Product.objects.select_related("seller", "seller__user", "subcategory")
+        .prefetch_related("variants__images")
+        .filter(approval_status="PENDING")
+        .order_by("-created_at")
+    )
     paginator = Paginator(products, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -417,9 +598,12 @@ def reject_single_product(request, id):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def rejected_products(request):
-    products = Product.objects.select_related("seller", "subcategory").filter(
-        approval_status="REJECTED"
-    ).order_by("-created_at")
+    products = (
+        Product.objects.select_related("seller", "seller__user", "subcategory")
+        .prefetch_related("variants__images")
+        .filter(approval_status="REJECTED")
+        .order_by("-created_at")
+    )
     paginator = Paginator(products, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)

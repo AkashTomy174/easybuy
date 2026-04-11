@@ -15,7 +15,7 @@ import logging
 import traceback
 import random
 import string
-from core.decorators import role_required
+from core.decorators import role_required, approved_seller_required
 from easybuy_admin.models import Coupon
 from .models import SellerProfile, Product, ProductVariant, ProductImage, InventoryLog
 from core.models import SubCategory
@@ -36,6 +36,27 @@ def generate_sku(length=8):
     return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
 
+def generate_unique_store_slug(store_name):
+    base_slug = slugify(store_name) or "seller-store"
+    unique_slug = base_slug
+    counter = 1
+
+    while SellerProfile.objects.filter(store_slug=unique_slug).exists():
+        unique_slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    return unique_slug
+
+
+def seller_shell_context(request, active_menu=None, **extra):
+    context = {"active_menu": active_menu}
+    seller_profile = getattr(request.user, "seller_profile", None) if request.user.is_authenticated else None
+    if seller_profile is not None:
+        context["seller_profile"] = seller_profile
+    context.update(extra)
+    return context
+
+
 def _parse_promo_datetime(raw_value):
     dt = datetime.fromisoformat(raw_value)
     if timezone.is_naive(dt):
@@ -45,6 +66,28 @@ def _parse_promo_datetime(raw_value):
 
 def seller_regi_success(request):
     return render(request, "seller/seller_registration_success.html")
+
+
+@login_required
+@role_required(allowed_roles=["SELLER"])
+def seller_waiting(request):
+    seller_profile = getattr(request.user, "seller_profile", None)
+    if seller_profile is None:
+        messages.error(request, "Complete your seller registration to continue.")
+        return redirect("seller_register")
+
+    if seller_profile.status == "APPROVED":
+        return redirect("seller_dashboard")
+
+    return render(
+        request,
+        "seller/seller_waiting.html",
+        seller_shell_context(
+            request,
+            active_menu=None,
+            seller=seller_profile,
+        ),
+    )
 
 
 def seller_regi(request):
@@ -103,7 +146,7 @@ def seller_regi(request):
                 SellerProfile.objects.create(
                     user=user,
                     store_name=store_name,
-                    store_slug=slugify(store_name),
+                    store_slug=generate_unique_store_slug(store_name),
                     gst_number=gst_number,
                     pan_number=pan_number,
                     doc=doc,
@@ -132,15 +175,13 @@ def seller_regi(request):
     return render(request, "seller/sellerregistration.html")
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def seller_product_list(request):
     sellers = SellerProfile.objects.prefetch_related("product_set").all()
     return render(request, "seller/inventory.html", {"sellers": sellers})
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def seller_dashboard(request):
     seller = request.user.seller_profile
     now = timezone.now()
@@ -233,34 +274,34 @@ def seller_dashboard(request):
     low_stock_items = ProductVariant.objects.filter(
         product__seller=seller, stock_quantity__lte=10, stock_quantity__gt=0
     ).select_related("product")[:5]
-    context = {
-        "seller": seller,
-        "total_orders": total_orders,
-        "total_revenue": total_revenue,
-        "pending_orders": pending_orders,
-        "total_products": total_products,
-        "active_products": active_products,
-        "average_order_value": average_order_value,
-        "delivered_revenue": delivered_revenue,
-        "daily_labels_data": json.dumps(daily_labels),
-        "daily_revenue_data": json.dumps(daily_revenue),
-        "daily_inv_labels_data": json.dumps(inv_labels),
-        "daily_inv_changes_data": json.dumps(inv_changes),
-        "total_stock_in": total_stock_in,
-        "total_stock_out": total_stock_out,
-        "net_stock_movement": net_stock_movement,
-        "top_products": top_products,
-        "status_counts": status_counts,
-        "recent_orders": recent_orders,
-        "low_stock_items": low_stock_items,
-        "active_menu": "dashboard",
-    }
+    context = seller_shell_context(
+        request,
+        active_menu="dashboard",
+        seller=seller,
+        total_orders=total_orders,
+        total_revenue=total_revenue,
+        pending_orders=pending_orders,
+        total_products=total_products,
+        active_products=active_products,
+        average_order_value=average_order_value,
+        delivered_revenue=delivered_revenue,
+        daily_labels_data=json.dumps(daily_labels),
+        daily_revenue_data=json.dumps(daily_revenue),
+        daily_inv_labels_data=json.dumps(inv_labels),
+        daily_inv_changes_data=json.dumps(inv_changes),
+        total_stock_in=total_stock_in,
+        total_stock_out=total_stock_out,
+        net_stock_movement=net_stock_movement,
+        top_products=top_products,
+        status_counts=status_counts,
+        recent_orders=recent_orders,
+        low_stock_items=low_stock_items,
+    )
 
     return render(request, "seller/dashboard.html", context)
 
 
-@login_required
-@role_required(allowed_roles=["SELLER", "ADMIN"])
+@approved_seller_required
 def seller_inventory(request):
     seller = request.user.seller_profile
 
@@ -296,24 +337,22 @@ def seller_inventory(request):
         low_stock_count = 0
         out_of_stock_count = 0
 
-    context = {
-        "page_obj": page_obj,
-        "total_products": (
-            Product.objects.filter(seller=seller).count() if seller else 0
-        ),
-        "total_variants": variants.count() if seller else 0,
-        "total_stock": total_stock,
-        "total_inventory_value": total_inventory_value,
-        "low_stock_count": low_stock_count,
-        "out_of_stock_count": out_of_stock_count,
-        "active_menu": "inventory",
-    }
+    context = seller_shell_context(
+        request,
+        active_menu="inventory",
+        page_obj=page_obj,
+        total_products=(Product.objects.filter(seller=seller).count() if seller else 0),
+        total_variants=(variants.count() if seller else 0),
+        total_stock=total_stock,
+        total_inventory_value=total_inventory_value,
+        low_stock_count=low_stock_count,
+        out_of_stock_count=out_of_stock_count,
+    )
 
     return render(request, "seller/inventory.html", context)
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def seller_promo_codes(request):
     seller = request.user.seller_profile
 
@@ -322,23 +361,38 @@ def seller_promo_codes(request):
             product = get_object_or_404(
                 Product, id=request.POST.get("product_id"), seller=seller
             )
+            valid_from = _parse_promo_datetime(request.POST.get("valid_from"))
+            valid_to = _parse_promo_datetime(request.POST.get("valid_to"))
+            discount_value = Decimal(request.POST.get("discount_value") or "0")
+            min_order_amount = Decimal(request.POST.get("min_order_amount") or "0")
+            usage_limit = int(request.POST.get("usage_limit") or 0)
+
+            if valid_to <= valid_from:
+                raise ValueError("Promo end date must be after the start date.")
+            if discount_value <= 0:
+                raise ValueError("Discount value must be greater than 0.")
+            if min_order_amount < 0 or usage_limit < 0:
+                raise ValueError("Minimum subtotal and usage limit cannot be negative.")
+
             Coupon.objects.create(
                 seller=seller,
                 product=product,
                 name=(request.POST.get("name") or "").strip(),
                 code=(request.POST.get("code") or "").strip().upper(),
                 discount_type=(request.POST.get("discount_type") or "PERCENT").strip().upper(),
-                discount_value=Decimal(request.POST.get("discount_value") or "0"),
-                valid_from=_parse_promo_datetime(request.POST.get("valid_from")),
-                valid_to=_parse_promo_datetime(request.POST.get("valid_to")),
-                usage_limit=int(request.POST.get("usage_limit") or 0),
-                min_order_amount=Decimal(request.POST.get("min_order_amount") or "0"),
+                discount_value=discount_value,
+                valid_from=valid_from,
+                valid_to=valid_to,
+                usage_limit=usage_limit,
+                min_order_amount=min_order_amount,
                 is_active=request.POST.get("is_active") == "on",
             )
             messages.success(request, "Product promo code created successfully.")
             return redirect("seller_promo_codes")
-        except (InvalidOperation, ValueError, TypeError):
+        except (InvalidOperation, TypeError):
             messages.error(request, "Please enter valid promo code details.")
+        except ValueError as exc:
+            messages.error(request, str(exc))
         except Exception as exc:
             messages.error(request, str(exc))
 
@@ -349,17 +403,16 @@ def seller_promo_codes(request):
     return render(
         request,
         "seller/promo_codes.html",
-        {
-            "promo_codes": promo_codes,
-            "products": products,
-            "active_menu": "promotions",
-            "data1": seller,
-        },
+        seller_shell_context(
+            request,
+            active_menu="promotions",
+            promo_codes=promo_codes,
+            products=products,
+        ),
     )
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def toggle_seller_promo_code(request, coupon_id):
     if request.method != "POST":
         return redirect("seller_promo_codes")
@@ -372,8 +425,7 @@ def toggle_seller_promo_code(request, coupon_id):
     return redirect("seller_promo_codes")
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def add_product(request):
 
     if request.method == "POST":
@@ -460,12 +512,15 @@ def add_product(request):
     return render(
         request,
         "seller/add_product.html",
-        {"subcategories": subcategories, "active_menu": "add_product"},
+        seller_shell_context(
+            request,
+            active_menu="add_product",
+            subcategories=subcategories,
+        ),
     )
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def add_variant(request, product_id):
 
     product = get_object_or_404(
@@ -584,12 +639,18 @@ def add_variant(request, product_id):
     variants = product.variants.all()
 
     return render(
-        request, "seller/add_variant.html", {"product": product, "variants": variants}
+        request,
+        "seller/add_variant.html",
+        seller_shell_context(
+            request,
+            active_menu="manage_variants",
+            product=product,
+            variants=variants,
+        ),
     )
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def select_product_for_variant(request):
     products = Product.objects.filter(seller=request.user.seller_profile).order_by(
         "-created_at"
@@ -598,12 +659,15 @@ def select_product_for_variant(request):
     return render(
         request,
         "seller/select_product_variant.html",
-        {"products": products, "active_menu": "manage_variants"},
+        seller_shell_context(
+            request,
+            active_menu="manage_variants",
+            products=products,
+        ),
     )
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def add_stock(request):
     if request.method == "POST":
         try:
@@ -648,8 +712,7 @@ def add_stock(request):
     return JsonResponse({"success": False, "error": "Invalid request method"})
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def deactivate(request, id):
     if request.method != "POST":
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -683,8 +746,7 @@ def deactivate(request, id):
         return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def seller_order(request):
     seller = request.user.seller_profile
     status_filter = request.GET.get("status")
@@ -719,17 +781,18 @@ def seller_order(request):
         seller=seller, status="CANCELLED"
     ).count()
 
-    context = {
-        "order_items": order_items,
-        "total_orders": total_orders,
-        "total_revenue": total_revenue,
-        "pending_orders": pending_orders,
-        "shipped_orders": shipped_orders,
-        "delivered_orders": delivered_orders,
-        "cancelled_orders": cancelled_orders,
-        "current_status_filter": status_filter,
-        "active_menu": "orders",
-    }
+    context = seller_shell_context(
+        request,
+        active_menu="orders",
+        order_items=order_items,
+        total_orders=total_orders,
+        total_revenue=total_revenue,
+        pending_orders=pending_orders,
+        shipped_orders=shipped_orders,
+        delivered_orders=delivered_orders,
+        cancelled_orders=cancelled_orders,
+        current_status_filter=status_filter,
+    )
 
     return render(request, "seller/orders.html", context)
 
@@ -744,12 +807,12 @@ import traceback
 logger = logging.getLogger(__name__)
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def status(request, id):
     seller = request.user.seller_profile
     order_item = get_object_or_404(OrderItem, seller=seller, id=id)
     new_status = request.POST.get("status")
+    allowed_statuses = {"PENDING", "SHIPPED", "DELIVERED", "CANCELLED"}
 
     if not new_status:
 
@@ -757,6 +820,14 @@ def status(request, id):
             return JsonResponse(
                 {"success": False, "message": "No status provided"}, status=400
             )
+        return redirect("seller_orders")
+
+    if new_status not in allowed_statuses:
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse(
+                {"success": False, "message": "Invalid status selected"}, status=400
+            )
+        messages.error(request, "Invalid status selected.")
         return redirect("seller_orders")
 
     try:
@@ -823,8 +894,7 @@ def status(request, id):
         return redirect("seller_orders")
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def seller_reviews(request):
     seller = request.user.seller_profile
 
@@ -839,16 +909,16 @@ def seller_reviews(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    context = {
-        "page_obj": page_obj,
-        "active_menu": "reviews",
-    }
+    context = seller_shell_context(
+        request,
+        active_menu="reviews",
+        page_obj=page_obj,
+    )
 
     return render(request, "seller/reviews.html", context)
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def reply_review(request, review_id):
     seller = request.user.seller_profile
     review = get_object_or_404(
@@ -861,6 +931,9 @@ def reply_review(request, review_id):
         if not reply:
             messages.error(request, "Reply cannot be empty.")
             return redirect("seller_reviews")
+        if len(reply) > 500:
+            messages.error(request, "Reply must be 500 characters or fewer.")
+            return redirect("seller_reviews")
 
         review.seller_reply = reply
         review.replied_at = timezone.now()
@@ -872,8 +945,7 @@ def reply_review(request, review_id):
     return redirect("seller_reviews")
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def reply_to_review(request, review_id):
     if request.method != "POST":
         return JsonResponse({"message": "Invalid request"}, status=400)
@@ -909,8 +981,7 @@ def reply_to_review(request, review_id):
     )
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def seller_returns(request):
     seller = request.user.seller_profile
     status_filter = request.GET.get("status")
@@ -938,20 +1009,20 @@ def seller_returns(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    context = {
-        "page_obj": page_obj,
-        "total_requests": return_requests_qs.count(),
-        "active_menu": "returns",
-        "pending_count": pending_count,
-        "approved_count": approved_count,
-        "rejected_count": rejected_count,
-        "current_status_filter": status_filter,
-    }
+    context = seller_shell_context(
+        request,
+        active_menu="returns",
+        page_obj=page_obj,
+        total_requests=return_requests_qs.count(),
+        pending_count=pending_count,
+        approved_count=approved_count,
+        rejected_count=rejected_count,
+        current_status_filter=status_filter,
+    )
     return render(request, "seller/returns.html", context)
 
 
-@login_required
-@role_required(allowed_roles=["SELLER"])
+@approved_seller_required
 def process_return(request, id):
     if request.method != "POST":
         return JsonResponse({"success": False, "message": "Invalid method"}, status=405)
@@ -959,9 +1030,14 @@ def process_return(request, id):
     seller = request.user.seller_profile
     return_req = get_object_or_404(ReturnRequest, id=id, order_item__seller=seller)
     action = request.POST.get("action")
+    allowed_actions = {"approve", "reject"}
 
     if return_req.status != "PENDING":
         messages.error(request, "Return request already processed")
+        return redirect("seller_returns")
+
+    if action not in allowed_actions:
+        messages.error(request, "Invalid return action.")
         return redirect("seller_returns")
 
     try:

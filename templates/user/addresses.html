@@ -29,6 +29,11 @@
                         <span class="material-symbols-outlined text-[20px]">person</span>
                         <span class="text-sm font-bold">Personal Info</span>
                     </a>
+                    <a href="{% url 'change_password' %}" 
+                       class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800">
+                        <span class="material-symbols-outlined text-[20px]">password</span>
+                        <span class="text-sm font-bold">Password</span>
+                    </a>
                     <a href="{% url 'manage_addresses' %}" 
                        class="flex items-center gap-3 px-5 py-4 rounded-2xl transition-all bg-primary text-white shadow-lg shadow-primary/20">
                         <span class="material-symbols-outlined text-[20px]">location_on</span>

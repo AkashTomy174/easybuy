@@ -1,6 +1,60 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import (
+    PasswordChangeForm,
+    SetPasswordForm,
+    UserCreationForm,
+)
 from .models import User, Banner
+
+
+AUTH_INPUT_CLASS = (
+    "w-full px-5 py-3 bg-stone-50 dark:bg-stone-900/50 border "
+    "border-stone-200 dark:border-stone-700 rounded-2xl text-stone-900 "
+    "dark:text-white focus:ring-4 focus:ring-primary/10 focus:border-primary "
+    "transition-all outline-none"
+)
+
+
+class StyledAuthFormMixin:
+    field_placeholders = {}
+
+    def _apply_auth_styles(self):
+        for name, field in self.fields.items():
+            field.widget.attrs.setdefault("class", AUTH_INPUT_CLASS)
+            if name in self.field_placeholders:
+                field.widget.attrs.setdefault("placeholder", self.field_placeholders[name])
+
+
+class ForgotPasswordForm(StyledAuthFormMixin, forms.Form):
+    email = forms.EmailField()
+    field_placeholders = {"email": "Enter your account email"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._apply_auth_styles()
+
+
+class EasyBuySetPasswordForm(StyledAuthFormMixin, SetPasswordForm):
+    field_placeholders = {
+        "new_password1": "Create a new password",
+        "new_password2": "Confirm your new password",
+    }
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(user, *args, **kwargs)
+        self._apply_auth_styles()
+
+
+class EasyBuyPasswordChangeForm(StyledAuthFormMixin, PasswordChangeForm):
+    field_placeholders = {
+        "old_password": "Enter your current password",
+        "new_password1": "Create a new password",
+        "new_password2": "Confirm your new password",
+    }
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(user, *args, **kwargs)
+        self._apply_auth_styles()
 
 
 class CustomerRegisterForm(UserCreationForm):

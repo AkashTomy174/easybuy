@@ -96,6 +96,24 @@ class ProductVariant(models.Model):
     def __str__(self):
         return f"{self.product.name} - {self.sku_code}"
 
+    @property
+    def selection_label(self):
+        prefetched = getattr(self, "_prefetched_objects_cache", {})
+        bridges = prefetched.get("variantattributebridge_set")
+        if bridges is None:
+            bridges = self.variantattributebridge_set.select_related("option").all()
+
+        option_values = []
+        for bridge in bridges:
+            value = getattr(getattr(bridge, "option", None), "value", "")
+            value = value.strip() if isinstance(value, str) else value
+            if value:
+                option_values.append(value)
+
+        if option_values:
+            return " / ".join(option_values)
+        return self.product.name
+
 
 class ProductImage(models.Model):
     variant = models.ForeignKey(
@@ -107,6 +125,9 @@ class ProductImage(models.Model):
 
     def __str__(self):
         return f"{self.variant.sku_code} Image"
+
+    class Meta:
+        ordering = ["-is_primary", "id"]
 
 
 class Attribute(models.Model):

@@ -37,6 +37,18 @@
                             <div>
                                 <p class="text-sm font-bold text-slate-900">{{ product.name }}</p>
                                 <p class="text-xs text-slate-500">{{ product.model_number }}</p>
+                                <div class="mt-2 flex items-center gap-2">
+                                    <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                        {{ product.variants.first.images.all|length }} image{{ product.variants.first.images.all|length|pluralize }}
+                                    </span>
+                                    <div class="flex items-center -space-x-2">
+                                        {% for image in product.variants.first.images.all|slice:":3" %}
+                                            {% if image.image %}
+                                            <img src="{{ image.image.url }}" alt="{{ product.name }} preview {{ forloop.counter }}" class="h-6 w-6 rounded-full border border-white object-cover">
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </td>

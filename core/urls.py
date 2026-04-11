@@ -16,6 +16,13 @@ urlpatterns = [
     path("login/", views.all_login, name="all_login"),
     path("logout/", views.logout_view, name="logout"),
     path("register/", views.register_view, name="register"),
+    path("password/forgot/", views.forgot_password_view, name="forgot_password"),
+    path(
+        "password/reset/<uidb64>/<token>/",
+        views.reset_password_view,
+        name="reset_password",
+    ),
+    path("password/change/", views.change_password_view, name="change_password"),
     path("all-categories/", all_categories, name="all_categories"),
     path("new-arrivals/", new_arrival, name="new_arrivals"),
     path("category/<int:id>/", category_products, name="category_products_by_id"),

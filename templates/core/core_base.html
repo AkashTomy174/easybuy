@@ -385,6 +385,10 @@
                                     <span class="material-symbols-outlined text-lg">notifications_active</span>
                                     Notifications
                                 </a>
+                                <a href="{% url 'change_password' %}" class="flex items-center gap-3 px-4 py-2 text-sm text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800">
+                                    <span class="material-symbols-outlined text-lg">password</span>
+                                    Change Password
+                                </a>
                                 <div class="border-t border-stone-100 dark:border-stone-700 mt-2 pt-2">
                                     <form action="{% url 'logout' %}" method="post" class="m-0">
                                         {% csrf_token %}

@@ -52,7 +52,7 @@
             <span class="material-symbols-outlined text-2xl">payments</span>
         </div>
         <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Inventory Value</p>
-        <h3 class="text-3xl font-black mt-2">${{ total_inventory_value|floatformat:2 }}</h3>
+        <h3 class="text-3xl font-black mt-2">Rs. {{ total_inventory_value|floatformat:2 }}</h3>
     </div>
 </div>
 
@@ -101,6 +101,26 @@
                                 <p class="text-xs text-stone-500 font-medium mt-0.5">
                                     Category: {{ variant.product.subcategory.name }}
                                 </p>
+                                <div class="mt-2 flex flex-wrap items-center gap-2">
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide {% if variant.product.approval_status == 'APPROVED' %}bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300{% elif variant.product.approval_status == 'REJECTED' %}bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300{% else %}bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% endif %}">
+                                        {{ variant.product.approval_status }}
+                                    </span>
+                                    <span class="inline-flex items-center rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-stone-500 dark:bg-stone-800 dark:text-stone-300">
+                                        {{ variant.images.all|length }} image{{ variant.images.all|length|pluralize }}
+                                    </span>
+                                    <div class="flex items-center -space-x-2">
+                                        {% for image in variant.images.all|slice:":3" %}
+                                            {% if image.image %}
+                                            <img src="{{ image.image.url }}" alt="{{ variant.product.name }} preview {{ forloop.counter }}" class="h-6 w-6 rounded-full border border-white object-cover dark:border-stone-900">
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% if variant.product.approval_status == 'REJECTED' and variant.product.rejection_reason %}
+                                <p class="mt-2 text-xs font-medium text-rose-600 dark:text-rose-300">
+                                    Review issue: {{ variant.product.rejection_reason|truncatechars:80 }}
+                                </p>
+                                {% endif %}
                             </div>
                         </div>
                     </td>
@@ -115,10 +135,10 @@
                     <!-- Pricing -->
                     <td class="px-6 py-5 text-right">
                         <p class="text-sm font-black text-stone-900 dark:text-white">
-                            ${{ variant.selling_price }}
+                            Rs. {{ variant.selling_price }}
                         </p>
                         <p class="text-[10px] text-stone-400 line-through">
-                            ${{ variant.mrp }}
+                            Rs. {{ variant.mrp }}
                         </p>
                     </td>
 
@@ -361,8 +381,9 @@ document.getElementById('inventorySearch').addEventListener('input', function(e)
 // Toggle Variant Status (Activate/Deactivate)
 function toggleVariantStatus(variantId, currentStatus) {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+    const endpoint = `{% url 'deactivate' 0 %}`.replace('/0/', `/${variantId}/`);
     
-    fetch(`/seller/deactivate/${variantId}/`, {
+    fetch(endpoint, {
         method: 'POST',
         headers: {
             'X-CSRFToken': csrfToken,

@@ -4,6 +4,7 @@ from core.views import logout_view
 
 urlpatterns = [
     path("dashboard/", views.seller_dashboard, name="seller_dashboard"),
+    path("access/", views.seller_waiting, name="seller_waiting"),
     path("register/", views.seller_regi, name="seller_register"),
     path(
         "registration/success/",

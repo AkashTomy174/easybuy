@@ -625,7 +625,10 @@ def product_detail(request, slug=None, id=None):
                 approval_status="APPROVED",
                 seller__status="APPROVED",
             )
-            .prefetch_related("variants__images")
+            .prefetch_related(
+                "variants__images",
+                "variants__variantattributebridge_set__option",
+            )
             .first()
         )
     elif id:
@@ -636,7 +639,10 @@ def product_detail(request, slug=None, id=None):
                 approval_status="APPROVED",
                 seller__status="APPROVED",
             )
-            .prefetch_related("variants__images")
+            .prefetch_related(
+                "variants__images",
+                "variants__variantattributebridge_set__option",
+            )
             .first()
         )
     else:
@@ -714,9 +720,17 @@ def product_detail(request, slug=None, id=None):
             review.is_verified_purchase = review.user_id in verified_users
             review.user_voted_helpful = review.id in user_helpful_votes
 
+    selected_variant = product.variants.first()
+    requested_variant_id = str(request.GET.get("variant", "")).strip()
+    if requested_variant_id:
+        selected_variant = next(
+            (variant for variant in product.variants.all() if str(variant.id) == requested_variant_id),
+            selected_variant,
+        )
+
     context = {
         "product": product,
-        "selected_variant": product.variants.first(),
+        "selected_variant": selected_variant,
         "related_products": related_products,
         "reviews": reviews,
         "avg_rating": round(float(avg_rating), 1),
