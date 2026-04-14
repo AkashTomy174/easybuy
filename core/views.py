@@ -24,6 +24,7 @@ from .cache_utils import get_cached_google_login_enabled
 from .forms import EasyBuyPasswordChangeForm, EasyBuySetPasswordForm, ForgotPasswordForm
 from .models import Category, NotificationConfig, NotificationDelivery, Otp, StockNotification, User
 from .services import create_notification
+from .utils import build_public_absolute_uri
 
 
 logger = logging.getLogger(__name__)
@@ -126,7 +127,8 @@ def send_otp_email(email, otp):
 def send_password_reset_email(request, user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
-    reset_url = request.build_absolute_uri(
+    reset_url = build_public_absolute_uri(
+        request,
         reverse("reset_password", kwargs={"uidb64": uid, "token": token})
     )
     subject = "Reset Your EasyBuy Password"

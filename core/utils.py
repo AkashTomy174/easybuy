@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.mail import send_mail
+from urllib.parse import urljoin
 
 from .whatsapp_utils import whatsapp_notifier
 
@@ -31,3 +32,15 @@ def send_email(email, subject, message):
     )
     if sent_count != 1:
         raise RuntimeError("Email delivery failed")
+
+
+def build_public_absolute_uri(request, location):
+    location = str(location or "/")
+    if location.startswith(("http://", "https://")):
+        return location
+
+    public_base_url = (getattr(settings, "PUBLIC_BASE_URL", "") or "").rstrip("/")
+    if public_base_url:
+        return urljoin(f"{public_base_url}/", location.lstrip("/"))
+
+    return request.build_absolute_uri(location)

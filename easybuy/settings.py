@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import sys
+from urllib.parse import urlsplit
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
 
@@ -15,6 +16,33 @@ def env_bool(name, default=False):
     return os.getenv(name, str(default)).lower() in ("true", "1", "yes", "on")
 
 
+def env_list(name, default=""):
+    return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
+
+
+def _normalize_public_base_url(value, *, default_scheme):
+    value = (value or "").strip().rstrip("/")
+    if not value:
+        return ""
+    if "://" not in value:
+        value = f"{default_scheme}://{value}"
+    return value.rstrip("/")
+
+
+def _is_local_hostname(hostname):
+    hostname = (hostname or "").strip().lower()
+    return hostname in {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+
+
+def _guess_public_host(hosts):
+    for host in hosts:
+        hostname = host.split(":", 1)[0].strip().lower()
+        if not hostname or hostname == "*" or _is_local_hostname(hostname):
+            continue
+        return host.strip()
+    return ""
+
+
 DEBUG = env_bool("DEBUG", RUNNING_TESTS)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -24,16 +52,25 @@ if not SECRET_KEY:
     else:
         raise ImproperlyConfigured("SECRET_KEY must be set when DEBUG is disabled.")
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if host.strip()
-]
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
-    if origin.strip()
-]
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
+
+DEFAULT_PUBLIC_SCHEME = "https" if env_bool("SECURE_SSL_REDIRECT", not DEBUG) else "http"
+PUBLIC_BASE_URL = _normalize_public_base_url(
+    os.getenv("APP_BASE_URL"),
+    default_scheme=DEFAULT_PUBLIC_SCHEME,
+)
+if not PUBLIC_BASE_URL and not RUNNING_DEVELOPMENT_SERVER:
+    public_host = _guess_public_host(ALLOWED_HOSTS)
+    if public_host:
+        PUBLIC_BASE_URL = f"{DEFAULT_PUBLIC_SCHEME}://{public_host}"
+
+_public_url_parts = urlsplit(PUBLIC_BASE_URL) if PUBLIC_BASE_URL else None
+PUBLIC_SCHEME = (_public_url_parts.scheme if _public_url_parts else "").lower()
+PUBLIC_HOST = (_public_url_parts.netloc if _public_url_parts else "").strip()
+
+if PUBLIC_BASE_URL and PUBLIC_SCHEME in {"http", "https"}:
+    CSRF_TRUSTED_ORIGINS = list(dict.fromkeys([*CSRF_TRUSTED_ORIGINS, PUBLIC_BASE_URL]))
 
 AUTH_USER_MODEL = "core.User"
 
@@ -58,6 +95,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "core.middleware.PublicHostMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -72,10 +110,14 @@ PERFORMANCE_LOGGING_ENABLED = env_bool("PERFORMANCE_LOGGING_ENABLED", DEBUG)
 SLOW_REQUEST_THRESHOLD_MS = int(os.getenv("SLOW_REQUEST_THRESHOLD_MS", "500"))
 
 if PERFORMANCE_LOGGING_ENABLED:
-    MIDDLEWARE.insert(3, "core.middleware.RequestTimingMiddleware")
+    common_middleware_index = MIDDLEWARE.index("django.middleware.common.CommonMiddleware")
+    MIDDLEWARE.insert(common_middleware_index + 1, "core.middleware.RequestTimingMiddleware")
 
 if not DEBUG:
-    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+    security_middleware_index = MIDDLEWARE.index(
+        "django.middleware.security.SecurityMiddleware"
+    )
+    MIDDLEWARE.insert(security_middleware_index + 1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 ROOT_URLCONF = "easybuy.urls"
 
@@ -190,6 +232,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = PUBLIC_SCHEME or ("https" if not DEBUG else "http")
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
@@ -267,6 +310,9 @@ else:
     SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", not DEBUG)
     CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", not DEBUG)
     SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", not DEBUG)
+    SECURE_SSL_HOST = (
+        (os.getenv("SECURE_SSL_HOST") or PUBLIC_HOST).strip() or None
+    )
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     USE_X_FORWARDED_HOST = env_bool("USE_X_FORWARDED_HOST", not DEBUG)
     SECURE_HSTS_SECONDS = int(
