@@ -60,6 +60,16 @@
                     </button>
                 </div>
 
+                <div class="mb-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-500/20 dark:bg-amber-500/10">
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined text-amber-600 dark:text-amber-300">shield_locked</span>
+                        <div>
+                            <p class="text-sm font-black text-amber-900 dark:text-amber-100">Saved cards are display-only in this build.</p>
+                            <p class="mt-1 text-sm text-amber-800 dark:text-amber-200">EasyBuy stores only masked card details here for convenience. Real payment authorization still happens securely at checkout through Razorpay.</p>
+                        </div>
+                    </div>
+                </div>
+
                 {% if messages %}
                 <div class="mb-6 space-y-2">
                     {% for message in messages %}
@@ -83,7 +93,7 @@
                                 <p class="text-xs text-stone-500">Expires {{ card.expiry_month }}/{{ card.expiry_year }}</p>
                             </div>
                         </div>
-                        <form method="POST" action="{% url 'delete_saved_card' card.id %}" class="mt-4 sm:mt-0" onsubmit="return confirm('Are you sure you want to remove this card?');">
+                        <form method="POST" action="{% url 'delete_saved_card' card.id %}" class="mt-4 sm:mt-0 remove-card-form" data-card-label="{{ card.card_brand }} ending {{ card.card_number }}">
                             {% csrf_token %}
                             <button type="submit" class="text-red-500 hover:text-red-600 text-sm font-bold flex items-center gap-1 transition-colors">
                                 <span class="material-symbols-outlined text-lg">delete</span> Remove
@@ -113,6 +123,9 @@
         
         <form method="POST" class="space-y-4">
             {% csrf_token %}
+            <p class="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-xs font-semibold text-stone-500 dark:border-stone-700 dark:bg-stone-900/40 dark:text-stone-300">
+                We only store masked card details like brand, expiry, and last 4 digits. Full payment authentication still happens during checkout.
+            </p>
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1">Card Holder Name</label>
                 <input type="text" name="card_holder_name" required class="w-full rounded-xl border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-3 text-sm font-bold dark:text-white focus:ring-primary focus:border-primary">
@@ -140,4 +153,20 @@
         </form>
     </div>
 </div>
+
+<script>
+document.querySelectorAll('.remove-card-form').forEach((form) => {
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const cardLabel = form.dataset.cardLabel || 'this card';
+        showConfirmDialog({
+            title: 'Remove saved card?',
+            message: `This will remove ${cardLabel} from your saved payment methods.`,
+            confirmText: 'Remove card',
+            confirmClassName: 'inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white transition hover:bg-red-700',
+            onConfirm: () => form.submit()
+        });
+    });
+});
+</script>
 {% endblock %}

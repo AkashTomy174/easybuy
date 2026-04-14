@@ -206,14 +206,14 @@ function previewImages(event) {
   preview.innerHTML = '';
   
   if (files.length > 5) {
-    alert('Maximum 5 images allowed');
+    showToast('You can upload up to 5 images per review.', 'warning');
     event.target.value = '';
     return;
   }
   
   Array.from(files).forEach((file, index) => {
     if (file.size > 5 * 1024 * 1024) {
-      alert(`Image ${file.name} exceeds 5MB`);
+      showToast(`Image ${file.name} exceeds the 5MB limit.`, 'warning');
       return;
     }
     
@@ -240,14 +240,14 @@ function previewVideos(event) {
   preview.innerHTML = '';
   
   if (files.length > 2) {
-    alert('Maximum 2 videos allowed');
+    showToast('You can upload up to 2 videos per review.', 'warning');
     event.target.value = '';
     return;
   }
   
   Array.from(files).forEach((file, index) => {
     if (file.size > 50 * 1024 * 1024) {
-      alert(`Video ${file.name} exceeds 50MB`);
+      showToast(`Video ${file.name} exceeds the 50MB limit.`, 'warning');
       return;
     }
     

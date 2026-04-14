@@ -4,18 +4,20 @@ from django.utils.text import slugify
 from django.core.paginator import Paginator
 from django.core.mail import send_mail
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from core.decorators import role_required
 from core.forms import BannerForm
 from core.models import Banner, Category, User,SubCategory
-from seller.models import SellerProfile, Product
+from seller.models import SellerProfile, Product, ProductVariant, ProductImage
 from easybuy_admin.models import Coupon
 from user.models import OrderItem
-from django.db.models import Sum, F
+from django.db.models import Avg, Case, Count, F, IntegerField, Min, Prefetch, Sum, Value, When
 from django.shortcuts import render
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.db.models.functions import TruncDate
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -23,6 +25,8 @@ import json
 from django.db.models import Q
 
 User = get_user_model()
+ADMIN_DASHBOARD_CACHE_TTL_SECONDS = 60
+SELLER_QUEUE_PAGE_SIZE = 8
 
 
 SELLER_REVIEW_FIELDS = (
@@ -35,6 +39,7 @@ SELLER_REVIEW_FIELDS = (
     ("user__phone_number", "Phone number"),
     ("doc", "Business document"),
 )
+SELLER_REVIEW_FIELD_TOTAL = len(SELLER_REVIEW_FIELDS)
 
 
 def _has_value(value):
@@ -93,6 +98,10 @@ def _build_seller_review(seller):
     document_name = ""
     if getattr(seller, "doc", None):
         document_name = Path(seller.doc.name).name
+    document_extension = Path(document_name).suffix.replace(".", "").upper() or "FILE"
+    image_document_extensions = {"PNG", "JPG", "JPEG", "WEBP", "GIF", "BMP", "AVIF"}
+    is_pdf_document = document_extension == "PDF"
+    is_image_document = document_extension in image_document_extensions
 
     return {
         "seller": seller,
@@ -106,7 +115,10 @@ def _build_seller_review(seller):
         "missing_count": len(missing_fields),
         "has_document": bool(getattr(seller, "doc", None)),
         "document_name": document_name or "No file uploaded",
-        "document_extension": Path(document_name).suffix.replace(".", "").upper() or "FILE",
+        "document_extension": document_extension,
+        "is_pdf_document": is_pdf_document,
+        "is_image_document": is_image_document,
+        "supports_inline_preview": is_pdf_document or is_image_document,
         "days_waiting": days_waiting,
         "wait_label": wait_label,
         "wait_tone": wait_tone,
@@ -117,66 +129,116 @@ def _build_seller_review(seller):
     }
 
 
+def _completed_field_case(condition):
+    return Case(
+        When(condition, then=Value(1)),
+        default=Value(0),
+        output_field=IntegerField(),
+    )
+
+
+def _seller_completed_fields_expression():
+    expression = Value(0, output_field=IntegerField())
+    checks = (
+        Q(gst_number__isnull=False) & ~Q(gst_number=""),
+        Q(pan_number__isnull=False) & ~Q(pan_number=""),
+        Q(bank_account_number__isnull=False) & ~Q(bank_account_number=""),
+        Q(ifsc_code__isnull=False) & ~Q(ifsc_code=""),
+        Q(business_address__isnull=False) & ~Q(business_address=""),
+        Q(user__email__isnull=False) & ~Q(user__email=""),
+        Q(user__phone_number__isnull=False) & ~Q(user__phone_number=""),
+        Q(doc__isnull=False) & ~Q(doc=""),
+    )
+    for condition in checks:
+        expression = expression + _completed_field_case(condition)
+    return expression
+
+
+def _build_admin_dashboard_context():
+    cache_key = "admin:dashboard_context"
+    cached_context = cache.get(cache_key)
+    if cached_context is not None:
+        return cached_context
+
+    now = timezone.now()
+    start_date = (now - timedelta(days=6)).date()
+    revenue_expression = F("price_at_purchase") * F("quantity")
+
+    total_revenue = (
+        OrderItem.objects.aggregate(total_revenue=Sum(revenue_expression))["total_revenue"]
+        or 0
+    )
+    user_counts = User.objects.aggregate(
+        sellers=Count("id", filter=Q(role="SELLER")),
+        users=Count("id", filter=Q(role="CUSTOMER")),
+    )
+
+    daily_rows = (
+        OrderItem.objects.filter(order__ordered_at__date__gte=start_date)
+        .annotate(day=TruncDate("order__ordered_at"))
+        .values("day")
+        .annotate(day_total=Sum(revenue_expression))
+        .order_by("day")
+    )
+    daily_totals = {row["day"]: float(row["day_total"] or 0) for row in daily_rows}
+    daily_dates = [start_date + timedelta(days=index) for index in range(7)]
+    daily_labels = [day.strftime("%b %d") for day in daily_dates]
+    daily_revenue = [round(daily_totals.get(day, 0), 2) for day in daily_dates]
+
+    category_rows = list(
+        OrderItem.objects.values("variant__product__subcategory__category__name")
+        .annotate(sales=Sum(revenue_expression))
+        .order_by("-sales")[:6]
+    )
+    context = {
+        "active_menu": "dashboard",
+        "sellers": user_counts["sellers"] or 0,
+        "users": user_counts["users"] or 0,
+        "total_revenue": total_revenue,
+        "growth_labels": json.dumps(daily_labels),
+        "growth_data": json.dumps(daily_revenue),
+        "cat_labels": json.dumps(
+            [row["variant__product__subcategory__category__name"] for row in category_rows]
+        ),
+        "cat_values": json.dumps([float(row["sales"] or 0) for row in category_rows]),
+    }
+    cache.set(cache_key, context, ADMIN_DASHBOARD_CACHE_TTL_SECONDS)
+    return context
+
+
+def _product_preview_prefetch():
+    return Prefetch(
+        "variants",
+        queryset=ProductVariant.objects.prefetch_related(
+            Prefetch(
+                "images",
+                queryset=ProductImage.objects.only(
+                    "id", "variant_id", "image", "is_primary"
+                ).order_by("-is_primary", "id"),
+            )
+        ).order_by("id"),
+        to_attr="admin_prefetched_variants",
+    )
+
+
+def _attach_product_preview_data(products):
+    for product in products:
+        variants = list(getattr(product, "admin_prefetched_variants", []))
+        first_variant = variants[0] if variants else None
+        gallery_images = []
+        if first_variant is not None:
+            gallery_images = [
+                image for image in list(first_variant.images.all()) if getattr(image, "image", None)
+            ]
+        product.admin_preview_image = gallery_images[0] if gallery_images else None
+        product.admin_gallery_images = gallery_images[:3]
+        product.admin_image_count = len(gallery_images)
+
+
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def admin_dashboard(request):
-
-    rev_agg = OrderItem.objects.aggregate(
-        total_revenue=Sum(F("price_at_purchase") * F("quantity"))
-    )
-    total_revenue = rev_agg["total_revenue"] or 0
-
-    # --- Counts ---
-    total_sellers = User.objects.filter(role="SELLER").count()
-    total_users = User.objects.filter(role="CUSTOMER").count()
-
-    daily_revenue = []
-    daily_labels = []
-    now = timezone.now()
-    for i in range(6, -1, -1):
-        date = now - timedelta(days=i)
-        day_rev = (
-            OrderItem.objects.filter(order__ordered_at__date=date.date()).aggregate(
-                day_total=Sum(F("price_at_purchase") * F("quantity"))
-            )["day_total"]
-            or 0
-        )
-        daily_revenue.append(round(day_rev, 2))
-        daily_labels.append(date.strftime("%b %d"))
-
-    cat_data = (
-        OrderItem.objects.values("variant__product__subcategory__category__name")
-        .annotate(sales=Sum(F("price_at_purchase") * F("quantity")))
-        .order_by("-sales")
-    )
-    cat_labels = [c["variant__product__subcategory__category__name"] for c in cat_data]
-    cat_values = [float(c["sales"] or 0) for c in cat_data]
-
-    top_sellers = (
-        User.objects.filter(role="SELLER")
-        .annotate(
-            total_sales=Sum(
-                F("seller_profile__orderitem__price_at_purchase")
-                * F("seller_profile__orderitem__quantity")
-            )
-        )
-        .order_by("-total_sales")[:5]
-    )
-
-    daily_revenue = [float(x) for x in daily_revenue]
-
-    cat_values = [float(x) for x in cat_values]
-    context = {
-        "sellers": total_sellers,
-        "users": total_users,
-        "total_revenue": total_revenue,
-        "top_sellers": top_sellers,
-        "growth_labels": json.dumps(daily_labels),
-        "growth_data": json.dumps(daily_revenue),
-        "cat_labels": json.dumps(cat_labels),
-        "cat_values": json.dumps(cat_values),
-    }
-    return render(request, "admin/admin_dashboard.html", context)
+    return render(request, "admin/admin_dashboard.html", _build_admin_dashboard_context())
 
 
 def admin_email(email, seller_name, status, reason=None):
@@ -288,8 +350,42 @@ def reject_seller(request, id):
 def seller_veri(request):
     search_query = (request.GET.get("search") or "").strip()
     sort_key = (request.GET.get("sort") or "oldest").strip().lower()
+    attention_cutoff = timezone.now() - timedelta(days=7)
 
-    unverified = SellerProfile.objects.select_related("user").filter(status="PENDING")
+    unverified = (
+        SellerProfile.objects.select_related("user")
+        .only(
+            "id",
+            "store_name",
+            "created_at",
+            "gst_number",
+            "pan_number",
+            "bank_account_number",
+            "ifsc_code",
+            "business_address",
+            "doc",
+            "user__username",
+            "user__email",
+            "user__phone_number",
+        )
+        .filter(status="PENDING")
+        .annotate(completed_fields_value=_seller_completed_fields_expression())
+        .annotate(
+            missing_count_value=Value(
+                SELLER_REVIEW_FIELD_TOTAL, output_field=IntegerField()
+            )
+            - F("completed_fields_value"),
+            needs_attention_order=Case(
+                When(
+                    Q(completed_fields_value__lt=SELLER_REVIEW_FIELD_TOTAL)
+                    | Q(created_at__lte=attention_cutoff),
+                    then=Value(0),
+                ),
+                default=Value(1),
+                output_field=IntegerField(),
+            ),
+        )
+    )
 
     if search_query:
         unverified = unverified.filter(
@@ -304,48 +400,60 @@ def seller_veri(request):
         unverified = unverified.order_by("-created_at", "-id")
     elif sort_key == "store":
         unverified = unverified.order_by("store_name", "id")
+    elif sort_key == "attention":
+        unverified = unverified.order_by(
+            "needs_attention_order",
+            "-missing_count_value",
+            "created_at",
+            "id",
+        )
     else:
         unverified = unverified.order_by("created_at", "id")
 
-    queue_items = [_build_seller_review(seller) for seller in unverified]
+    stats = unverified.aggregate(
+        pending_count=Count("id"),
+        ready_count=Count(
+            "id", filter=Q(completed_fields_value=SELLER_REVIEW_FIELD_TOTAL)
+        ),
+        attention_count=Count(
+            "id",
+            filter=Q(completed_fields_value__lt=SELLER_REVIEW_FIELD_TOTAL)
+            | Q(created_at__lte=attention_cutoff),
+        ),
+        with_docs_count=Count("id", filter=Q(doc__isnull=False) & ~Q(doc="")),
+        average_completed_fields=Avg("completed_fields_value"),
+        oldest_created_at=Min("created_at"),
+    )
+    oldest_created_at = stats.pop("oldest_created_at")
+    average_completed_fields = stats.pop("average_completed_fields") or 0
+    oldest_wait_days = (
+        max((timezone.now() - oldest_created_at).days, 0) if oldest_created_at else 0
+    )
 
-    if sort_key == "attention":
-        queue_items.sort(
-            key=lambda item: (
-                not item["needs_attention"],
-                -item["missing_count"],
-                -item["days_waiting"],
-                item["seller"].created_at,
-                item["seller"].id,
-            ),
-            reverse=False,
-        )
-
-    pending_count = len(queue_items)
-    ready_count = sum(1 for item in queue_items if item["is_complete"])
-    attention_count = sum(1 for item in queue_items if item["needs_attention"])
-    with_docs_count = sum(1 for item in queue_items if item["has_document"])
-    oldest_wait_days = max((item["days_waiting"] for item in queue_items), default=0)
+    paginator = Paginator(unverified, SELLER_QUEUE_PAGE_SIZE)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+    queue_items = [_build_seller_review(seller) for seller in page_obj.object_list]
 
     return render(
         request,
         "admin/seller_veri.html",
         {
+            "page_obj": page_obj,
             "queue_items": queue_items,
             "active_menu": "verification",
             "search_query": search_query,
             "sort_key": sort_key,
             "stats": {
-                "pending_count": pending_count,
-                "ready_count": ready_count,
-                "attention_count": attention_count,
-                "with_docs_count": with_docs_count,
+                "pending_count": stats["pending_count"] or 0,
+                "ready_count": stats["ready_count"] or 0,
+                "attention_count": stats["attention_count"] or 0,
+                "with_docs_count": stats["with_docs_count"] or 0,
                 "oldest_wait_days": oldest_wait_days,
                 "average_completion": round(
-                    sum(item["completion_percentage"] for item in queue_items)
-                    / pending_count
+                    (average_completed_fields / SELLER_REVIEW_FIELD_TOTAL) * 100
                 )
-                if pending_count
+                if stats["pending_count"]
                 else 0,
             },
         },
@@ -518,7 +626,11 @@ def toggle_banner_status(request, id):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def all_users(request):
-    users = User.objects.filter(role="CUSTOMER").order_by("-date_joined")
+    users = (
+        User.objects.filter(role="CUSTOMER")
+        .only("id", "username", "email", "phone_number", "date_joined")
+        .order_by("-date_joined")
+    )
     paginator = Paginator(users, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -530,7 +642,21 @@ def all_users(request):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def all_sellers(request):
-    sellers = SellerProfile.objects.select_related("user").order_by("-created_at")
+    sellers = (
+        SellerProfile.objects.select_related("user")
+        .only(
+            "id",
+            "store_name",
+            "gst_number",
+            "status",
+            "rating",
+            "created_at",
+            "user__username",
+            "user__email",
+            "user__phone_number",
+        )
+        .order_by("-created_at")
+    )
     paginator = Paginator(sellers, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -546,13 +672,14 @@ def all_sellers(request):
 def approve_product(request):
     products = (
         Product.objects.select_related("seller", "seller__user", "subcategory")
-        .prefetch_related("variants__images")
+        .prefetch_related(_product_preview_prefetch())
         .filter(approval_status="PENDING")
         .order_by("-created_at")
     )
     paginator = Paginator(products, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
+    _attach_product_preview_data(page_obj.object_list)
     return render(
         request,
         "admin/approve.html",
@@ -600,13 +727,14 @@ def reject_single_product(request, id):
 def rejected_products(request):
     products = (
         Product.objects.select_related("seller", "seller__user", "subcategory")
-        .prefetch_related("variants__images")
+        .prefetch_related(_product_preview_prefetch())
         .filter(approval_status="REJECTED")
         .order_by("-created_at")
     )
     paginator = Paginator(products, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
+    _attach_product_preview_data(page_obj.object_list)
     return render(
         request,
         "admin/rejected_products.html",

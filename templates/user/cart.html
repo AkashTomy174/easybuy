@@ -22,6 +22,7 @@
             {% for item in cart.items.all %}
             <div class="flex flex-col sm:flex-row gap-4 p-4 rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-surface-dark cart-item"
                  id="cart-item-{{ item.id }}"
+                 data-unit-price="{{ item.price_at_time }}"
                  data-update-url="{% url 'update_cart_quantity' item.id %}"
                  data-remove-url="{% url 'remove_from_cart' item.id %}">
 
@@ -43,6 +44,7 @@
                     <div>
                         <h2 class="font-bold text-lg text-stone-900 dark:text-white">{{ item.variant.product.name }}</h2>
                         <p class="text-sm text-stone-500 dark:text-stone-400">Variant: {{ item.variant.name|default:"Standard" }}</p>
+                        <p class="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">Subtotal <span id="item-subtotal-{{ item.id }}" class="ml-2 text-stone-600 dark:text-stone-300">₹{% widthratio item.price_at_time 1 item.quantity %}</span></p>
                         <p class="text-base font-bold text-primary mt-2">₹{{ item.price_at_time }}</p>
                     </div>
 
@@ -50,7 +52,7 @@
                     <div class="flex items-center gap-4 mt-4">
                         <div class="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 rounded-xl p-1">
                             <button
-                                onclick="updateQuantity('{{ item.id }}')"
+                                onclick="updateQuantity(event, '{{ item.id }}')"
                                 data-delta="-1"
                                 aria-label="Decrease quantity of {{ item.variant.product.name }}"
                                 class="flex h-8 w-8 items-center justify-center rounded-lg text-stone-600 dark:text-stone-300 hover:bg-white dark:hover:bg-stone-700 hover:shadow-sm transition-all font-bold text-lg">
@@ -58,7 +60,7 @@
                             </button>
                             <span id="quantity-{{ item.id }}" class="min-w-[2rem] text-center font-bold text-stone-900 dark:text-white text-sm">{{ item.quantity }}</span>
                             <button
-                                onclick="updateQuantity('{{ item.id }}')"
+                                onclick="updateQuantity(event, '{{ item.id }}')"
                                 data-delta="1"
                                 aria-label="Increase quantity of {{ item.variant.product.name }}"
                                 class="flex h-8 w-8 items-center justify-center rounded-lg text-stone-600 dark:text-stone-300 hover:bg-white dark:hover:bg-stone-700 hover:shadow-sm transition-all font-bold text-lg">
@@ -91,6 +93,9 @@
                     <div class="flex justify-between text-stone-600 dark:text-stone-300 text-sm">
                         <span>Shipping</span>
                         <span class="text-green-600 font-medium">FREE on ₹999+</span>
+                    </div>
+                    <div class="rounded-2xl border border-stone-200 bg-stone-50 px-3 py-3 text-xs font-semibold text-stone-500 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-300">
+                        Review quantities here first, then confirm address and payment on the next screen.
                     </div>
                     <div class="border-t border-stone-100 dark:border-stone-700 pt-3 flex justify-between items-center">
                         <span class="font-black text-stone-900 dark:text-white">Total</span>
@@ -134,7 +139,7 @@
 <script>
 // getCookie and showToast are defined in core_base.html — no need to redefine here.
 
-function updateQuantity(cartItemId) {
+function updateQuantity(event, cartItemId) {
     // Read delta from the button that triggered the event
     const btn = event.currentTarget;
     const delta = parseInt(btn.dataset.delta);
@@ -159,15 +164,25 @@ function updateQuantity(cartItemId) {
             } else {
                 const qEl = document.getElementById('quantity-' + cartItemId);
                 if (qEl) qEl.textContent = data.quantity;
+                const subtotalEl = document.getElementById('item-subtotal-' + cartItemId);
+                const unitPrice = Number(row ? row.dataset.unitPrice : 0);
+                if (subtotalEl && Number.isFinite(unitPrice)) {
+                    subtotalEl.textContent = '₹' + (unitPrice * data.quantity).toFixed(2);
+                }
             }
             const totalEl = document.getElementById('cart-total');
             if (totalEl) totalEl.textContent = '₹' + data.total;
             const itemsEl = document.getElementById('total-items');
             if (itemsEl) itemsEl.textContent = data.cart_count;
             if (typeof updateHeaderCartCount === 'function') updateHeaderCartCount(data.cart_count || 0);
+        } else {
+            showToast(data.message || 'Unable to update quantity right now.', 'error');
         }
     })
-    .catch(err => console.error('[Cart]', err));
+    .catch(err => {
+        console.error('[Cart]', err);
+        showToast('Unable to update quantity right now.', 'error');
+    });
 }
 
 function removeItem(cartItemId) {

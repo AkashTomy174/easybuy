@@ -61,7 +61,7 @@
             </div>
 
             <!-- Add Address Form -->
-            <section id="addAddressSection" class="hidden bg-white dark:bg-surface-dark rounded-3xl border border-stone-200 dark:border-stone-700 p-8 shadow-sm">
+            <section id="addAddressSection" class="{% if addresses %}hidden {% endif %}bg-white dark:bg-surface-dark rounded-3xl border border-stone-200 dark:border-stone-700 p-8 shadow-sm">
                 <h3 class="text-xl font-black mb-6 dark:text-white">Add a New Address</h3>
                 <form method="POST" action="{% url 'user_address' %}" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {% csrf_token %}
@@ -71,6 +71,7 @@
                     <input type="text" name="locality" required placeholder="Locality / Street" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
                     <input type="text" name="city" required placeholder="City" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
                     <input type="text" name="state" required placeholder="State" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                    <input type="text" name="country" value="India" required placeholder="Country" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
                     <input type="text" name="pincode" required placeholder="Pincode" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
                     <select name="address_type" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
                         <option value="HOME">Home</option>
@@ -102,7 +103,7 @@
                     
                     <p class="text-sm text-stone-500 font-medium leading-relaxed mb-2">
                         {{ addr.house_info }}, {{ addr.locality }}<br/>
-                        {{ addr.city }}, {{ addr.state }} - {{ addr.pincode }}
+                        {{ addr.city }}, {{ addr.state }}, {{ addr.country }} - {{ addr.pincode }}
                     </p>
                     <p class="text-sm text-stone-400 font-medium mb-8">
                         <span class="material-symbols-outlined text-xs align-middle">call</span> {{ addr.phone_number }}
@@ -110,7 +111,10 @@
 
                     <div class="flex gap-4 border-t border-stone-100 dark:border-stone-700 pt-6">
                         <button onclick="toggleEdit('{{ addr.id }}')" class="text-xs font-black uppercase tracking-widest text-primary hover:underline">Edit</button>
-                        <a href="{% url 'delete_address' addr.id %}" onclick="return confirm('Delete this address?')" class="text-xs font-black uppercase tracking-widest text-red-400 hover:underline">Remove</a>
+                        <form id="delete-address-{{ addr.id }}" method="POST" action="{% url 'delete_address' addr.id %}">
+                            {% csrf_token %}
+                            <button type="button" onclick="confirmAddressRemoval('delete-address-{{ addr.id }}')" class="text-xs font-black uppercase tracking-widest text-red-400 hover:underline">Remove</button>
+                        </form>
                     </div>
 
                     <!-- Edit Modal -->
@@ -128,6 +132,7 @@
                                 <input type="text" name="locality" value="{{ addr.locality }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
                                 <input type="text" name="city" value="{{ addr.city }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
                                 <input type="text" name="state" value="{{ addr.state }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                                <input type="text" name="country" value="{{ addr.country }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
                                 <input type="text" name="pincode" value="{{ addr.pincode }}" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
                                 <select name="address_type" class="rounded-2xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 p-4 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
                                     <option value="HOME" {% if addr.address_type == 'HOME' %}selected{% endif %}>Home</option>
@@ -157,6 +162,18 @@
     function toggleEdit(id) {
         const modal = document.getElementById('edit-modal-' + id);
         modal.classList.toggle('hidden');
+    }
+
+    function confirmAddressRemoval(formId) {
+        showConfirmDialog({
+            title: 'Delete this address?',
+            message: 'This address will be removed from your saved delivery locations.',
+            confirmText: 'Delete address',
+            confirmClassName: 'inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white transition hover:bg-red-700',
+            onConfirm: () => {
+                document.getElementById(formId).requestSubmit();
+            }
+        });
     }
 </script>
 {% endblock %}

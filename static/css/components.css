@@ -27,12 +27,12 @@
 
 /* Danger Button */
 .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-2xl font-bold transition-all duration-300 hover:shadow-lg hover:shadow-red/30 active:scale-95 disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-2xl font-bold transition-all duration-300 hover:shadow-lg hover:shadow-red-500/30 active:scale-95 disabled:opacity-60;
 }
 
 /* Success Button */
 .btn-success {
-    @apply inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-2xl font-bold transition-all duration-300 hover:shadow-lg hover:shadow-green/30 active:scale-95 disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-2xl font-bold transition-all duration-300 hover:shadow-lg hover:shadow-green-500/30 active:scale-95 disabled:opacity-60;
 }
 
 /* Button Sizes */

@@ -8,7 +8,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 RUNNING_TESTS = "test" in sys.argv
-RUNNING_DEVELOPMENT_SERVER = "runserver" in sys.argv
+RUNNING_DEVELOPMENT_SERVER = "runserver" in sys.argv or os.getenv("RUN_MAIN") == "true"
 
 
 def env_bool(name, default=False):
@@ -20,7 +20,7 @@ DEBUG = env_bool("DEBUG", RUNNING_TESTS)
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     if DEBUG or RUNNING_TESTS:
-        SECRET_KEY = "easybuy-dev-secret-key"
+        SECRET_KEY = "5nL9vQ2xR7mK4pT8cH1yB6wE3zU0aJ9sD4fG7hK2qR5tY8uI1oP6xC3vN0mL7aS"
     else:
         raise ImproperlyConfigured("SECRET_KEY must be set when DEBUG is disabled.")
 
@@ -67,6 +67,12 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
+
+PERFORMANCE_LOGGING_ENABLED = env_bool("PERFORMANCE_LOGGING_ENABLED", DEBUG)
+SLOW_REQUEST_THRESHOLD_MS = int(os.getenv("SLOW_REQUEST_THRESHOLD_MS", "500"))
+
+if PERFORMANCE_LOGGING_ENABLED:
+    MIDDLEWARE.insert(3, "core.middleware.RequestTimingMiddleware")
 
 if not DEBUG:
     MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
@@ -161,9 +167,21 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
+# Keep production-style static handling for deployed environments, but let the
+# local development server see freshly built assets from STATICFILES_DIRS even
+# when .env sets DEBUG=False.
+WHITENOISE_AUTOREFRESH = RUNNING_DEVELOPMENT_SERVER
+WHITENOISE_USE_FINDERS = RUNNING_DEVELOPMENT_SERVER
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "easybuy-performance-cache",
+        "TIMEOUT": 300,
+    }
+}
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-
 
 
 MEDIA_URL = "/media/"
@@ -258,4 +276,3 @@ else:
         "SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG
     )
     SECURE_HSTS_PRELOAD = env_bool("SECURE_HSTS_PRELOAD", False)
-

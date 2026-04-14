@@ -10,12 +10,12 @@
         <div class="px-4 py-3 border-b border-stone-200 dark:border-stone-700">
             <h4 class="font-bold text-stone-900 dark:text-white text-sm">Save to Wishlist</h4>
         </div>
-        {% for wishlist in user.wishlists.all %}
+        {% for wishlist in user_wishlists %}
         <a href="#" onclick="addToSpecificWishlist({{ wishlist.id }}, event)" 
            class="wishlist-option flex items-center gap-3 px-4 py-3 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors text-sm {% if wishlist.wishlist_name == 'My Wishlist' %}font-bold border-r-4 border-primary{% endif %}">
             <span class="material-symbols-outlined text-primary text-lg">favorite</span>
             <span>{{ wishlist.wishlist_name }}</span>
-            <span class="ml-auto text-xs text-stone-400">({{ wishlist.items.count }})</span>
+            <span class="ml-auto text-xs text-stone-400">({{ wishlist.item_count }})</span>
         </a>
         {% empty %}
         <div class="px-4 py-4 text-center text-stone-500 dark:text-stone-400">

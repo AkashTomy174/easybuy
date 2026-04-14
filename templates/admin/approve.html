@@ -39,8 +39,8 @@
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold overflow-hidden">
-                                {% if product.variants.first.images.first %}
-                                <img src="{{ product.variants.first.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
+                                {% if product.admin_preview_image %}
+                                <img src="{{ product.admin_preview_image.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
                                 {% else %}
                                 {{ product.name|first|upper }}
                                 {% endif %}
@@ -50,13 +50,11 @@
                                 <p class="text-xs text-slate-500">{{ product.model_number }}</p>
                                 <div class="mt-2 flex items-center gap-2">
                                     <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                                        {{ product.variants.first.images.all|length }} image{{ product.variants.first.images.all|length|pluralize }}
+                                        {{ product.admin_image_count }} image{{ product.admin_image_count|pluralize }}
                                     </span>
                                     <div class="flex items-center -space-x-2">
-                                        {% for image in product.variants.first.images.all|slice:":3" %}
-                                            {% if image.image %}
-                                            <img src="{{ image.image.url }}" alt="{{ product.name }} preview {{ forloop.counter }}" class="h-6 w-6 rounded-full border border-white object-cover">
-                                            {% endif %}
+                                        {% for image in product.admin_gallery_images %}
+                                        <img src="{{ image.image.url }}" alt="{{ product.name }} preview {{ forloop.counter }}" class="h-6 w-6 rounded-full border border-white object-cover">
                                         {% endfor %}
                                     </div>
                                 </div>
@@ -183,9 +181,12 @@
     }
 
     function handleApprove(productId) {
-        if (confirm("Are you sure you want to approve this product?")) {
-            document.getElementById('approveForm-' + productId).submit();
-        }
+        showConfirmDialog({
+            title: 'Approve this product?',
+            message: 'The product will become eligible to appear in the storefront once it passes this approval step.',
+            confirmText: 'Approve product',
+            onConfirm: () => document.getElementById('approveForm-' + productId).submit()
+        });
     }
 </script>
 {% endblock %}

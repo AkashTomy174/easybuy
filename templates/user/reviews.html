@@ -285,31 +285,35 @@ function openVideoModal(videoUrl) {
 }
 
 function deleteReview(reviewId) {
-  if (!confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
-    return;
-  }
-
-  fetch(`/user/reviews/delete/${reviewId}/`, {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': getCookie('csrftoken'),
-      'Content-Type': 'application/json'
+  showConfirmDialog({
+    title: 'Delete this review?',
+    message: 'This action cannot be undone once the review is removed.',
+    confirmText: 'Delete review',
+    confirmClassName: 'inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white transition hover:bg-red-700',
+    onConfirm: () => {
+      fetch(`/user/reviews/delete/${reviewId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken'),
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showToast('Review deleted successfully', 'success');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else {
+          showToast('Failed to delete review', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showToast('An error occurred', 'error');
+      });
     }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      showToast('Review deleted successfully', 'success');
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } else {
-      showToast('Failed to delete review', 'error');
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    showToast('An error occurred', 'error');
   });
 }
 

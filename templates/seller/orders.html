@@ -254,18 +254,19 @@ function updateStatus(itemId, newStatus) {
             select.classList.remove('text-orange-600', 'text-blue-600', 'text-emerald-600', 'text-red-600');
             select.classList.add(colorMap[newStatus]);
             select.classList.replace('ring-primary', 'ring-emerald-500');
+            showToast('Order status updated successfully.', 'success');
             
             setTimeout(() => {
                 window.location.reload();
             }, 800);
         } else {
-            alert('Update failed: ' + (data.message || 'Unknown error'));
+            showToast('Update failed: ' + (data.message || 'Unknown error'), 'error');
             select.classList.remove('ring-2', 'ring-primary');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Network error. Please try again.');
+        showToast('Network error. Please try again.', 'error');
         select.classList.remove('ring-2', 'ring-primary');
     });
 }

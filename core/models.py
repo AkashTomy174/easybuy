@@ -93,6 +93,12 @@ class Notification(models.Model):
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "is_read"]),
+            models.Index(fields=["user", "-created_at"]),
+        ]
+
 
 class NotificationDelivery(models.Model):
     notification = models.ForeignKey(
@@ -134,6 +140,11 @@ class Category(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["is_active"]),
+        ]
+
     def __str__(self):
         return self.name
 
@@ -150,6 +161,12 @@ class SubCategory(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["category", "is_active"]),
+            models.Index(fields=["is_active"]),
+        ]
+
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = generate_unique_category_slug(SubCategory, self.name)
@@ -165,6 +182,12 @@ class Banner(models.Model):
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     is_active = models.BooleanField(default=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["is_active", "start_date", "end_date"]),
+            models.Index(fields=["start_date", "end_date"]),
+        ]
 
     def __str__(self):
         return self.title

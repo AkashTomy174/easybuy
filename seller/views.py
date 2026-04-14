@@ -3,7 +3,8 @@ from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.utils.text import slugify
 from django.db import transaction
-from django.db.models import F, Sum, Count, Avg, Q
+from django.db.models import F, Sum, Count, Q
+from django.db.models.functions import TruncDate
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -29,6 +30,27 @@ from core.notifications import send_status_change_notification
 
 
 User = get_user_model()
+ALLOWED_IMAGE_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+}
+ALLOWED_DOCUMENT_CONTENT_TYPES = {
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+ALLOWED_ORDER_STATUS_TRANSITIONS = {
+    "PENDING": {"SHIPPED", "CANCELLED"},
+    "SHIPPED": {"DELIVERED"},
+    "DELIVERED": set(),
+    "CANCELLED": set(),
+    "RETURN_REQUESTED": set(),
+    "RETURNED": set(),
+}
 
 
 def generate_sku(length=8):
@@ -55,6 +77,15 @@ def seller_shell_context(request, active_menu=None, **extra):
         context["seller_profile"] = seller_profile
     context.update(extra)
     return context
+
+
+def _validate_upload(file_obj, *, allowed_content_types, label):
+    content_type = (getattr(file_obj, "content_type", "") or "").lower()
+    if content_type and content_type not in allowed_content_types:
+        return f"{label} has an unsupported file type."
+    if file_obj.size > MAX_UPLOAD_BYTES:
+        return f"{label} must be under 5MB."
+    return ""
 
 
 def _parse_promo_datetime(raw_value):
@@ -134,6 +165,28 @@ def seller_regi(request):
                     "business_address": business_address,
                 },
             )
+        if doc:
+            validation_error = _validate_upload(
+                doc,
+                allowed_content_types=ALLOWED_DOCUMENT_CONTENT_TYPES,
+                label="Business document",
+            )
+            if validation_error:
+                return render(
+                    request,
+                    "seller/sellerregistration.html",
+                    {
+                        "error": validation_error,
+                        "username": username,
+                        "email": email,
+                        "store_name": store_name,
+                        "gst_number": gst_number,
+                        "pan_number": pan_number,
+                        "bank_account_number": bank_account_number,
+                        "ifsc_code": ifsc_code,
+                        "business_address": business_address,
+                    },
+                )
 
         try:
             with transaction.atomic():
@@ -186,45 +239,55 @@ def seller_dashboard(request):
     seller = request.user.seller_profile
     now = timezone.now()
 
-    all_order_items = OrderItem.objects.filter(seller=seller).select_related(
-        "order", "variant__product"
+    order_items = OrderItem.objects.filter(seller=seller)
+
+    stats = order_items.aggregate(
+        total_orders=Count("id"),
+        total_revenue=Sum(F("price_at_purchase") * F("quantity")),
+        pending_orders=Count("id", filter=Q(status="PENDING")),
+        delivered_revenue=Sum(
+            F("price_at_purchase") * F("quantity"),
+            filter=Q(order__order_status="DELIVERED"),
+        ),
+        pending_count=Count("id", filter=Q(status="PENDING")),
+        shipped_count=Count("id", filter=Q(status="SHIPPED")),
+        delivered_count=Count("id", filter=Q(status="DELIVERED")),
+        cancelled_count=Count("id", filter=Q(status="CANCELLED")),
     )
 
-    total_orders = all_order_items.count()
-    total_revenue = sum(
-        float(item.price_at_purchase * item.quantity) for item in all_order_items
-    )
-    pending_orders = all_order_items.filter(status="PENDING").count()
-
+    total_orders = stats["total_orders"] or 0
+    total_revenue = float(stats["total_revenue"] or 0)
+    pending_orders = stats["pending_orders"] or 0
     average_order_value = total_revenue / total_orders if total_orders > 0 else 0
+    delivered_revenue = float(stats["delivered_revenue"] or 0)
 
-    delivered_revenue = sum(
-        float(item.price_at_purchase * item.quantity)
-        for item in all_order_items.filter(order__order_status="DELIVERED")
+    recent_orders = (
+        order_items.select_related("order", "variant__product")
+        .order_by("-order__ordered_at")[:5]
     )
-
-    recent_orders = all_order_items.order_by("-order__ordered_at")[:5]
 
     total_products = Product.objects.filter(seller=seller).count()
     active_products = Product.objects.filter(seller=seller, is_active=True).count()
+
+    revenue_by_day = {
+        row["day"]: float(row["revenue"] or 0)
+        for row in order_items
+        .filter(order__ordered_at__gte=now - timedelta(days=6))
+        .annotate(day=TruncDate("order__ordered_at"))
+        .values("day")
+        .annotate(revenue=Sum(F("price_at_purchase") * F("quantity")))
+        .order_by("day")
+    }
 
     daily_revenue = []
     daily_labels = []
     for i in range(6, -1, -1):
         date = now - timedelta(days=i)
-        day_orders = all_order_items.filter(order__ordered_at__date=date.date())
         daily_labels.append(date.strftime("%b %d"))
-        daily_revenue.append(
-            round(
-                sum(
-                    float(item.price_at_purchase * item.quantity) for item in day_orders
-                ),
-                2,
-            )
-        )
+        daily_revenue.append(round(revenue_by_day.get(date.date(), 0), 2))
 
     top_products = (
-        all_order_items.values("variant__product__name")
+        order_items.values("variant__product__name")
         .annotate(
             total_sold=Sum("quantity"),
             revenue=Sum(F("price_at_purchase") * F("quantity")),
@@ -233,47 +296,57 @@ def seller_dashboard(request):
     )
 
     status_counts = {
-        "PENDING": all_order_items.filter(status="PENDING").count(),
-        "SHIPPED": all_order_items.filter(status="SHIPPED").count(),
-        "DELIVERED": all_order_items.filter(status="DELIVERED").count(),
-        "CANCELLED": all_order_items.filter(status="CANCELLED").count(),
+        "PENDING": stats["pending_count"] or 0,
+        "SHIPPED": stats["shipped_count"] or 0,
+        "DELIVERED": stats["delivered_count"] or 0,
+        "CANCELLED": stats["cancelled_count"] or 0,
+    }
+
+    inventory_history = (
+        InventoryLog.objects.filter(
+            variant__product__seller=seller,
+            created_at__gte=now - timedelta(days=6),
+        )
+        .annotate(day=TruncDate("created_at"))
+        .values("day")
+        .annotate(
+            stock_in=Sum("change_amount", filter=Q(change_amount__gt=0)),
+            stock_out=Sum("change_amount", filter=Q(change_amount__lt=0)),
+        )
+        .order_by("day")
+    )
+
+    inv_by_day = {
+        row["day"]: {
+            "stock_in": float(row["stock_in"] or 0),
+            "stock_out": float(row["stock_out"] or 0),
+        }
+        for row in inventory_history
     }
 
     inv_labels = []
     inv_changes = []
     total_stock_in = 0
     total_stock_out = 0
-
     for i in range(6, -1, -1):
         date = now - timedelta(days=i)
         inv_labels.append(date.strftime("%b %d"))
-
-        stock_in = (
-            InventoryLog.objects.filter(
-                variant__product__seller=seller,
-                change_amount__gt=0,
-                created_at__date=date.date(),
-            ).aggregate(total=Sum("change_amount"))["total"]
-            or 0
-        )
-        stock_out = (
-            InventoryLog.objects.filter(
-                variant__product__seller=seller,
-                change_amount__lt=0,
-                created_at__date=date.date(),
-            ).aggregate(total=Sum("change_amount"))["total"]
-            or 0
-        )
-
-        net_daily = stock_in + stock_out
-        inv_changes.append(net_daily)
-
+        day_data = inv_by_day.get(date.date(), {"stock_in": 0, "stock_out": 0})
+        stock_in = day_data["stock_in"]
+        stock_out = day_data["stock_out"]
+        inv_changes.append(stock_in + stock_out)
         total_stock_in += stock_in
         total_stock_out += abs(stock_out)
+
     net_stock_movement = total_stock_in - total_stock_out
-    low_stock_items = ProductVariant.objects.filter(
-        product__seller=seller, stock_quantity__lte=10, stock_quantity__gt=0
-    ).select_related("product")[:5]
+    low_stock_items = (
+        ProductVariant.objects.filter(
+            product__seller=seller, stock_quantity__lte=10, stock_quantity__gt=0
+        )
+        .select_related("product")
+        [:5]
+    )
+
     context = seller_shell_context(
         request,
         active_menu="dashboard",
@@ -596,8 +669,13 @@ def add_variant(request, product_id):
                 return redirect("add_variant", product_id=product.id)
 
         for img in images:
-            if img.size > 5 * 1024 * 1024:
-                messages.error(request, "Each image must be under 5MB.")
+            validation_error = _validate_upload(
+                img,
+                allowed_content_types=ALLOWED_IMAGE_CONTENT_TYPES,
+                label=f"Image '{img.name}'",
+            )
+            if validation_error:
+                messages.error(request, validation_error)
                 return redirect("add_variant", product_id=product.id)
         try:
             with transaction.atomic():
@@ -811,7 +889,15 @@ logger = logging.getLogger(__name__)
 def status(request, id):
     seller = request.user.seller_profile
     order_item = get_object_or_404(OrderItem, seller=seller, id=id)
-    new_status = request.POST.get("status")
+    if request.method != "POST":
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse(
+                {"success": False, "message": "POST required"}, status=405
+            )
+        messages.error(request, "Invalid request method.")
+        return redirect("seller_orders")
+
+    new_status = (request.POST.get("status") or "").strip().upper()
     allowed_statuses = {"PENDING", "SHIPPED", "DELIVERED", "CANCELLED"}
 
     if not new_status:
@@ -829,6 +915,17 @@ def status(request, id):
             )
         messages.error(request, "Invalid status selected.")
         return redirect("seller_orders")
+
+    if new_status != order_item.status:
+        allowed_next_statuses = ALLOWED_ORDER_STATUS_TRANSITIONS.get(
+            order_item.status, set()
+        )
+        if new_status not in allowed_next_statuses:
+            message = f"Cannot change order status from {order_item.status} to {new_status}."
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({"success": False, "message": message}, status=400)
+            messages.error(request, message)
+            return redirect("seller_orders")
 
     try:
         with transaction.atomic():

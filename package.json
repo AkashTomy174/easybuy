@@ -1,0 +1,16 @@
+{
+  "name": "easybuy-assets",
+  "private": true,
+  "scripts": {
+    "build:storefront": "tailwindcss -c tailwind.storefront.config.js -i ./static/src/storefront.css -o ./static/css/tailwind-storefront.css --minify",
+    "build:admin": "tailwindcss -c tailwind.admin.config.js -i ./static/src/admin.css -o ./static/css/tailwind-admin.css --minify",
+    "build:onboarding": "tailwindcss -c tailwind.onboarding.config.js -i ./static/src/onboarding.css -o ./static/css/tailwind-onboarding.css --minify",
+    "build:components": "tailwindcss -c tailwind.storefront.config.js -i ./static/css/components.css -o ./static/css/components-built.css --minify",
+    "build": "npm run build:storefront && npm run build:admin && npm run build:onboarding && npm run build:components"
+  },
+  "devDependencies": {
+    "@tailwindcss/container-queries": "^0.1.1",
+    "@tailwindcss/forms": "^0.5.10",
+    "tailwindcss": "^3.4.17"
+  }
+}

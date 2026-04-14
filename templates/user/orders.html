@@ -193,25 +193,31 @@
 {% block extra_js %}
 <script>
 function cancelItem(itemId) {
-    if (!confirm('Cancel this item only? Stock will be restored.')) return;
-    
-    fetch(`/user/orders/item-cancel/${itemId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'X-Requested-With': 'XMLHttpRequest'
+    showConfirmDialog({
+        title: 'Cancel this item?',
+        message: 'The item will be cancelled and stock will be restored if the order has not progressed too far.',
+        confirmText: 'Cancel item',
+        confirmClassName: 'inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white transition hover:bg-red-700',
+        onConfirm: () => {
+            fetch(`/user/orders/item-cancel/${itemId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Item cancelled successfully', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast(data.message || 'Error', 'error');
+                }
+            })
+            .catch(() => showToast('Network error', 'error'));
         }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Item cancelled successfully', 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            showToast(data.message || 'Error', 'error');
-        }
-    })
-    .catch(() => showToast('Network error', 'error'));
+    });
 }
 
 function openReturnModal(itemId, itemName) {

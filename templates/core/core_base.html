@@ -10,55 +10,17 @@
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect"/>
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#4a7c43",
-                        "primary-dark": "#2d5a27",
-                        "primary-light": "#6b9e5f",
-                        "accent-terracotta": "#ff7f50",
-                        "accent-coral": "#ff6b6b",
-                        "accent-gold": "#f59e0b",
-                        "accent-blue": "#0ea5e9",
-                        "accent-emerald": "#10b981",
-                        "background-light": "#fdfaf6",
-                        "background-dark": "#1a1c19",
-                        "surface-dark": "#232622",
-                        "surface-light": "#ffffff",
-                        "soft-gray": "#f3f4f1",
-                    },
-                    fontFamily: {
-                        "display": ["Inter", "sans-serif"]
-                    },
-                    borderRadius: {
-                        "DEFAULT": "0.5rem",
-                        "lg": "0.75rem",
-                        "xl": "1rem",
-                        "2xl": "1.5rem",
-                        "3xl": "2rem",
-                        "full": "9999px"
-                    },
-                    boxShadow: {
-                        'card': '0 4px 20px -2px rgba(0, 0, 0, 0.06)',
-                        'card-hover': '0 20px 40px -12px rgba(0, 0, 0, 0.12)',
-                        'button': '0 4px 14px -3px rgba(74, 124, 67, 0.3)',
-                        'gold': '0 4px 14px -3px rgba(245, 158, 11, 0.3)',
-                        'coral': '0 4px 14px -3px rgba(255, 107, 107, 0.3)',
-                    }
-                },
-            },
-        }
-    </script>
-    
-    <style type="text/tailwindcss">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
+    <noscript>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
+    </noscript>
+
+    <link rel="stylesheet" href="{% static 'css/tailwind-storefront.css' %}">
+
+    <style>
         :root {
             --primary-color: #2d5a27;
             --cream-bg: #fdfaf6;
@@ -186,7 +148,7 @@
     
     <!-- UI/UX Enhancements CSS -->
     <link rel="stylesheet" href="{% static 'css/enhancements.css' %}">
-    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components-built.css' %}">
     
     {% block extra_css %}{% endblock %}
 </head>
@@ -218,7 +180,10 @@
                 <div class="flex items-center">
                     <a href="{% url 'home' %}" class="flex items-center gap-2 group">
                         <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-700 via-green-600 to-orange-500 text-white shadow-lg group-hover:scale-105 transition-transform">
-                            <span class="material-symbols-outlined text-xl">shopping_bag</span>
+                            <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 8h12l-1 11H7L6 8Z"></path>
+                                <path d="M9 8a3 3 0 1 1 6 0"></path>
+                            </svg>
                         </div>
                         <h1 class="text-lg font-black tracking-tight group-hover:scale-105 transition-transform">
                             <span class="text-green-700 dark:text-green-400">Easy</span><span class="text-orange-500 dark:text-orange-400">Buy</span>
@@ -229,7 +194,10 @@
                 <!-- Center: Search Bar -->
                 <div class="flex-1 max-w-2xl mx-6 hidden lg:block">
                     <form action="{% url 'all_products' %}" method="get" class="relative group" id="search-form">
-                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-primary transition-colors text-xl">search</span>
+                        <svg aria-hidden="true" class="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-400 group-focus-within:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="7"></circle>
+                            <path d="m20 20-3.5-3.5"></path>
+                        </svg>
                         <input 
                             id="search-input"
                             name="q" 
@@ -259,13 +227,14 @@
                     
                     <!-- Notification Bell -->
                     <div class="relative group">
-                        <button class="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative">
-                            <span class="material-symbols-outlined text-xl">notifications</span>
-                            {% if unread_notification_count > 0 %}
-                            <span class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white animate-pulse">
-                                {{ unread_notification_count }}
+                        <button type="button" aria-label="View notifications" class="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative" onclick="window.location.href='{% url 'all_notifications' %}'">
+                            <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"></path>
+                                <path d="M10 17a2 2 0 0 0 4 0"></path>
+                            </svg>
+                            <span id="notification-badge" class="absolute -right-1 -top-1 {% if unread_notification_count > 0 %}flex{% else %}hidden{% endif %} h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white animate-pulse">
+                                {{ unread_notification_count|default:0 }}
                             </span>
-                            {% endif %}
                         </button>
 
                         <!-- Dropdown Menu -->
@@ -316,22 +285,40 @@
 
                     <!-- Wishlist -->
                     <a href="{% url 'wishlist' %}" class="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative">
-                        <span class="material-symbols-outlined text-xl">favorite_border</span>
+                        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m12 20-1.2-1.1C5.7 14.2 2.5 11.3 2.5 7.8A4.8 4.8 0 0 1 7.3 3a5.2 5.2 0 0 1 4.7 2.7A5.2 5.2 0 0 1 16.7 3a4.8 4.8 0 0 1 4.8 4.8c0 3.5-3.2 6.4-8.3 11.1L12 20Z"></path>
+                        </svg>
                         {% if request.user.is_authenticated %}
-                        <span id="header-wishlist-count" class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">{{ wishlist_count }}</span>
+                        <span id="header-wishlist-count" class="absolute -right-1 -top-1 {% if wishlist_count %}flex{% else %}hidden{% endif %} h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">{{ wishlist_count }}</span>
                         {% endif %}
                     </a>
                     
                     <!-- Cart -->
                     <a href="{% url 'cart' %}" class="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 relative">
-                        <span class="material-symbols-outlined text-xl">shopping_cart</span>
+                        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="9" cy="20" r="1.5"></circle>
+                            <circle cx="18" cy="20" r="1.5"></circle>
+                            <path d="M3 4h2l2.3 10.1A2 2 0 0 0 9.3 16H18a2 2 0 0 0 2-1.6L21.5 8H7"></path>
+                        </svg>
                         <span id="header-cart-count" class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[10px] font-bold text-white">{{ cart_count }}</span>
                     </a>
                     
                     <!-- Dark Mode Toggle -->
                     <button id="darkModeToggle" class="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300" aria-label="Toggle dark mode">
-                        <span class="material-symbols-outlined text-xl dark:hidden">dark_mode</span>
-                        <span class="material-symbols-outlined text-xl hidden dark:block">light_mode</span>
+                        <svg aria-hidden="true" class="h-5 w-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path>
+                        </svg>
+                        <svg aria-hidden="true" class="hidden h-5 w-5 dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="4"></circle>
+                            <path d="M12 2v2.5"></path>
+                            <path d="M12 19.5V22"></path>
+                            <path d="M4.9 4.9 6.7 6.7"></path>
+                            <path d="m17.3 17.3 1.8 1.8"></path>
+                            <path d="M2 12h2.5"></path>
+                            <path d="M19.5 12H22"></path>
+                            <path d="m4.9 19.1 1.8-1.8"></path>
+                            <path d="m17.3 6.7 1.8-1.8"></path>
+                        </svg>
                     </button>
                     
                     <!-- Divider -->
@@ -345,11 +332,16 @@
                                 {% if request.user.profile_image %}
                                     <img src="{{ request.user.profile_image.url }}" class="h-full w-full object-cover">
                                 {% else %}
-                                    <span class="material-symbols-outlined text-stone-500 text-lg">account_circle</span>
+                                    <svg aria-hidden="true" class="h-5 w-5 text-stone-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="8" r="3.25"></circle>
+                                        <path d="M5 19a7 7 0 0 1 14 0"></path>
+                                    </svg>
                                 {% endif %}
                             </div>
                             <span class="hidden lg:block text-sm font-medium text-stone-700 dark:text-stone-200 max-w-[80px] truncate">{{ request.user.username }}</span>
-                            <span class="material-symbols-outlined text-sm text-stone-400 hidden lg:block">expand_more</span>
+                            <svg aria-hidden="true" class="hidden h-4 w-4 text-stone-400 lg:block" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m5 7 5 5 5-5"></path>
+                            </svg>
                         </button>
                         
                         <!-- Dropdown -->
@@ -403,14 +395,22 @@
                     </div>
                     {% else %}
                     <a href="{% url 'all_login' %}" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primary-dark transition-colors">
-                        <span class="material-symbols-outlined text-lg">login</span>
+                        <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"></path>
+                            <path d="M10 17l5-5-5-5"></path>
+                            <path d="M15 12H4"></path>
+                        </svg>
                         <span class="hidden sm:inline">Sign In</span>
                     </a>
                     {% endif %}
                     
                     <!-- Mobile Menu Button -->
                     <button id="mobileMenuBtn" class="flex xl:hidden items-center justify-center h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-600 dark:text-stone-300 ml-2">
-                        <span class="material-symbols-outlined text-xl">menu</span>
+                        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                            <path d="M4 7h16"></path>
+                            <path d="M4 12h16"></path>
+                            <path d="M4 17h16"></path>
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -419,7 +419,10 @@
         <!-- Mobile Search Bar -->
         <div class="lg:hidden border-t border-stone-200 dark:border-stone-700 px-4 py-3">
             <form action="{% url 'all_products' %}" method="get" class="relative">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg">search</span>
+                <svg aria-hidden="true" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <path d="m20 20-3.5-3.5"></path>
+                </svg>
                 <input name="q" class="h-10 w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 pl-10 pr-4 text-sm font-medium text-stone-900 dark:text-white placeholder:text-stone-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search products..." type="text"/>
             </form>
         </div>
@@ -446,23 +449,41 @@
     <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-surface-dark border-t border-stone-200 dark:border-stone-700 z-50 px-4 py-2">
         <div class="flex items-center justify-around">
             <a href="{% url 'home' %}" class="flex flex-col items-center gap-1 p-2 {% if request.resolver_match.url_name == 'home' %}text-primary{% else %}text-stone-500{% endif %}">
-                <span class="material-symbols-outlined">home</span>
+                <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 11.5 12 4l9 7.5"></path>
+                    <path d="M5.5 10.5V20h13V10.5"></path>
+                </svg>
                 <span class="text-[10px] font-medium">Home</span>
             </a>
             <a href="{% url 'all_products' %}" class="flex flex-col items-center gap-1 p-2 {% if request.resolver_match.url_name == 'all_products' %}text-primary{% else %}text-stone-500{% endif %}">
-                <span class="material-symbols-outlined">grid_view</span>
+                <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="4" width="6" height="6" rx="1"></rect>
+                    <rect x="14" y="4" width="6" height="6" rx="1"></rect>
+                    <rect x="4" y="14" width="6" height="6" rx="1"></rect>
+                    <rect x="14" y="14" width="6" height="6" rx="1"></rect>
+                </svg>
                 <span class="text-[10px] font-medium">Shop</span>
             </a>
             <a href="{% url 'best_sellers' %}" class="flex flex-col items-center gap-1 p-2 {% if request.resolver_match.url_name == 'best_sellers' %}text-primary{% else %}text-stone-500{% endif %}">
-                <span class="material-symbols-outlined">trending_up</span>
+                <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 16l5-5 4 4 7-8"></path>
+                    <path d="M15 7h5v5"></path>
+                </svg>
                 <span class="text-[10px] font-medium">Trending</span>
             </a>
             <a href="#" onclick="document.querySelector('input[name=q]')&&document.querySelector('input[name=q]').focus()" class="flex flex-col items-center gap-1 p-2 text-stone-500">
-                <span class="material-symbols-outlined">search</span>
+                <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <path d="m20 20-3.5-3.5"></path>
+                </svg>
                 <span class="text-[10px] font-medium">Search</span>
             </a>
             <a href="{% url 'cart' %}" class="flex flex-col items-center gap-1 p-2 {% if request.resolver_match.url_name == 'cart' %}text-primary{% else %}text-stone-500{% endif %} relative">
-                <span class="material-symbols-outlined">shopping_cart</span>
+                <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="20" r="1.5"></circle>
+                    <circle cx="18" cy="20" r="1.5"></circle>
+                    <path d="M3 4h2l2.3 10.1A2 2 0 0 0 9.3 16H18a2 2 0 0 0 2-1.6L21.5 8H7"></path>
+                </svg>
                 <span class="text-[10px] font-medium">Cart</span>
                 {% if request.user.is_authenticated and cart_count %}
                 <span class="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-accent-terracotta text-[8px] font-bold text-white">{{ cart_count }}</span>
@@ -470,7 +491,10 @@
             </a>
             {% if request.user.is_authenticated %}
             <a href="{% url 'profile_settings' %}" class="flex flex-col items-center gap-1 p-2 text-stone-500">
-                <span class="material-symbols-outlined">person</span>
+                <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="8" r="3.25"></circle>
+                    <path d="M5 19a7 7 0 0 1 14 0"></path>
+                </svg>
                 <span class="text-[10px] font-medium">Account</span>
             </a>
             {% else %}
@@ -499,25 +523,31 @@
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-xl font-black text-stone-900 dark:text-white" id="modal-title">Save to Collection</h3>
-                        <button onclick="closeWishlistModal()" class="h-10 w-10 rounded-full flex items-center justify-center text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+                        <button type="button" onclick="closeWishlistModal()" class="h-10 w-10 rounded-full flex items-center justify-center text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
                             <span class="material-symbols-outlined">close</span>
                         </button>
                     </div>
                     
                     <div class="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-2">
-                        {% for wishlist in user.wishlists.all %}
-                        <button onclick="addToSpecificWishlist('{{ wishlist.id }}')" class="w-full group flex items-center justify-between p-4 rounded-2xl border-2 border-transparent hover:border-primary hover:bg-primary/5 transition-all text-left">
+                        {% for wishlist in user_wishlists %}
+                        <button type="button" onclick="addToSpecificWishlist('{{ wishlist.id }}')" class="w-full group flex items-center justify-between p-4 rounded-2xl border-2 border-transparent hover:border-primary hover:bg-primary/5 transition-all text-left">
                             <div class="flex items-center gap-4">
                                 <div class="h-12 w-12 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-400 group-hover:text-primary transition-colors">
                                     <span class="material-symbols-outlined">folder_heart</span>
                                 </div>
                                 <div>
                                     <p class="font-bold text-stone-900 dark:text-white">{{ wishlist.wishlist_name }}</p>
-                                    <p class="text-xs text-stone-500">{{ wishlist.items.count }} items</p>
+                                    <p class="text-xs text-stone-500">{{ wishlist.item_count }} items</p>
                                 </div>
                             </div>
                             <span class="material-symbols-outlined text-stone-300 group-hover:text-primary transition-colors">add_circle</span>
                         </button>
+                        {% empty %}
+                        <div class="rounded-2xl border border-dashed border-stone-200 px-4 py-8 text-center dark:border-stone-700">
+                            <span class="material-symbols-outlined text-4xl text-stone-300 dark:text-stone-600">favorite</span>
+                            <p class="mt-3 text-sm font-semibold text-stone-700 dark:text-stone-200">Create your first collection</p>
+                            <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">Save products into named wishlists so they are easier to revisit later.</p>
+                        </div>
                         {% endfor %}
                     </div>
                     
@@ -525,9 +555,37 @@
                         <p class="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-3 ml-1">Create New Collection</p>
                         <div class="flex gap-2">
                             <input type="text" id="newWishlistName" class="flex-1 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 px-4 py-3 text-sm font-bold focus:border-primary focus:ring-0 transition-colors dark:text-white" placeholder="e.g. Dream PC Setup">
-                            <button onclick="createNewWishlistAndAdd()" class="px-6 py-3 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-xl text-sm font-black uppercase tracking-wider hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all shadow-lg">Create</button>
+                            <button type="button" onclick="createNewWishlistAndAdd()" class="px-6 py-3 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-xl text-sm font-black uppercase tracking-wider hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all shadow-lg">Create</button>
                         </div>
+                        <a href="{% url 'manage_wishlists' %}" class="mt-3 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-primary hover:underline">
+                            <span class="material-symbols-outlined text-sm">dashboard</span>
+                            Manage collections
+                        </a>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="fixed inset-0 z-[110] hidden bg-stone-900/60 backdrop-blur-sm p-4" aria-hidden="true">
+        <div class="flex min-h-full items-center justify-center">
+            <div class="w-full max-w-md rounded-3xl border border-stone-200 bg-white p-6 shadow-2xl dark:border-stone-700 dark:bg-surface-dark">
+                <div class="flex items-start gap-4">
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                        <span class="material-symbols-outlined">priority_high</span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <h3 id="confirmModalTitle" class="text-xl font-black text-stone-900 dark:text-white">Please confirm</h3>
+                        <p id="confirmModalMessage" class="mt-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">Are you sure you want to continue?</p>
+                    </div>
+                </div>
+                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button id="confirmModalCancel" type="button" class="inline-flex items-center justify-center rounded-2xl border border-stone-200 px-4 py-3 text-sm font-black text-stone-700 transition hover:bg-stone-100 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800">
+                        Cancel
+                    </button>
+                    <button id="confirmModalConfirm" type="button" class="inline-flex items-center justify-center rounded-2xl bg-stone-900 px-4 py-3 text-sm font-black text-white transition hover:bg-primary dark:bg-white dark:text-stone-900 dark:hover:bg-primary dark:hover:text-white">
+                        Confirm
+                    </button>
                 </div>
             </div>
         </div>
@@ -708,8 +766,16 @@ function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container') || createToastContainer();
     const toast = document.createElement('div');
 
-    const bgColor = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-gray-800';
-    const icon = type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info';
+    const bgColor =
+        type === 'success' ? 'bg-green-600' :
+        type === 'error' ? 'bg-red-600' :
+        type === 'warning' ? 'bg-amber-500' :
+        'bg-gray-800';
+    const icon =
+        type === 'success' ? 'check_circle' :
+        type === 'error' ? 'error' :
+        type === 'warning' ? 'warning' :
+        'info';
 
     toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 mb-2 toast-animate-in`;
     toast.innerHTML = `
@@ -734,10 +800,163 @@ function createToastContainer() {
     return container;
 }
 
+const confirmDialogState = {
+    onConfirm: null,
+};
+
+function closeConfirmDialog() {
+    const modal = document.getElementById('confirmModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+    confirmDialogState.onConfirm = null;
+}
+
+function showConfirmDialog(options = {}) {
+    const modal = document.getElementById('confirmModal');
+    const title = document.getElementById('confirmModalTitle');
+    const message = document.getElementById('confirmModalMessage');
+    const confirmBtn = document.getElementById('confirmModalConfirm');
+    const cancelBtn = document.getElementById('confirmModalCancel');
+    if (!modal || !title || !message || !confirmBtn || !cancelBtn) {
+        if (window.confirm(options.message || 'Are you sure?')) {
+            if (typeof options.onConfirm === 'function') options.onConfirm();
+        }
+        return;
+    }
+
+    title.textContent = options.title || 'Please confirm';
+    message.textContent = options.message || 'Are you sure you want to continue?';
+    confirmBtn.textContent = options.confirmText || 'Confirm';
+    confirmBtn.className = options.confirmClassName || 'inline-flex items-center justify-center rounded-2xl bg-stone-900 px-4 py-3 text-sm font-black text-white transition hover:bg-primary dark:bg-white dark:text-stone-900 dark:hover:bg-primary dark:hover:text-white';
+    cancelBtn.textContent = options.cancelText || 'Cancel';
+    confirmDialogState.onConfirm = typeof options.onConfirm === 'function' ? options.onConfirm : null;
+
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    confirmBtn.focus();
+}
+
+function updateHeaderNotificationCount(count) {
+    const badge = document.getElementById('notification-badge');
+    const safeCount = Number(count || 0);
+    if (!badge) return;
+    badge.textContent = safeCount;
+    badge.classList.toggle('hidden', safeCount <= 0);
+    badge.classList.toggle('flex', safeCount > 0);
+}
+
+let currentVariantId = null;
+let currentWishlistTrigger = null;
+
+function openWishlistModal(variantId, buttonElement = null) {
+    if (!variantId) return;
+    currentVariantId = String(variantId);
+    currentWishlistTrigger = buttonElement;
+    const input = document.getElementById('newWishlistName');
+    if (input) {
+        input.value = '';
+    }
+    const modal = document.getElementById('wishlistModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function closeWishlistModal() {
+    const modal = document.getElementById('wishlistModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    currentVariantId = null;
+    currentWishlistTrigger = null;
+}
+
+function syncWishlistButtonState(buttonElement, inWishlist) {
+    if (!buttonElement) return;
+    const icon = buttonElement.querySelector('.material-symbols-outlined');
+    if (!icon) return;
+    icon.textContent = inWishlist ? 'favorite' : 'favorite_border';
+    buttonElement.classList.toggle('text-accent-terracotta', Boolean(inWishlist));
+}
+
+function addToSpecificWishlist(wishlistId, event = null) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    const variantId = currentVariantId || window.selectedVariantIdForWishlist || window.selectedVariantId || (typeof selectedVariantId !== 'undefined' ? selectedVariantId : null);
+    if (!variantId) {
+        showToast('Select a product option before saving to a collection.', 'warning');
+        return;
+    }
+
+    fetch(`/user/wishlist/toggle/${variantId}/${wishlistId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            syncWishlistButtonState(currentWishlistTrigger, data.in_wishlist);
+            updateWishlistCount();
+            showToast(data.message || 'Collection updated.', 'success');
+            closeWishlistModal();
+        } else {
+            showToast(data.message || 'Unable to update collection.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Wishlist update failed:', error);
+        showToast('Please sign in to save items.', 'error');
+    });
+}
+
+function createNewWishlistAndAdd() {
+    const input = document.getElementById('newWishlistName');
+    const name = (input ? input.value : '').trim();
+    if (!name) {
+        showToast('Enter a name for the new collection.', 'warning');
+        input && input.focus();
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('wishlist_name', name);
+
+    fetch('/user/wishlist/create/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            addToSpecificWishlist(data.wishlist_id);
+        } else {
+            showToast(data.message || 'Unable to create collection.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Wishlist creation failed:', error);
+        showToast('Unable to create collection right now.', 'error');
+    });
+}
+
 // Dark Mode Toggle
 document.addEventListener('DOMContentLoaded', function() {
     const darkModeToggle = document.getElementById('darkModeToggle');
     const html = document.documentElement;
+    const confirmModal = document.getElementById('confirmModal');
+    const confirmBtn = document.getElementById('confirmModalConfirm');
+    const cancelBtn = document.getElementById('confirmModalCancel');
 
     // Check for saved preference
     const savedTheme = localStorage.getItem('theme');
@@ -752,6 +971,33 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
         });
     }
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function() {
+            const handler = confirmDialogState.onConfirm;
+            closeConfirmDialog();
+            if (handler) handler();
+        });
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeConfirmDialog);
+    }
+
+    if (confirmModal) {
+        confirmModal.addEventListener('click', function(event) {
+            if (event.target === confirmModal) {
+                closeConfirmDialog();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeConfirmDialog();
+            closeWishlistModal();
+        }
+    });
 });
 
 // Enhanced addToCart with animations
@@ -882,7 +1128,6 @@ function getCookie(name) {
 // Wishlist Toggle Function
 function toggleWishlist(variantId, buttonElement) {
     if (!variantId) return;
-    if (!confirm("Add to default 'My Wishlist'? Use selector for other wishlists.")) return;
     
     const icon = buttonElement.querySelector('.material-symbols-outlined');
     const isInWishlist = icon.textContent.trim() === 'favorite';
@@ -938,11 +1183,8 @@ function updateWishlistCount() {
         const wishlistCountEl = document.getElementById('header-wishlist-count');
         if (wishlistCountEl) {
             wishlistCountEl.textContent = count;
-            if (count === 0) {
-                wishlistCountEl.style.display = 'none';
-            } else {
-                wishlistCountEl.style.display = 'flex';
-            }
+            wishlistCountEl.classList.toggle('hidden', count === 0);
+            wishlistCountEl.classList.toggle('flex', count > 0);
         }
     })
     .catch(err => console.error('Error updating wishlist count:', err));

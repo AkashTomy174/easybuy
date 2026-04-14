@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html class="light" lang="en">
 <head>
@@ -5,36 +6,61 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>{% block title %}Seller | EasyBuy{% endblock %}</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#4a7c43",
-                        "primary-dark": "#2d5a27",
-                        "primary-light": "#6b9e5f",
-                        "accent-terracotta": "#ff7f50",
-                        "background-dark": "#1a1c19",
-                        "surface-dark": "#232622",
-                    },
-                    fontFamily: { "display": ["Inter", "sans-serif"] },
-                },
-            },
-        }
-    </script>
-    <style type="text/tailwindcss">
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
+    <noscript>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
+    </noscript>
+
+    <link rel="stylesheet" href="{% static 'css/tailwind-storefront.css' %}">
+    <style>
         :root {
             --cream-bg: #fdfaf6;
             --shell-bg: linear-gradient(180deg, #f8f6f3 0%, #fdfaf6 100%);
         }
         .content-bg { background: var(--shell-bg); }
-        .seller-panel { @apply rounded-[28px] border border-stone-200 bg-white/90 shadow-sm backdrop-blur dark:border-stone-800 dark:bg-surface-dark/90; }
-        .seller-nav-link { @apply flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-all; }
-        .seller-nav-active { @apply bg-primary text-white shadow-lg shadow-primary/20; }
-        .seller-nav-idle { @apply text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800; }
+        .seller-panel {
+            border-radius: 28px;
+            border: 1px solid rgb(231 229 228);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(12px);
+        }
+        .dark .seller-panel {
+            border-color: rgb(41 37 36);
+            background: rgba(35, 38, 34, 0.9);
+        }
+        .seller-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-radius: 1rem;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .seller-nav-active {
+            background: #4a7c43;
+            color: #fff;
+            box-shadow: 0 10px 15px -3px rgba(74, 124, 67, 0.2);
+        }
+        .seller-nav-idle {
+            color: rgb(87 83 78);
+        }
+        .seller-nav-idle:hover {
+            background: rgb(245 245 244);
+        }
+        .dark .seller-nav-idle {
+            color: rgb(214 211 209);
+        }
+        .dark .seller-nav-idle:hover {
+            background: rgb(41 37 36);
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -184,10 +210,94 @@
 </div>
 {% endwith %}
 
+<div id="seller-confirm-modal" class="fixed inset-0 z-[120] hidden bg-slate-900/60 p-4 backdrop-blur-sm" aria-hidden="true">
+    <div class="flex min-h-full items-center justify-center">
+        <div class="w-full max-w-md rounded-[28px] border border-stone-200 bg-white p-6 shadow-2xl dark:border-stone-700 dark:bg-surface-dark">
+            <h3 id="seller-confirm-title" class="text-xl font-black text-stone-900 dark:text-white">Please confirm</h3>
+            <p id="seller-confirm-message" class="mt-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">Are you sure you want to continue?</p>
+            <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button id="seller-confirm-cancel" type="button" class="rounded-2xl border border-stone-200 px-4 py-3 text-sm font-black text-stone-700 transition hover:bg-stone-100 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800">Cancel</button>
+                <button id="seller-confirm-action" type="button" class="rounded-2xl bg-primary px-4 py-3 text-sm font-black text-white transition hover:bg-primary-dark">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+    const sellerConfirmState = { onConfirm: null };
+
     function toggleSellerMobileNav() {
         document.getElementById('seller-mobile-nav').classList.toggle('hidden');
     }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        const colors = {
+            success: 'bg-emerald-600',
+            error: 'bg-rose-600',
+            warning: 'bg-amber-500',
+            info: 'bg-slate-900'
+        };
+        toast.className = `${colors[type] || colors.info} fixed bottom-6 right-6 z-[130] rounded-2xl px-5 py-4 text-sm font-semibold text-white shadow-2xl`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3200);
+    }
+
+    function closeConfirmDialog() {
+        const modal = document.getElementById('seller-confirm-modal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        sellerConfirmState.onConfirm = null;
+    }
+
+    function showConfirmDialog(options = {}) {
+        const modal = document.getElementById('seller-confirm-modal');
+        const title = document.getElementById('seller-confirm-title');
+        const message = document.getElementById('seller-confirm-message');
+        const action = document.getElementById('seller-confirm-action');
+        if (!modal || !title || !message || !action) {
+            if (window.confirm(options.message || 'Are you sure?') && typeof options.onConfirm === 'function') {
+                options.onConfirm();
+            }
+            return;
+        }
+
+        title.textContent = options.title || 'Please confirm';
+        message.textContent = options.message || 'Are you sure you want to continue?';
+        action.textContent = options.confirmText || 'Confirm';
+        action.className = options.confirmClassName || 'rounded-2xl bg-primary px-4 py-3 text-sm font-black text-white transition hover:bg-primary-dark';
+        sellerConfirmState.onConfirm = typeof options.onConfirm === 'function' ? options.onConfirm : null;
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        action.focus();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('seller-confirm-modal');
+        const confirmBtn = document.getElementById('seller-confirm-action');
+        const cancelBtn = document.getElementById('seller-confirm-cancel');
+
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function() {
+                const handler = sellerConfirmState.onConfirm;
+                closeConfirmDialog();
+                if (handler) handler();
+            });
+        }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', closeConfirmDialog);
+        }
+        if (modal) {
+            modal.addEventListener('click', function(event) {
+                if (event.target === modal) closeConfirmDialog();
+            });
+        }
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') closeConfirmDialog();
+        });
+    });
 </script>
 {% block extra_js %}{% endblock %}
 </body>

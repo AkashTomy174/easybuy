@@ -26,10 +26,10 @@ from .models import (
     ReturnRequestImage,
     PaymentTransaction,
 )
-from core.models import SubCategory, Category, Address, Notification, Banner
+from core.models import SubCategory, Category, Address, Notification
 import json
 from django.http import Http404
-from django.db.models import Q, Avg
+from django.db.models import Q, Avg, Count
 from django.db import transaction
 from decimal import Decimal
 from django.utils import timezone
@@ -43,12 +43,29 @@ from django.http import HttpResponse
 from decimal import Decimal as DzDecimal
 from core.whatsapp_utils import WhatsAppNotifier
 from core.services import create_notification
+from core.cache_utils import (
+    get_cached_active_banners as _get_cached_active_banners,
+    get_cached_active_categories as _get_cached_active_categories,
+    get_cached_active_subcategories as _get_cached_active_subcategories,
+    get_cached_subcategory_options,
+    get_cached_user_wishlists as _get_user_wishlists,
+    invalidate_user_header_cache,
+)
 from django.views.decorators.csrf import csrf_exempt
 
 
 logger = logging.getLogger(__name__)
 CHECKOUT_PROMO_SESSION_KEY = "checkout_promo_code"
 MONEY_PRECISION = DzDecimal("0.01")
+DEFAULT_ADDRESS_COUNTRY = "India"
+ALLOWED_IMAGE_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+}
+MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024
+MAX_RETURN_IMAGES = 5
 
 
 class RazorpayOrderError(Exception):
@@ -178,6 +195,129 @@ def _extract_razorpay_payment_details(payload):
     return razorpay_order_id, razorpay_payment_id, payment_entity
 
 
+def _get_primary_image_for_variant(variant):
+    images = list(variant.images.all())
+    for image in images:
+        if image.image and image.is_primary:
+            return image
+    for image in images:
+        if image.image:
+            return image
+    return None
+
+
+def _get_wishlist_variant_ids(user, variant_ids):
+    if not getattr(user, "is_authenticated", False) or not variant_ids:
+        return set()
+    return set(
+        WishlistItem.objects.filter(
+            wishlist__user=user, variant_id__in=variant_ids
+        ).values_list("variant_id", flat=True)
+    )
+
+
+def _build_product_data(variants, wishlist_variant_ids=None):
+    wishlist_variant_ids = wishlist_variant_ids or set()
+    return [
+        {
+            "variant": variant,
+            "image": _get_primary_image_for_variant(variant),
+            "in_wishlist": variant.id in wishlist_variant_ids,
+        }
+        for variant in variants
+    ]
+
+
+def _customer_visible_variants_queryset():
+    return ProductVariant.objects.select_related("product", "product__seller").filter(
+        product__is_active=True,
+        product__approval_status="APPROVED",
+        product__seller__status="APPROVED",
+    )
+
+
+def _get_customer_visible_variant_or_404(variant_id):
+    return get_object_or_404(_customer_visible_variants_queryset(), id=variant_id)
+
+
+def _is_variant_customer_visible(variant):
+    product = getattr(variant, "product", None)
+    seller = getattr(product, "seller", None) if product is not None else None
+    return bool(
+        product
+        and seller
+        and product.is_active
+        and product.approval_status == "APPROVED"
+        and seller.status == "APPROVED"
+    )
+
+
+def _get_return_eligibility(order_item):
+    if order_item.status != "DELIVERED":
+        return {
+            "eligible": False,
+            "expired": False,
+            "message": "Item must be delivered to be returned.",
+        }
+
+    if ReturnRequest.objects.filter(order_item=order_item).exists():
+        return {
+            "eligible": False,
+            "expired": False,
+            "message": "Return already requested.",
+        }
+
+    product = order_item.variant.product
+    if not product.is_returnable:
+        return {
+            "eligible": False,
+            "expired": False,
+            "message": "This product is not eligible for return.",
+        }
+
+    ref_date = order_item.delivered_at or order_item.order.ordered_at
+    if not ref_date:
+        return {
+            "eligible": False,
+            "expired": False,
+            "message": "Return details are unavailable for this item.",
+        }
+
+    days_passed = (timezone.now() - ref_date).days
+    if days_passed > product.return_days:
+        return {
+            "eligible": False,
+            "expired": True,
+            "message": "The return window has expired for this item.",
+        }
+
+    return {"eligible": True, "expired": False, "message": ""}
+
+
+def _normalize_address_payload(request):
+    return {
+        "full_name": (request.POST.get("fullname") or "").strip(),
+        "phone_number": (request.POST.get("phone") or "").strip(),
+        "pincode": (request.POST.get("pincode") or "").strip(),
+        "locality": (request.POST.get("locality") or "").strip(),
+        "house_info": (request.POST.get("house_info") or "").strip(),
+        "city": (request.POST.get("city") or "").strip(),
+        "state": (request.POST.get("state") or "").strip(),
+        "country": (request.POST.get("country") or DEFAULT_ADDRESS_COUNTRY).strip(),
+        "address_type": (request.POST.get("address_type") or "").strip(),
+        "is_default": request.POST.get("is_default") == "on",
+    }
+
+
+def _validate_image_file(file_obj, *, label):
+    content_type = (getattr(file_obj, "content_type", "") or "").lower()
+    if content_type and content_type not in ALLOWED_IMAGE_CONTENT_TYPES:
+        return f"{label} must be a JPG, PNG, GIF, or WEBP image."
+    if file_obj.size > MAX_IMAGE_UPLOAD_BYTES:
+        return f"{label} must be smaller than 5MB."
+    return ""
+
+
 # home related diplaying mainly
 def home_view(request):
     if request.user.is_authenticated:
@@ -186,12 +326,8 @@ def home_view(request):
         elif request.user.role == "SELLER":
             return redirect("seller_dashboard")
 
-    categories = Category.objects.filter(is_active=True)
-    active_banners = Banner.objects.filter(
-        is_active=True,
-        start_date__lte=timezone.now(),
-        end_date__gte=timezone.now(),
-    ).order_by("start_date", "-id")
+    categories = _get_cached_active_categories()
+    active_banners = _get_cached_active_banners()
     variants = (
         ProductVariant.objects.filter(
             product__is_active=True,
@@ -202,37 +338,12 @@ def home_view(request):
         .prefetch_related("images")
         .order_by("-id")[:8]
     )
-    wishlist_variant_ids = set()
-    if request.user.is_authenticated:
-        variant_ids = [v.id for v in variants]
-        wishlist_items = WishlistItem.objects.filter(
-            wishlist__user=request.user, variant_id__in=variant_ids
-        ).values_list("variant_id", flat=True)
-        wishlist_variant_ids = set(wishlist_items)
-
-    user_wishlists = []
-    if request.user.is_authenticated:
-        user_wishlists = request.user.wishlists.all()
-
-    product_data = []
-    for variant in variants:
-        primary_image = None
-        for img in variant.images.filter(is_primary=True):
-            if img.image:
-                primary_image = img
-                break
-        if not primary_image:
-            for img in variant.images.all():
-                if img.image:
-                    primary_image = img
-                    break
-        product_data.append(
-            {
-                "variant": variant,
-                "image": primary_image,
-                "in_wishlist": variant.id in wishlist_variant_ids,
-            }
-        )
+    variant_list = list(variants)
+    wishlist_variant_ids = _get_wishlist_variant_ids(
+        request.user, [variant.id for variant in variant_list]
+    )
+    user_wishlists = _get_user_wishlists(request.user)
+    product_data = _build_product_data(variant_list, wishlist_variant_ids)
     return render(
         request,
         "core/home.html",
@@ -246,7 +357,7 @@ def home_view(request):
 
 
 def all_categories(request):
-    categories = Category.objects.filter(is_active=True)
+    categories = _get_cached_active_categories()
     return render(request, "core/all_categories.html", {"categories": categories})
 
 
@@ -270,7 +381,7 @@ def all_products(request):
         "product__seller",
         "product__subcategory",
         "product__subcategory__category",
-    )
+    ).prefetch_related("images")
 
     # Base query for brands - start with all approved products
     brand_query = Product.objects.filter(
@@ -359,48 +470,18 @@ def all_products(request):
         .exclude(brand__exact="")
     )
 
-    categories = Category.objects.filter(is_active=True)
-    subcategories = SubCategory.objects.filter(is_active=True)
-
-    variant_list = list(variants)
-    variant_ids = [v.id for v in variant_list]
-    primary_images = {}
-    for img in ProductImage.objects.filter(variant_id__in=variant_ids, is_primary=True):
-        if img.image:
-            primary_images[img.variant_id] = img
-
-    # Fallback to any image if no primary image
-    for img in ProductImage.objects.filter(variant_id__in=variant_ids).exclude(
-        variant_id__in=primary_images.keys()
-    ):
-        if img.image and img.variant_id not in primary_images:
-            primary_images[img.variant_id] = img
-
-    # Check wishlist status for authenticated users
-    wishlist_variant_ids = set()
-    if request.user.is_authenticated:
-        wishlist_items = WishlistItem.objects.filter(
-            wishlist__user=request.user, variant_id__in=variant_ids
-        ).values_list("variant_id", flat=True)
-        wishlist_variant_ids = set(wishlist_items)
-
-    user_wishlists = []
-    if request.user.is_authenticated:
-        user_wishlists = request.user.wishlists.all()
-
-    product_data = []
-    for variant in variant_list:
-        product_data.append(
-            {
-                "variant": variant,
-                "image": primary_images.get(variant.id),
-                "in_wishlist": variant.id in wishlist_variant_ids,
-            }
-        )
-
-    paginator = Paginator(product_data, 12)
+    paginator = Paginator(variants, 12)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
+    variant_list = list(page_obj.object_list)
+    wishlist_variant_ids = _get_wishlist_variant_ids(
+        request.user, [variant.id for variant in variant_list]
+    )
+    page_obj.object_list = _build_product_data(variant_list, wishlist_variant_ids)
+
+    categories = _get_cached_active_categories()
+    subcategories = _get_cached_active_subcategories()
+    user_wishlists = _get_user_wishlists(request.user)
 
     context = {
         "page_obj": page_obj,
@@ -432,49 +513,15 @@ def new_arrival(request):
         .prefetch_related("images")
         .order_by("-id")
     )
-
-    variant_list = list(variants)
-    variant_ids = [v.id for v in variant_list]
-
-    wishlist_variant_ids = set()
-    if request.user.is_authenticated and variant_ids:
-        wishlist_items = WishlistItem.objects.filter(
-            wishlist__user=request.user, variant_id__in=variant_ids
-        ).values_list("variant_id", flat=True)
-        wishlist_variant_ids = set(wishlist_items)
-
-    user_wishlists = []
-    if request.user.is_authenticated:
-        user_wishlists = request.user.wishlists.all()
-
-    primary_images = {}
-    if variant_ids:
-        for img in ProductImage.objects.filter(
-            variant_id__in=variant_ids, is_primary=True
-        ):
-            if img.image:
-                primary_images[img.variant_id] = img
-
-        missing_ids = [vid for vid in variant_ids if vid not in primary_images]
-        if missing_ids:
-            # Fallback to any image if no primary image
-            for img in ProductImage.objects.filter(variant_id__in=missing_ids):
-                if img.image and img.variant_id not in primary_images:
-                    primary_images[img.variant_id] = img
-
-    product_data = []
-    for variant in variant_list:
-        product_data.append(
-            {
-                "variant": variant,
-                "image": primary_images.get(variant.id),
-                "in_wishlist": variant.id in wishlist_variant_ids,
-            }
-        )
-
-    paginator = Paginator(product_data, 12)
+    paginator = Paginator(variants, 12)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
+    variant_list = list(page_obj.object_list)
+    wishlist_variant_ids = _get_wishlist_variant_ids(
+        request.user, [variant.id for variant in variant_list]
+    )
+    page_obj.object_list = _build_product_data(variant_list, wishlist_variant_ids)
+    user_wishlists = _get_user_wishlists(request.user)
 
     return render(
         request,
@@ -503,39 +550,16 @@ def category_products(request, slug=None, id=None):
         )
         .select_related("product", "product__seller")
         .prefetch_related("images")
+        .order_by("-id")
     )
-
-    wishlist_variant_ids = set()
-    if request.user.is_authenticated:
-        variant_ids = [v.id for v in variants]
-        wishlist_items = WishlistItem.objects.filter(
-            wishlist__user=request.user, variant_id__in=variant_ids
-        ).values_list("variant_id", flat=True)
-        wishlist_variant_ids = set(wishlist_items)
-
-    product_data = []
-    for variant in variants:
-        primary_image = None
-        for img in variant.images.filter(is_primary=True):
-            if img.image:
-                primary_image = img
-                break
-        if not primary_image:
-            for img in variant.images.all():
-                if img.image:
-                    primary_image = img
-                    break
-        product_data.append(
-            {
-                "variant": variant,
-                "image": primary_image,
-                "in_wishlist": variant.id in wishlist_variant_ids,
-            }
-        )
-
-    paginator = Paginator(product_data, 12)
+    paginator = Paginator(variants, 12)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
+    variant_list = list(page_obj.object_list)
+    wishlist_variant_ids = _get_wishlist_variant_ids(
+        request.user, [variant.id for variant in variant_list]
+    )
+    page_obj.object_list = _build_product_data(variant_list, wishlist_variant_ids)
 
     return render(
         request,
@@ -570,39 +594,16 @@ def subcategory_products(request, slug=None, id=None):
         )
         .select_related("product", "product__seller")
         .prefetch_related("images")
+        .order_by("-id")
     )
-
-    wishlist_variant_ids = set()
-    if request.user.is_authenticated:
-        variant_ids = [v.id for v in variants]
-        wishlist_items = WishlistItem.objects.filter(
-            wishlist__user=request.user, variant_id__in=variant_ids
-        ).values_list("variant_id", flat=True)
-        wishlist_variant_ids = set(wishlist_items)
-
-    product_data = []
-    for variant in variants:
-        primary_image = None
-        for img in variant.images.filter(is_primary=True):
-            if img.image:
-                primary_image = img
-                break
-        if not primary_image:
-            for img in variant.images.all():
-                if img.image:
-                    primary_image = img
-                    break
-        product_data.append(
-            {
-                "variant": variant,
-                "image": primary_image,
-                "in_wishlist": variant.id in wishlist_variant_ids,
-            }
-        )
-
-    paginator = Paginator(product_data, 12)
+    paginator = Paginator(variants, 12)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
+    variant_list = list(page_obj.object_list)
+    wishlist_variant_ids = _get_wishlist_variant_ids(
+        request.user, [variant.id for variant in variant_list]
+    )
+    page_obj.object_list = _build_product_data(variant_list, wishlist_variant_ids)
 
     return render(
         request,
@@ -727,10 +728,23 @@ def product_detail(request, slug=None, id=None):
             (variant for variant in product.variants.all() if str(variant.id) == requested_variant_id),
             selected_variant,
         )
+    selected_variant_images = list(selected_variant.images.all()) if selected_variant else []
+    selected_variant_image = None
+    for image in selected_variant_images:
+        if image.image and image.is_primary:
+            selected_variant_image = image
+            break
+    if not selected_variant_image:
+        for image in selected_variant_images:
+            if image.image:
+                selected_variant_image = image
+                break
 
     context = {
         "product": product,
         "selected_variant": selected_variant,
+        "selected_variant_image": selected_variant_image,
+        "selected_variant_image_count": len(selected_variant_images),
         "related_products": related_products,
         "reviews": reviews,
         "avg_rating": round(float(avg_rating), 1),
@@ -738,11 +752,7 @@ def product_detail(request, slug=None, id=None):
         "rating_breakdown": rating_breakdown,
         "existing_review": existing_review,
         "wishlist_variant_ids": list(wishlist_variant_ids),
-        "wishlists": (
-            request.user.wishlists.prefetch_related("items__variant").all()
-            if request.user.is_authenticated
-            else []
-        ),
+        "wishlists": _get_user_wishlists(request.user),
     }
     return render(
         request,
@@ -1034,7 +1044,7 @@ def delete_review(request, review_id):
 def addtocart(request, id):
     if request.method != "POST":
         return JsonResponse({"message": "Invalid request"}, status=400)
-    variant = get_object_or_404(ProductVariant, id=id)
+    variant = _get_customer_visible_variant_or_404(id)
 
     if variant.stock_quantity <= 0:
         return JsonResponse({"message": "Out of stock"}, status=400)
@@ -1108,6 +1118,15 @@ def update_cart_quantity(request, item_id):
     cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
     variant = cart_item.variant
     cart = cart_item.cart
+
+    if not _is_variant_customer_visible(variant):
+        return JsonResponse(
+            {
+                "message": "This product is no longer available",
+                "success": False,
+            },
+            status=400,
+        )
 
     new_quantity = cart_item.quantity + delta
 
@@ -1194,7 +1213,7 @@ def filtering(request):
         "product__seller",
         "product__subcategory",
         "product__subcategory__category",
-    )
+    ).prefetch_related("images")
 
     brand_query = Product.objects.filter(
         is_active=True, approval_status="APPROVED", seller__status="APPROVED"
@@ -1249,42 +1268,15 @@ def filtering(request):
         .exclude(brand__exact="")
     )
 
-    categories = Category.objects.filter(is_active=True)
-    subcategories = SubCategory.objects.filter(is_active=True)
+    categories = _get_cached_active_categories()
+    subcategories = _get_cached_active_subcategories()
 
     variant_list = list(variants)
-    variant_ids = [v.id for v in variant_list]
-    primary_images = {}
-    for img in ProductImage.objects.filter(variant_id__in=variant_ids, is_primary=True):
-        if img.image:
-            primary_images[img.variant_id] = img
-
-    for img in ProductImage.objects.filter(variant_id__in=variant_ids).exclude(
-        variant_id__in=primary_images.keys()
-    ):
-        if img.image and img.variant_id not in primary_images:
-            primary_images[img.variant_id] = img
-
-    wishlist_variant_ids = set()
-    if request.user.is_authenticated:
-        wishlist_items = WishlistItem.objects.filter(
-            wishlist__user=request.user, variant_id__in=variant_ids
-        ).values_list("variant_id", flat=True)
-        wishlist_variant_ids = set(wishlist_items)
-
-    user_wishlists = []
-    if request.user.is_authenticated:
-        user_wishlists = request.user.wishlists.all()
-
-    product_data = []
-    for variant in variant_list:
-        product_data.append(
-            {
-                "variant": variant,
-                "image": primary_images.get(variant.id),
-                "in_wishlist": variant.id in wishlist_variant_ids,
-            }
-        )
+    wishlist_variant_ids = _get_wishlist_variant_ids(
+        request.user, [variant.id for variant in variant_list]
+    )
+    user_wishlists = _get_user_wishlists(request.user)
+    product_data = _build_product_data(variant_list, wishlist_variant_ids)
 
     context = {
         "products": product_data,
@@ -1314,51 +1306,26 @@ def best_seller(request):
         .annotate(total_sold=Sum("orderitem__quantity"))
         .filter(total_sold__gt=0)
         .select_related("product", "product__seller")
+        .prefetch_related("images")
         .order_by("-total_sold")
     )
-
-    variant_list = list(variants)
-    variant_ids = [v.id for v in variant_list]
-
-    primary_images = {}
-    if variant_ids:
-        for img in ProductImage.objects.filter(
-            variant_id__in=variant_ids, is_primary=True
-        ):
-            if img.image:
-                primary_images[img.variant_id] = img
-
-        missing_ids = [vid for vid in variant_ids if vid not in primary_images]
-        if missing_ids:
-            for img in ProductImage.objects.filter(variant_id__in=missing_ids):
-                if img.image and img.variant_id not in primary_images:
-                    primary_images[img.variant_id] = img
-
-    wishlist_variant_ids = set()
-    if request.user.is_authenticated and variant_ids:
-        wishlist_items = WishlistItem.objects.filter(
-            wishlist__user=request.user, variant_id__in=variant_ids
-        ).values_list("variant_id", flat=True)
-        wishlist_variant_ids = set(wishlist_items)
-
-    user_wishlists = []
-    if request.user.is_authenticated:
-        user_wishlists = request.user.wishlists.all()
-
-    product_data = []
-    for variant in variant_list:
-        product_data.append(
-            {
-                "variant": variant,
-                "image": primary_images.get(variant.id),
-                "in_wishlist": variant.id in wishlist_variant_ids,
-                "total_sold": variant.total_sold,
-            }
-        )
-
-    paginator = Paginator(product_data, 12)
+    paginator = Paginator(variants, 12)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
+    variant_list = list(page_obj.object_list)
+    wishlist_variant_ids = _get_wishlist_variant_ids(
+        request.user, [variant.id for variant in variant_list]
+    )
+    page_obj.object_list = [
+        {
+            "variant": variant,
+            "image": _get_primary_image_for_variant(variant),
+            "in_wishlist": variant.id in wishlist_variant_ids,
+            "total_sold": variant.total_sold,
+        }
+        for variant in variant_list
+    ]
+    user_wishlists = _get_user_wishlists(request.user)
     return render(
         request,
         "user/best_sellers.html",
@@ -1404,20 +1371,7 @@ def get_subcategories_ajax(request):
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request method"}, status=400)
     category = request.GET.get("category")
-    if category:
-
-        subcategories = (
-            SubCategory.objects.filter(category__slug=category, is_active=True)
-            .values("slug", "name")
-            .order_by("name")
-        )
-    else:
-
-        subcategories = (
-            SubCategory.objects.filter(is_active=True)
-            .values("slug", "name")
-            .order_by("name")
-        )
+    subcategories = get_cached_subcategory_options(category)
 
     return JsonResponse(
         {"subcategories": list(subcategories), "count": len(subcategories)}
@@ -1506,23 +1460,9 @@ def display_order(request):
             item.shipment_display = None
 
         # Return eligibility check
-        item.can_return = False
-        item.return_expired = False
-        if (
-            item.status == "DELIVERED"
-            and not ReturnRequest.objects.filter(order_item=item).exists()
-        ):
-            # Check return window (30 days)
-            ref_date = item.delivered_at or item.order.ordered_at
-            if ref_date:
-                days_passed = (timezone.now() - ref_date).days
-                # Check if product is returnable based on product settings
-                product = item.variant.product
-                if product.is_returnable:
-                    if days_passed <= product.return_days:
-                        item.can_return = True
-                    else:
-                        item.return_expired = True
+        eligibility = _get_return_eligibility(item)
+        item.can_return = eligibility["eligible"]
+        item.return_expired = eligibility["expired"]
 
     paginator = Paginator(order_items, 10)
     page_number = request.GET.get("page")
@@ -1583,26 +1523,33 @@ def request_return(request, item_id):
 
     item = get_object_or_404(OrderItem, id=item_id, order__user=request.user)
 
-    if item.status != "DELIVERED":
-        messages.error(request, "Item must be delivered to be returned.")
+    eligibility = _get_return_eligibility(item)
+    if not eligibility["eligible"]:
+        messages.error(request, eligibility["message"])
         return redirect("user_orders")
 
-    # Check return request existence
-    if ReturnRequest.objects.filter(order_item=item).exists():
-        messages.error(request, "Return already requested.")
-        return redirect("user_orders")
-
-    reason = request.POST.get("reason")
+    reason = (request.POST.get("reason") or "").strip()
     if not reason:
         messages.error(request, "Return reason is required.")
         return redirect("user_orders")
+
+    images = request.FILES.getlist("images")
+    if len(images) > MAX_RETURN_IMAGES:
+        messages.error(request, f"You can upload at most {MAX_RETURN_IMAGES} images.")
+        return redirect("user_orders")
+
+    for image in images:
+        validation_error = _validate_image_file(image, label="Return image")
+        if validation_error:
+            messages.error(request, validation_error)
+            return redirect("user_orders")
 
     with transaction.atomic():
         return_req = ReturnRequest.objects.create(
             order_item=item, reason=reason, status="PENDING"
         )
 
-        for image in request.FILES.getlist("images"):
+        for image in images:
             ReturnRequestImage.objects.create(return_request=return_req, image=image)
 
         item.status = "RETURN_REQUESTED"
@@ -1621,14 +1568,23 @@ def profile_settings(request):
     default_address = addresses.filter(is_default=True).first()
 
     if request.method == "POST":
+        profile_image = request.FILES.get("profile_image")
+        if profile_image:
+            validation_error = _validate_image_file(
+                profile_image, label="Profile image"
+            )
+            if validation_error:
+                messages.error(request, validation_error)
+                return redirect("profile_settings")
+
         user.first_name = request.POST.get("first_name")
         user.last_name = request.POST.get("last_name")
         user.email = request.POST.get("email")
         user.phone_number = request.POST.get("phone_number")
         user.dob = request.POST.get("dob") if request.POST.get("dob") else None
         user.gender = request.POST.get("gender")
-        if request.FILES.get("profile_image"):
-            user.profile_image = request.FILES.get("profile_image")
+        if profile_image:
+            user.profile_image = profile_image
         user.save()
         messages.success(request, "Profile updated successfully!")
         return redirect("profile_settings")
@@ -1649,61 +1605,79 @@ def manage_addresses(request):
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def user_address(request):
-    if request.method == "POST":
-        full_name = request.POST.get("fullname")
-        phone = request.POST.get("phone")
-        pincode = request.POST.get("pincode")
-        locality = request.POST.get("locality")
-        house = request.POST.get("house_info")
-        city = request.POST.get("city")
-        state = request.POST.get("state")
-        addr_type = request.POST.get("address_type")
-        is_default = request.POST.get("is_default") == "on"
-        if is_default:
+    if request.method != "POST":
+        return redirect("manage_addresses")
+
+    payload = _normalize_address_payload(request)
+    required_fields = (
+        "full_name",
+        "phone_number",
+        "pincode",
+        "locality",
+        "house_info",
+        "city",
+        "state",
+        "country",
+        "address_type",
+    )
+    if any(not payload[field] for field in required_fields):
+        messages.error(request, "All address fields are required.")
+        return redirect("manage_addresses")
+
+    with transaction.atomic():
+        if payload["is_default"]:
             Address.objects.filter(user=request.user).update(is_default=False)
         Address.objects.create(
             user=request.user,
-            full_name=full_name,
-            phone_number=phone,
-            pincode=pincode,
-            locality=locality,
-            house_info=house,
-            city=city,
-            state=state,
-            address_type=addr_type,
-            is_default=is_default,
+            **payload,
         )
-        return redirect("manage_addresses")
+    messages.success(request, "Address added successfully.")
+    return redirect("manage_addresses")
 
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def edit_address(request, id):
-    address = Address.objects.get(id=id, user=request.user)
-    if request.method == "POST":
-        address.full_name = request.POST.get("fullname")
-        address.phone_number = request.POST.get("phone")
-        address.house_info = request.POST.get("house_info")
-        address.locality = request.POST.get("locality")
-        address.city = request.POST.get("city")
-        address.state = request.POST.get("state")
-        address.pincode = request.POST.get("pincode")
-        address.address_type = request.POST.get("address_type")
-        is_default = request.POST.get("is_default") == "on"
-        if is_default:
+    if request.method != "POST":
+        return redirect("manage_addresses")
+
+    address = get_object_or_404(Address, id=id, user=request.user)
+    payload = _normalize_address_payload(request)
+    required_fields = (
+        "full_name",
+        "phone_number",
+        "pincode",
+        "locality",
+        "house_info",
+        "city",
+        "state",
+        "country",
+        "address_type",
+    )
+    if any(not payload[field] for field in required_fields):
+        messages.error(request, "All address fields are required.")
+        return redirect("manage_addresses")
+
+    with transaction.atomic():
+        if payload["is_default"]:
             Address.objects.filter(user=request.user).update(is_default=False)
-            address.is_default = True
-        else:
-            address.is_default = False
+        for field, value in payload.items():
+            setattr(address, field, value)
         address.save()
+    messages.success(request, "Address updated successfully.")
     return redirect("manage_addresses")
 
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def delete_address(request, id):
-    address = Address.objects.get(id=id, user=request.user)
+    if request.method != "POST":
+        messages.error(request, "Invalid address removal request.")
+        return redirect("manage_addresses")
+
+    address = get_object_or_404(Address, id=id, user=request.user)
     address.delete()
+    messages.success(request, "Address removed successfully.")
     return redirect("manage_addresses")
 
 
@@ -1713,7 +1687,7 @@ def delete_address(request, id):
 def toggle_wishlist(request, variant_id, wishlist_id=None):
     if request.method != "POST":
         return JsonResponse({"message": "Invalid request"}, status=400)
-    variant = get_object_or_404(ProductVariant, id=variant_id)
+    variant = _get_customer_visible_variant_or_404(variant_id)
     user = request.user
 
     if wishlist_id:
@@ -1828,6 +1802,7 @@ def manage_wishlists(request):
     user = request.user
     wishlists = (
         Wishlist.objects.filter(user=user)
+        .annotate(item_count=Count("items"))
         .prefetch_related("items__variant__images")
         .order_by("-created_at")
     )
@@ -1918,6 +1893,15 @@ def move_to_cart(request, item_id):
     )
 
     variant = wishlist_item.variant
+
+    if not _is_variant_customer_visible(variant):
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "This product is no longer available",
+            },
+            status=400,
+        )
 
     if variant.stock_quantity <= 0:
         return JsonResponse({"success": False, "message": "Product is out of stock"})
@@ -2077,10 +2061,14 @@ def _build_checkout_summary(
     line_items = []
 
     if buy_now_variant_id:
-        variant = get_object_or_404(
-            ProductVariant.objects.select_related("product__subcategory__category"),
-            id=buy_now_variant_id,
+        variant = (
+            _customer_visible_variants_queryset()
+            .select_related("product__subcategory__category")
+            .filter(id=buy_now_variant_id)
+            .first()
         )
+        if variant is None:
+            raise ValueError("This product is no longer available")
         if variant.stock_quantity < quantity:
             raise ValueError("Insufficient stock")
         line_total = _money(variant.selling_price * quantity)
@@ -2102,6 +2090,10 @@ def _build_checkout_summary(
         if not cart or not cart.items.exists():
             raise ValueError("Your cart is empty")
         for item in cart.items.all():
+            if not _is_variant_customer_visible(item.variant):
+                raise ValueError(
+                    f"{item.variant.product.name} is no longer available"
+                )
             if item.variant.stock_quantity < item.quantity:
                 raise ValueError(f"Insufficient stock for {item.variant.product.name}")
             line_items.append(
@@ -2310,14 +2302,6 @@ def create_razorpay_order(request):
         return JsonResponse({"error": "Invalid quantity"}, status=400)
 
     try:
-        if buy_now_variant_id:
-            variant = get_object_or_404(ProductVariant, id=buy_now_variant_id)
-        else:
-            cart = Cart.objects.filter(user=user).first()
-            if not cart or not cart.items.exists():
-                logger.warning(f"Empty cart for user {user.id}")
-                return JsonResponse({"error": "Cart is empty"}, status=400)
-
         summary = _build_checkout_summary(
             request,
             buy_now_variant_id=buy_now_variant_id,
@@ -2327,6 +2311,8 @@ def create_razorpay_order(request):
         if promo_code and summary["promo_error"]:
             return JsonResponse({"error": summary["promo_error"]}, status=400)
 
+        cart = summary["cart"]
+        variant = summary["variant"]
         grand_total = summary["grand_total"]
         applied_promo_code = summary["promo_code"]
         discount_amount = summary["discount_amount"]
@@ -2458,6 +2444,8 @@ def create_razorpay_order(request):
 
     except RazorpayOrderError as e:
         return JsonResponse(e.payload, status=e.status_code)
+    except ValueError as e:
+        return JsonResponse({"error": str(e)}, status=400)
     except Exception as e:
         logger.error(f"Error in create_razorpay_order: {str(e)}", exc_info=True)
         return JsonResponse(
@@ -2750,7 +2738,7 @@ def process_cod_order(request):
 
 @login_required
 def buy_now(request, variant_id):
-    variant = get_object_or_404(ProductVariant, id=variant_id)
+    variant = _get_customer_visible_variant_or_404(variant_id)
     if variant.stock_quantity <= 0:
         messages.error(request, "Out of stock")
         return redirect("product_detail_user", slug=variant.product.slug)
@@ -2898,6 +2886,7 @@ def mark_all_notifications_read(request):
         Notification.objects.filter(user=request.user, is_read=False).update(
             is_read=True
         )
+        invalidate_user_header_cache(request.user.id)
         messages.success(request, "All notifications marked as read")
     return redirect("all_notifications")
 

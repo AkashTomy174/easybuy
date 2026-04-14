@@ -12,12 +12,12 @@
                     <div class="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md p-6 rounded-3xl border border-stone-200 dark:border-stone-700 shadow-sm">
                         <h2 class="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 mb-4">My Collections</h2>
                         <nav class="space-y-1">
-                            {% for wl in user.wishlists.all %}
+                            {% for wl in user_wishlists %}
                             <a href="{% url 'wishlist' %}?wishlist_id={{ wl.id }}"
                                class="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all
                                {% if wl.id == wishlist.id %} bg-primary text-white shadow-lg shadow-primary/20 {% else %} text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 {% endif %}">
                                 <span class="truncate">{{ wl.wishlist_name }}</span>
-                                <span class="text-[10px] opacity-60">({{ wl.items.count }})</span>
+                                <span class="text-[10px] opacity-60">({{ wl.item_count }})</span>
                             </a>
                             {% endfor %}
                         </nav>
@@ -140,32 +140,38 @@
 
 <script>
 function removeFromWishlist(itemId) {
-    if (!confirm('Remove this item from your wishlist?')) return;
+    showConfirmDialog({
+        title: 'Remove saved item?',
+        message: 'This item will be removed from the current wishlist collection.',
+        confirmText: 'Remove item',
+        confirmClassName: 'inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white transition hover:bg-red-700',
+        onConfirm: () => {
+            const csrftoken = getCookie("csrftoken");
 
-    const csrftoken = getCookie("csrftoken");
-
-    fetch(`/user/wishlist/remove/${itemId}/`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrftoken
-        },
-        body: JSON.stringify({}) // required for Django to see it as POST
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.message, 'success');
-            const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
-            if (itemElement) {
-                itemElement.remove();
-                if (!document.querySelector('.wishlist-item')) location.reload();
-            }
-        } else {
-            showToast(data.message || "Failed to remove item", 'error');
+            fetch(`/user/wishlist/remove/${itemId}/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrftoken
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
+                    if (itemElement) {
+                        itemElement.remove();
+                        if (!document.querySelector('.wishlist-item')) location.reload();
+                    }
+                } else {
+                    showToast(data.message || "Failed to remove item", 'error');
+                }
+            })
+            .catch(() => showToast('An error occurred', 'error'));
         }
-    })
-    .catch(() => showToast('An error occurred', 'error'));
+    });
 }
 function moveToCart(itemId) {
     const csrftoken = getCookie("csrftoken");

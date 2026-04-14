@@ -132,51 +132,38 @@ function markAsRead(notificationId) {
     .then(data => {
         if (data.success) {
             row.classList.remove('bg-blue-50/30', 'dark:bg-blue-900/10');
-            row.querySelector('button[title="Mark as read"]').remove();
+            const markButton = row.querySelector('button[title="Mark as read"]');
+            if (markButton) markButton.remove();
 
             // Update header badge
-            const badge = document.getElementById('notification-badge');
-            if (badge) {
-                if (data.unread_count > 0) {
-                    badge.textContent = data.unread_count;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.textContent = 0;
-                    badge.classList.add('hidden');
-                }
-            }
+            if (typeof updateHeaderNotificationCount === 'function') updateHeaderNotificationCount(data.unread_count);
         }
     });
 }
 
 function deleteNotification(notificationId) {
-    if(!confirm('Delete this notification?')) return;
-    
     const row = document.getElementById('notification-' + notificationId);
-    
-    fetch(`/user/notifications/delete/${notificationId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            row.remove();
-            const badge = document.getElementById('notification-badge');
-            if (badge) {
-                if (data.unread_count > 0) {
-                    badge.textContent = data.unread_count;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.textContent = 0;
-                    badge.classList.add('hidden');
+    showConfirmDialog({
+        title: 'Delete notification?',
+        message: 'This will remove the notification from your inbox.',
+        confirmText: 'Delete',
+        confirmClassName: 'inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white transition hover:bg-red-700',
+        onConfirm: () => {
+            fetch(`/user/notifications/delete/${notificationId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
-            }
-            // If list empty on page, reload to show empty state
-            if (document.querySelectorAll('[id^="notification-"]').length === 0) location.reload();
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    row.remove();
+                    if (typeof updateHeaderNotificationCount === 'function') updateHeaderNotificationCount(data.unread_count);
+                    if (document.querySelectorAll('[id^="notification-"]').length === 0) location.reload();
+                }
+            });
         }
     });
 }

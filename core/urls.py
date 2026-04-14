@@ -43,5 +43,6 @@ urlpatterns = [
     path("contact/", views.contact_view, name="contact"),
     path("returns/", views.returns_view, name="returns"),
     path("track-order/", views.track_order_view, name="track_order"),
+    path("discover/", views.discover_view, name="discover"),
 ]
 

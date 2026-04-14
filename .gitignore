@@ -37,6 +37,7 @@ db.sqlite3-journal
 # IDE
 .vscode/
 .idea/
+node_modules/
 *.swp
 *.swo
 *~

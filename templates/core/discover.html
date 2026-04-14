@@ -1,0 +1,257 @@
+{% extends 'core/core_base.html' %}
+{% block title %}Discover | EasyBuy{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+<link rel="preload" as="image" href="https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=1200&auto=format&fit=crop">
+<style>
+/* Custom animations & utilities for premium aesthetic */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+    100% { transform: translateY(0px); }
+}
+
+@keyframes pulse-slow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.03); }
+}
+
+@keyframes text-shine {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+    animation: pulse-slow 8s ease-in-out infinite;
+}
+
+.bg-hero-gradient {
+    background: linear-gradient(135deg, #1f2937 0%, #030712 100%);
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.dark .glass-card {
+    background: rgba(17, 24, 39, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.text-gradient {
+    background: linear-gradient(to right, #ffffff, #d1d5db, #9ca3af);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.accent-gradient {
+    background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+}
+
+.animate-fade-in {
+    opacity: 0;
+    animation: fadeIn 1s forwards ease-in-out;
+}
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+
+/* Delay classes */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+
+/* Grid overlay */
+.grid-overlay {
+    background-size: 40px 40px;
+    background-image: 
+        linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Main Layout wrapper for seamless Dark Mode transition -->
+<div class="bg-gray-50 dark:bg-[#0a0a0a] min-h-screen text-gray-900 dark:text-gray-100 transition-colors duration-500 font-sans tracking-tight">
+
+    <!-- Hero Section -->
+    <section class="relative w-full h-[85vh] flex items-center justify-center overflow-hidden bg-hero-gradient">
+        <!-- Abstract Background Orbs -->
+        <div class="absolute top-1/4 -left-20 w-96 h-96 bg-[#FF6B6B] rounded-full mix-blend-screen filter blur-[100px] opacity-40 animate-pulse-slow"></div>
+        <div class="absolute bottom-1/4 -right-20 w-[500px] h-[500px] bg-[#4338CA] rounded-full mix-blend-screen filter blur-[120px] opacity-40 animate-pulse-slow" style="animation-delay: 2s;"></div>
+        
+        <!-- Grid pattern overlay -->
+        <div class="absolute inset-0 grid-overlay"></div>
+
+        <div class="relative z-10 container mx-auto px-6 lg:px-12 flex flex-col-reverse lg:flex-row items-center justify-between gap-12">
+            
+            <!-- Hero Text Content (Glass Card) -->
+            <div class="w-full lg:w-1/2">
+                <div class="glass-card rounded-[2.5rem] p-8 lg:p-12 animate-float">
+                    <span class="inline-block py-1 px-3 rounded-full bg-white/10 text-[#FF8E53] text-sm font-bold tracking-widest uppercase mb-6 border border-white/10 shadow-[0_0_15px_rgba(255,142,83,0.3)]">
+                        Summer Collection '26
+                    </span>
+                    <h1 class="text-5xl lg:text-7xl font-black mb-6 leading-[1.05] text-gradient pb-2">
+                        Redefine Your Tech Lifestyle.
+                    </h1>
+                    <p class="text-lg lg:text-xl text-gray-300 mb-10 font-medium leading-relaxed">
+                        Experience the pinnacle of electronic craftsmanship. Curated gear for audio lovers, creators, and visionaries.
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-5">
+                        <a href="{% url 'home' %}" class="relative overflow-hidden rounded-2xl group flex items-center justify-center">
+                            <div class="absolute inset-0 w-full h-full accent-gradient transition-all duration-300 group-hover:scale-110"></div>
+                            <span class="relative z-10 px-8 py-4 text-white font-bold text-lg inline-flex items-center gap-2">
+                                Shop Collection
+                                <svg aria-hidden="true" class="h-5 w-5 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M5 12h14"></path>
+                                    <path d="m13 6 6 6-6 6"></path>
+                                </svg>
+                            </span>
+                        </a>
+                        <a href="#curated" class="rounded-2xl border border-white/20 bg-white/5 hover:bg-white/10 transition-colors duration-300 px-8 py-4 text-white font-bold text-lg text-center backdrop-blur-md">
+                            View Lookbook
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hero Image Showcase -->
+            <div class="w-full lg:w-1/2 flex justify-center lg:justify-end">
+                <div class="relative w-[300px] h-[400px] sm:w-[400px] sm:h-[500px] lg:w-[450px] lg:h-[600px] perspective-1000">
+                    <!-- High-end glowing border effect -->
+                    <div class="absolute inset-0 accent-gradient rounded-[3rem] blur-[3px] rotate-3 opacity-70 transition-transform duration-500 hover:rotate-6"></div>
+                    <img src="https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=1200&auto=format&fit=crop"
+                         alt="Premium Headphones Showcase" 
+                         width="900"
+                         height="1200"
+                         fetchpriority="high"
+                         loading="eager"
+                         decoding="async"
+                         class="absolute inset-0 w-full h-full object-cover rounded-[3rem] shadow-2xl z-10 transition-transform duration-700 hover:scale-[1.02]" />
+                    
+                    <!-- Floating Tech Spec Badges -->
+                    <div class="absolute -left-8 top-20 z-20 glass-card px-4 py-3 rounded-2xl flex items-center gap-3 animate-float" style="animation-delay: 1s;">
+                        <svg aria-hidden="true" class="h-5 w-5 text-[#FF8E53]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                            <path d="M5 14v-4"></path>
+                            <path d="M9 18V6"></path>
+                            <path d="M13 15V9"></path>
+                            <path d="M17 20V4"></path>
+                            <path d="M21 13v-2"></path>
+                        </svg>
+                        <span class="text-white font-bold text-sm">Spatial Audio</span>
+                    </div>
+                    <div class="absolute -right-10 bottom-32 z-20 glass-card px-4 py-3 rounded-2xl flex items-center gap-3 animate-float" style="animation-duration: 7s;">
+                        <svg aria-hidden="true" class="h-5 w-5 text-[#FF8E53]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2.5" y="7" width="17" height="10" rx="2"></rect>
+                            <path d="M19.5 10H22v4h-2.5"></path>
+                            <path d="m10 9-2 4h3l-1 4 6-8h-3l1-3Z"></path>
+                        </svg>
+                        <span class="text-white font-bold text-sm">40hr Battery</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scroll indicator -->
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center animate-fade-in delay-400">
+            <span class="text-white/50 text-xs font-bold tracking-widest uppercase mb-2">Scroll</span>
+            <div class="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center p-1">
+                <div class="w-1.5 h-1.5 bg-white rounded-full animate-bounce mt-1"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Curated Categories Section (Visual Heavy) -->
+    <section id="curated" class="py-32 px-6 lg:px-12 bg-white dark:bg-[#0a0a0a] relative">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-20 animate-fade-in">
+                <h2 class="text-4xl lg:text-6xl font-black mb-4 dark:text-white">Curated For You.</h2>
+                <p class="text-gray-500 dark:text-gray-400 text-lg max-w-2xl mx-auto">Skip the endless scrolling. We've handpicked the absolute best in design, performance, and reliability.</p>
+            </div>
+
+            <!-- Bento Box Grid Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[300px] lg:auto-rows-[400px]">
+                
+                <!-- Item 1 (Large) -->
+                <a href="#" class="md:col-span-2 group relative rounded-[2rem] overflow-hidden shadow-xl shadow-gray-200 dark:shadow-none block">
+                    <img src="https://images.unsplash.com/photo-1606813907291-d86efa9b94db?q=80&w=1200&auto=format&fit=crop" class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Gaming Setup" loading="lazy" decoding="async" width="1200" height="800">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+                    <div class="absolute bottom-0 left-0 p-8 w-full">
+                        <span class="inline-block py-1 px-3 rounded-xl bg-purple-500/20 text-purple-300 text-xs font-bold uppercase tracking-wider mb-3 backdrop-blur-md border border-purple-500/30">The Creator Studio</span>
+                        <h3 class="text-3xl font-bold text-white mb-2 transform transition-transform duration-500 group-hover:-translate-y-2">Next-Gen Consoles & PCs</h3>
+                        <p class="text-gray-300 text-sm max-w-md opacity-0 transform translate-y-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-y-0">Power through rendering tasks or dominate the leaderboard.</p>
+                    </div>
+                </a>
+
+                <!-- Item 2 -->
+                <a href="#" class="group relative rounded-[2rem] overflow-hidden shadow-xl shadow-gray-200 dark:shadow-none block">
+                    <img src="https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?q=80&w=900&auto=format&fit=crop" class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Tablet Details" loading="lazy" decoding="async" width="900" height="1200">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+                    <div class="absolute bottom-0 left-0 p-8 w-full">
+                        <span class="inline-block py-1 px-3 rounded-xl bg-blue-500/20 text-blue-300 text-xs font-bold uppercase tracking-wider mb-3 backdrop-blur-md border border-blue-500/30">On The Go</span>
+                        <h3 class="text-2xl font-bold text-white mb-2 transform transition-transform duration-500 group-hover:-translate-y-2">Pro Tablets</h3>
+                    </div>
+                </a>
+
+                <!-- Item 3 -->
+                <a href="#" class="group relative rounded-[2rem] overflow-hidden shadow-xl shadow-gray-200 dark:shadow-none block">
+                    <img src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=900&auto=format&fit=crop" class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Smartwatches" loading="lazy" decoding="async" width="900" height="1200">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+                    <div class="absolute bottom-0 left-0 p-8 w-full">
+                        <span class="inline-block py-1 px-3 rounded-xl bg-pink-500/20 text-pink-300 text-xs font-bold uppercase tracking-wider mb-3 backdrop-blur-md border border-pink-500/30">Wearables</span>
+                        <h3 class="text-2xl font-bold text-white mb-2 transform transition-transform duration-500 group-hover:-translate-y-2">Fitness Tracking</h3>
+                    </div>
+                </a>
+
+                <!-- Item 4 (Large Horizontal) -->
+                <a href="#" class="md:col-span-2 group relative rounded-[2rem] overflow-hidden shadow-xl shadow-gray-200 dark:shadow-none block">
+                    <img src="https://images.unsplash.com/photo-1628155930542-3c7a64e2c848?q=80&w=1200&auto=format&fit=crop" class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Photography Camera" loading="lazy" decoding="async" width="1200" height="800">
+                    <div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent"></div>
+                    <div class="absolute top-1/2 -translate-y-1/2 left-8 md:left-12 max-w-md">
+                        <span class="inline-block py-1 px-3 rounded-xl bg-yellow-500/20 text-yellow-300 text-xs font-bold uppercase tracking-wider mb-4 backdrop-blur-md border border-yellow-500/30">Capture Reality</span>
+                        <h3 class="text-4xl font-bold text-white mb-4">Mirrorless Masters</h3>
+                        <p class="text-gray-300 mb-6 font-medium">Elevate your photography with sensors that see more than the human eye.</p>
+                        <span class="inline-flex items-center gap-2 text-white font-bold group-hover:text-yellow-400 transition-colors">
+                            Explore Cameras
+                            <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 12h14"></path>
+                                <path d="m13 6 6 6-6 6"></path>
+                            </svg>
+                        </span>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Call To Action -->
+    <section class="py-24 relative overflow-hidden">
+        <div class="absolute inset-0 accent-gradient opacity-10 dark:opacity-20"></div>
+        <div class="max-w-4xl mx-auto px-6 text-center relative z-10">
+            <h2 class="text-4xl md:text-5xl font-black mb-8 dark:text-white">Ready for an Upgrade?</h2>
+            <p class="text-xl text-gray-600 dark:text-gray-300 mb-12">Join 100,000+ tech enthusiasts who trust EasyBuy for their premium electronic needs.</p>
+            
+            <form onsubmit="event.preventDefault(); alert('Subscribed to VIP Newsletter!');" class="flex flex-col sm:flex-row gap-4 justify-center max-w-xl mx-auto">
+                <input type="email" placeholder="Enter your email" required class="px-6 py-4 rounded-2xl w-full bg-white dark:bg-stone-800 border-2 border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white focus:outline-none focus:border-[#FF6B6B] focus:ring-4 focus:ring-[#FF6B6B]/20 transition-all font-medium text-lg">
+                <button type="submit" class="px-10 py-4 rounded-2xl text-white font-bold text-lg accent-gradient hover:shadow-[0_0_20px_rgba(255,107,107,0.5)] transition-shadow whitespace-nowrap">
+                    Get VIP Access
+                </button>
+            </form>
+        </div>
+    </section>
+
+</div>
+{% endblock %}
