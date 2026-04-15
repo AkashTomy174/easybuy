@@ -13,7 +13,7 @@
         </div>
         <div class="relative flex h-full w-full flex-col justify-center px-4 sm:px-8 lg:px-16 xl:px-24">
             <span class="mb-4 text-xs font-bold uppercase tracking-widest text-accent-terracotta animate-fade-in-up">Featured Banner</span>
-            <h1 class="max-w-4xl text-4xl font-black text-white md:text-6xl lg:text-7xl leading-[1.05] animate-fade-in-up delay-100">{{ banner.title }}</h1>
+            <h1 class="hero-lcp-heading max-w-4xl text-4xl font-black text-white md:text-6xl lg:text-7xl leading-[1.05]">{{ banner.title }}</h1>
             {% if banner.description %}
             <p class="mt-6 max-w-2xl text-base text-stone-200 leading-relaxed md:text-lg animate-fade-in-up delay-200">{{ banner.description }}</p>
             {% endif %}
@@ -45,7 +45,7 @@
     </div>
     <div class="relative mx-auto flex h-full max-w-7xl flex-col justify-center px-4 sm:px-12">
         <span class="mb-4 text-xs font-bold uppercase tracking-widest text-accent-terracotta animate-fade-in-up">Biggest Sale of the Season</span>
-        <h1 class="max-w-2xl text-5xl font-black text-white md:text-7xl leading-[1.1] animate-fade-in-up delay-100">Super Savings on Premium Tech</h1>
+        <h1 class="hero-lcp-heading max-w-2xl text-5xl font-black text-white md:text-7xl leading-[1.1]">Super Savings on Premium Tech</h1>
         <p class="mt-6 max-w-lg text-lg text-stone-200 leading-relaxed animate-fade-in-up delay-200">Grab the best deals on top electronics. Limited time offers you don't want to miss!</p>
         <div class="mt-10 flex flex-wrap gap-4 animate-fade-in-up delay-300">
             <a href="{% url 'all_products' %}">
