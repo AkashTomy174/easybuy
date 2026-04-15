@@ -105,7 +105,13 @@ class ProductVariant(models.Model):
 
         option_values = []
         for bridge in bridges:
-            value = getattr(getattr(bridge, "option", None), "value", "")
+            option = None
+            if getattr(bridge, "option_id", None):
+                try:
+                    option = bridge.option
+                except AttributeOption.DoesNotExist:
+                    option = None
+            value = getattr(option, "value", "")
             value = value.strip() if isinstance(value, str) else value
             if value:
                 option_values.append(value)
