@@ -4,12 +4,13 @@ from django.utils.text import slugify
 from django.core.paginator import Paginator
 from django.core.mail import send_mail
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.core.cache import cache
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from core.decorators import role_required
 from core.forms import BannerForm
-from core.models import Banner, Category, User,SubCategory
+from core.models import Banner, Category, User, SubCategory, generate_unique_category_slug
 from seller.models import SellerProfile, Product, ProductVariant, ProductImage
 from easybuy_admin.models import Coupon
 from user.models import OrderItem
@@ -501,20 +502,45 @@ def detailed_view(request, id):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def add_category(request):
+    form_values = {
+        "name": (request.POST.get("name") or "").strip(),
+        "des": (request.POST.get("des") or "").strip(),
+    }
+
     if request.method == "POST":
-        name = request.POST.get("name")
-        slug = slugify(name)
+        name = form_values["name"]
         image = request.FILES.get("image_url")
-        description = request.POST.get("des")
-        Category.objects.create(
-            name=name,
-            slug=slug,
-            image_url=image,
-            description=description,
-        )
-        messages.success(request, f"Category '{name}' added successfully!")
-        return redirect("admin_all_categories")
-    return render(request, "admin/add_category.html")
+        description = form_values["des"]
+
+        if not name:
+            messages.error(request, "Category name is required.")
+        elif not slugify(name):
+            messages.error(request, "Enter a valid category name.")
+        elif Category.objects.filter(name__iexact=name).exists():
+            messages.error(request, f"Category '{name}' already exists.")
+        elif not image:
+            messages.error(request, "Category image is required.")
+        else:
+            try:
+                Category.objects.create(
+                    name=name,
+                    slug=generate_unique_category_slug(Category, name),
+                    image_url=image,
+                    description=description,
+                )
+                messages.success(request, f"Category '{name}' added successfully!")
+                return redirect("admin_all_categories")
+            except IntegrityError:
+                messages.error(
+                    request,
+                    "We couldn't create that category right now. Please try again.",
+                )
+
+    return render(
+        request,
+        "admin/add_category.html",
+        {"form_values": form_values, "active_menu": "category"},
+    )
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def admin_all_categories(request):

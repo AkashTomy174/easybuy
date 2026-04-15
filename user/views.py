@@ -56,6 +56,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 logger = logging.getLogger(__name__)
 CHECKOUT_PROMO_SESSION_KEY = "checkout_promo_code"
+RECENTLY_VIEWED_VARIANTS_SESSION_KEY = "recently_viewed_variant_ids"
+MAX_RECENTLY_VIEWED_VARIANTS = 10
 MONEY_PRECISION = DzDecimal("0.01")
 DEFAULT_ADDRESS_COUNTRY = "India"
 ALLOWED_IMAGE_CONTENT_TYPES = {
@@ -228,6 +230,68 @@ def _build_product_data(variants, wishlist_variant_ids=None):
     ]
 
 
+def _get_recently_viewed_variant_ids(request):
+    raw_ids = request.session.get(RECENTLY_VIEWED_VARIANTS_SESSION_KEY, [])
+    cleaned_ids = []
+    for raw_id in raw_ids:
+        try:
+            cleaned_ids.append(int(raw_id))
+        except (TypeError, ValueError):
+            continue
+    return cleaned_ids
+
+
+def _track_recently_viewed_variant(request, variant):
+    if not variant:
+        return
+
+    variant_id = int(variant.id)
+    recent_ids = [
+        existing_id
+        for existing_id in _get_recently_viewed_variant_ids(request)
+        if existing_id != variant_id
+    ]
+    recent_ids.insert(0, variant_id)
+    request.session[RECENTLY_VIEWED_VARIANTS_SESSION_KEY] = recent_ids[
+        :MAX_RECENTLY_VIEWED_VARIANTS
+    ]
+    request.session.modified = True
+
+
+def _get_recently_viewed_variants(request, *, limit=6, exclude_variant_ids=None):
+    exclude_variant_ids = {
+        int(variant_id)
+        for variant_id in (exclude_variant_ids or [])
+        if str(variant_id).isdigit()
+    }
+    ordered_ids = [
+        variant_id
+        for variant_id in _get_recently_viewed_variant_ids(request)
+        if variant_id not in exclude_variant_ids
+    ]
+    if not ordered_ids:
+        return []
+
+    recent_variants = (
+        _customer_visible_variants_queryset()
+        .filter(id__in=ordered_ids)
+        .select_related(
+            "product",
+            "product__seller",
+            "product__subcategory",
+            "product__subcategory__category",
+        )
+        .prefetch_related("images")
+    )
+    variant_map = {variant.id: variant for variant in recent_variants}
+    ordered_variants = [
+        variant_map[variant_id]
+        for variant_id in ordered_ids
+        if variant_id in variant_map
+    ]
+    return ordered_variants[:limit]
+
+
 def _customer_visible_variants_queryset():
     return ProductVariant.objects.select_related("product", "product__seller").filter(
         product__is_active=True,
@@ -342,8 +406,15 @@ def home_view(request):
     wishlist_variant_ids = _get_wishlist_variant_ids(
         request.user, [variant.id for variant in variant_list]
     )
+    recently_viewed_variants = _get_recently_viewed_variants(request, limit=8)
+    recent_wishlist_variant_ids = _get_wishlist_variant_ids(
+        request.user, [variant.id for variant in recently_viewed_variants]
+    )
     user_wishlists = _get_user_wishlists(request.user)
     product_data = _build_product_data(variant_list, wishlist_variant_ids)
+    recent_product_data = _build_product_data(
+        recently_viewed_variants, recent_wishlist_variant_ids
+    )
     return render(
         request,
         "core/home.html",
@@ -351,6 +422,7 @@ def home_view(request):
             "active_banners": active_banners,
             "categories": categories,
             "product_data": product_data,
+            "recent_product_data": recent_product_data,
             "wishlists": user_wishlists,
         },
     )
@@ -728,6 +800,7 @@ def product_detail(request, slug=None, id=None):
             (variant for variant in product.variants.all() if str(variant.id) == requested_variant_id),
             selected_variant,
         )
+    _track_recently_viewed_variant(request, selected_variant)
     selected_variant_images = list(selected_variant.images.all()) if selected_variant else []
     selected_variant_image = None
     for image in selected_variant_images:

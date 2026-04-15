@@ -26,20 +26,20 @@
             
             <div>
                 <label for="id_name" class="block text-sm font-semibold text-slate-900 mb-2">Category Name *</label>
-                <input type="text" name="name" id="id_name" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="e.g. Electronics">
+                <input type="text" name="name" id="id_name" value="{{ form_values.name|default:'' }}" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="e.g. Electronics">
             </div>
             
             <div>
                 <label for="id_des" class="block text-sm font-semibold text-slate-900 mb-2">Description</label>
-                <textarea name="des" id="id_des" rows="4" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="Category description (optional)"></textarea>
+                <textarea name="des" id="id_des" rows="4" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="Category description (optional)">{{ form_values.des|default:'' }}</textarea>
             </div>
             
             <div>
                 <label for="id_image_url" class="block text-sm font-semibold text-slate-900 mb-2">Category Image *</label>
                 <div class="mt-2 flex items-center gap-4">
                     <input type="file" name="image_url" id="id_image_url" accept="image/*" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20">
-                    <div class="w-20 h-20 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 text-sm font-medium border-2 border-dashed border-slate-200">
-                        Preview
+                    <div id="category-image-preview" class="w-20 h-20 overflow-hidden bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 text-sm font-medium border-2 border-dashed border-slate-200">
+                        <span id="category-image-preview-text">Preview</span>
                     </div>
                 </div>
                 <p class="mt-1 text-xs text-slate-500">Recommended size: 400x300px, JPG/PNG</p>
@@ -58,4 +58,26 @@
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('id_image_url');
+    const preview = document.getElementById('category-image-preview');
+    const previewText = document.getElementById('category-image-preview-text');
+    if (!input || !preview || !previewText) {
+        return;
+    }
+
+    input.addEventListener('change', function (event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+            preview.innerHTML = '<span id="category-image-preview-text">Preview</span>';
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(file);
+        preview.innerHTML = '<img src="' + objectUrl + '" alt="Category preview" class="h-full w-full object-cover">';
+    });
+});
+</script>
 {% endblock %}

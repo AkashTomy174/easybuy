@@ -4,45 +4,59 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+concurrency:
+  group: ec2-production-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_DIR: /home/ubuntu/easybuy
+      VENV_PYTHON: /home/ubuntu/easybuy/venv/bin/python
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy to EC2
         run: |
-          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            cd /home/ubuntu/easybuy
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "APP_DIR=${APP_DIR} VENV_PYTHON=${VENV_PYTHON} bash -se" << 'EOF'
+            set -Eeuo pipefail
 
-            echo "Pull latest code"
-            git pull origin main
+            cd "$APP_DIR"
 
-            echo "Activate virtualenv"
-            source venv/bin/activate
+            echo "Sync latest code"
+            git fetch --prune origin main
+            git reset --hard origin/main
 
             echo "Install dependencies"
-            pip install -r requirements.txt
+            "$VENV_PYTHON" -m pip install --upgrade pip
+            "$VENV_PYTHON" -m pip install -r requirements.txt
 
             echo "Run migrations"
-            python manage.py migrate
+            "$VENV_PYTHON" manage.py migrate --noinput
 
             echo "Collect static"
-            python manage.py collectstatic --noinput
+            "$VENV_PYTHON" manage.py collectstatic --noinput
 
-            echo "Restart Gunicorn"
+            echo "Restart services"
             sudo systemctl restart gunicorn
-
-            echo "Restart Nginx"
             sudo systemctl restart nginx
+            sudo systemctl is-active --quiet gunicorn
+            sudo systemctl is-active --quiet nginx
           EOF

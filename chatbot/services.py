@@ -147,9 +147,19 @@ COMPLAINT_HINTS = {
     "late",
     "delay",
     "wrong",
-    "support",
 }
-ESCALATION_HINTS = {"human", "agent", "support person", "representative"}
+ESCALATION_HINTS = {
+    "human",
+    "agent",
+    "support person",
+    "representative",
+    "talk to support",
+    "talk to a human",
+    "connect me to support",
+    "customer care",
+    "live agent",
+    "speak to someone",
+}
 
 AI_SYSTEM_PROMPT = """
 You are EasyBuy's shopping and support assistant.
@@ -172,6 +182,24 @@ Return a JSON object with:
 
 def tokenize(message):
     return re.findall(r"[a-zA-Z0-9]+", (message or "").lower())
+
+
+def _expand_token_variants(tokens):
+    expanded = set()
+    for token in tokens:
+        token = (token or "").strip().lower()
+        if not token:
+            continue
+        expanded.add(token)
+        if token.endswith("s") and len(token) > 3:
+            expanded.add(token[:-1])
+    return expanded
+
+
+def _message_tokens(message):
+    return _expand_token_variants(
+        token for token in tokenize(message) if token not in STOP_WORDS
+    )
 
 
 def get_quick_replies(user):
@@ -229,14 +257,20 @@ def _faq_entries():
 
 
 def _relevant_faq_context(message, limit=3):
-    tokens = {token for token in tokenize(message) if token not in STOP_WORDS}
+    tokens = _message_tokens(message)
     scored_entries = []
 
     for entry in _faq_entries():
-        haystack = (
-            f"{entry.question} {getattr(entry, 'keywords', '')} {entry.answer}"
-        ).lower()
-        score = sum(1 for token in tokens if token in haystack)
+        question_tokens = _expand_token_variants(tokenize(entry.question))
+        keyword_tokens = _expand_token_variants(
+            tokenize(getattr(entry, "keywords", ""))
+        )
+        answer_tokens = _expand_token_variants(tokenize(entry.answer))
+        score = (
+            sum(3 for token in tokens if token in question_tokens)
+            + sum(2 for token in tokens if token in keyword_tokens)
+            + sum(1 for token in tokens if token in answer_tokens)
+        )
         if score:
             scored_entries.append((score + getattr(entry, "priority", 0), entry))
 
@@ -252,19 +286,24 @@ def _relevant_faq_context(message, limit=3):
 
 
 def match_faq(message):
-    tokens = {token for token in tokenize(message) if token not in STOP_WORDS}
+    tokens = _message_tokens(message)
+    lower_message = (message or "").lower()
     best_entry = None
     best_score = 0
 
     for entry in _faq_entries():
-        haystack = f"{entry.question} {getattr(entry, 'keywords', '')}".lower()
-        token_score = sum(1 for token in tokens if token in haystack)
-        if token_score == 0 and entry.question.lower() not in (message or "").lower():
+        question_tokens = _expand_token_variants(tokenize(entry.question))
+        keyword_tokens = _expand_token_variants(
+            tokenize(getattr(entry, "keywords", ""))
+        )
+        token_score = sum(4 for token in tokens if token in question_tokens)
+        token_score += sum(2 for token in tokens if token in keyword_tokens)
+        if token_score == 0 and entry.question.lower() not in lower_message:
             continue
 
-        score = token_score * 5
-        if entry.question.lower() in (message or "").lower():
-            score += 3
+        score = token_score
+        if entry.question.lower() in lower_message:
+            score += 6
         score += getattr(entry, "priority", 0)
         if score > best_score:
             best_score = score
@@ -429,13 +468,24 @@ def order_help_response(user, message):
             "quick_replies": ["Track my latest order", "I have a complaint"],
         }
 
+    items = list(order.items.all())
     item_summaries = [
-        f"{item.variant.product.name}: {item.status}"
-        for item in order.items.all()[:3]
+        f"{item.variant.product.name}: {item.status.lower()}"
+        for item in items[:3]
     ]
+    product_names = [item.variant.product.name for item in items[:3]]
+    product_summary = ", ".join(product_names)
+    if len(items) > 3:
+        remaining_count = len(items) - 3
+        product_summary += (
+            f" and {remaining_count} more item"
+            f"{'s' if remaining_count != 1 else ''}"
+        )
+
     reply = (
-        f"Your latest order {order.order_number} is currently {order.order_status.lower()} "
-        f"with payment status {order.payment_status.lower()}."
+        f"Your latest order {order.order_number}"
+        f"{f' for {product_summary}' if product_summary else ''} is currently "
+        f"{order.order_status.lower()} with payment status {order.payment_status.lower()}."
     )
     if item_summaries:
         reply += " Item update: " + "; ".join(item_summaries) + "."
@@ -700,19 +750,6 @@ def handle_chat_message(user, session, message):
                     "What is your return policy?",
                 ],
             }
-        ai_response = generate_ai_reply(
-            user,
-            session,
-            clean_message,
-            extra_context={
-                "product_search_attempt": {
-                    "budget": budget,
-                    "matched_products": [],
-                }
-            },
-        )
-        if ai_response:
-            return ai_response
         return {
             "reply": "I couldn't find a strong match yet. Try telling me the category, brand, or a budget like 'phones under 15000'.",
             "intent": "product_search",

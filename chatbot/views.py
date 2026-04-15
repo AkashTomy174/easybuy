@@ -118,6 +118,9 @@ def send_message(request):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     message = (data.get("message") or "").strip()
+    if not message:
+        return JsonResponse({"error": "Message is required"}, status=400)
+
     session_id = data.get("session_id")
     chat_session = _get_chat_session(request, session_id=session_id)
 
