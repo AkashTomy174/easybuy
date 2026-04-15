@@ -708,6 +708,7 @@
     </footer>
 </div>
 
+{% if chatbot_widget_enabled %}
 <div
     id="chatbot-widget"
     class="fixed bottom-6 right-6 z-[60]"
@@ -764,6 +765,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 {% block extra_js %}{% endblock %}
 
@@ -1477,6 +1479,7 @@ function escapeHtml(value) {
     });
 }
 
+{% if chatbot_widget_enabled %}
 const chatbotState = {
     sessionId: null,
     initialized: false,
@@ -1756,6 +1759,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+{% endif %}
 </script>
 
 <!-- UI/UX Enhancement Scripts -->

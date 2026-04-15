@@ -254,6 +254,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 OPENAI_ENABLED = env_bool("OPENAI_ENABLED", bool(OPENAI_API_KEY))
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
 OPENAI_TIMEOUT_SECONDS = int(os.getenv("OPENAI_TIMEOUT_SECONDS", "20"))
+CHATBOT_WIDGET_ENABLED = env_bool("CHATBOT_WIDGET_ENABLED", False)
 
 
 WHATSAPP_NOTIFICATIONS_ENABLED = os.getenv(
