@@ -729,7 +729,7 @@ def product_detail(request, slug=None, id=None):
     related_products = (
         Product.objects.prefetch_related("variants__images")
         .filter(
-            subcategory=product.subcategory,
+            subcategory_id=product.subcategory_id,
             is_active=True,
             approval_status="APPROVED",
             seller__status="APPROVED",

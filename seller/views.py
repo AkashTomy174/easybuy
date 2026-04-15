@@ -72,7 +72,11 @@ def generate_unique_store_slug(store_name):
 
 def seller_shell_context(request, active_menu=None, **extra):
     context = {"active_menu": active_menu}
-    seller_profile = getattr(request.user, "seller_profile", None) if request.user.is_authenticated else None
+    seller_profile = (
+        getattr(request.user, "seller_profile", None)
+        if request.user.is_authenticated
+        else None
+    )
     if seller_profile is not None:
         context["seller_profile"] = seller_profile
     context.update(extra)
@@ -261,18 +265,16 @@ def seller_dashboard(request):
     average_order_value = total_revenue / total_orders if total_orders > 0 else 0
     delivered_revenue = float(stats["delivered_revenue"] or 0)
 
-    recent_orders = (
-        order_items.select_related("order", "variant__product")
-        .order_by("-order__ordered_at")[:5]
-    )
+    recent_orders = order_items.select_related("order", "variant__product").order_by(
+        "-order__ordered_at"
+    )[:5]
 
     total_products = Product.objects.filter(seller=seller).count()
     active_products = Product.objects.filter(seller=seller, is_active=True).count()
 
     revenue_by_day = {
         row["day"]: float(row["revenue"] or 0)
-        for row in order_items
-        .filter(order__ordered_at__gte=now - timedelta(days=6))
+        for row in order_items.filter(order__ordered_at__gte=now - timedelta(days=6))
         .annotate(day=TruncDate("order__ordered_at"))
         .values("day")
         .annotate(revenue=Sum(F("price_at_purchase") * F("quantity")))
@@ -339,13 +341,9 @@ def seller_dashboard(request):
         total_stock_out += abs(stock_out)
 
     net_stock_movement = total_stock_in - total_stock_out
-    low_stock_items = (
-        ProductVariant.objects.filter(
-            product__seller=seller, stock_quantity__lte=10, stock_quantity__gt=0
-        )
-        .select_related("product")
-        [:5]
-    )
+    low_stock_items = ProductVariant.objects.filter(
+        product__seller=seller, stock_quantity__lte=10, stock_quantity__gt=0
+    ).select_related("product")[:5]
 
     context = seller_shell_context(
         request,
@@ -452,7 +450,9 @@ def seller_promo_codes(request):
                 product=product,
                 name=(request.POST.get("name") or "").strip(),
                 code=(request.POST.get("code") or "").strip().upper(),
-                discount_type=(request.POST.get("discount_type") or "PERCENT").strip().upper(),
+                discount_type=(request.POST.get("discount_type") or "PERCENT")
+                .strip()
+                .upper(),
                 discount_value=discount_value,
                 valid_from=valid_from,
                 valid_to=valid_to,
@@ -469,8 +469,10 @@ def seller_promo_codes(request):
         except Exception as exc:
             messages.error(request, str(exc))
 
-    promo_codes = Coupon.objects.filter(seller=seller).select_related("product").order_by(
-        "-created_at"
+    promo_codes = (
+        Coupon.objects.filter(seller=seller)
+        .select_related("product")
+        .order_by("-created_at")
     )
     products = Product.objects.filter(seller=seller).order_by("name")
     return render(
@@ -921,7 +923,9 @@ def status(request, id):
             order_item.status, set()
         )
         if new_status not in allowed_next_statuses:
-            message = f"Cannot change order status from {order_item.status} to {new_status}."
+            message = (
+                f"Cannot change order status from {order_item.status} to {new_status}."
+            )
             if request.headers.get("x-requested-with") == "XMLHttpRequest":
                 return JsonResponse({"success": False, "message": message}, status=400)
             messages.error(request, message)
@@ -1189,4 +1193,3 @@ def process_return(request, id):
         messages.error(request, "An error occurred processing the return.")
 
     return redirect("seller_returns")
-
