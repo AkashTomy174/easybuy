@@ -737,7 +737,7 @@ def product_detail(request, slug=None, id=None):
         .exclude(slug=product.slug)[:4]
     )
 
-    reviews = (
+    reviews = list(
         Review.objects.select_related("user")
         .prefetch_related("images", "videos")
         .filter(product=product)
@@ -773,6 +773,7 @@ def product_detail(request, slug=None, id=None):
             wishlist__user=request.user, variant_id__in=variant_ids
         ).values_list("variant_id", flat=True)
         wishlist_variant_ids = set(wishlist_items)
+        review_ids = [r.id for r in reviews]
         review_user_ids = [r.user_id for r in reviews]
         verified_users = set(
             OrderItem.objects.filter(
@@ -785,7 +786,7 @@ def product_detail(request, slug=None, id=None):
         )
         user_helpful_votes = set(
             ReviewHelpful.objects.filter(
-                user=request.user, review__in=reviews
+                user=request.user, review_id__in=review_ids
             ).values_list("review_id", flat=True)
         )
 
@@ -1014,6 +1015,7 @@ def reviews(request, variant_id):
         reviews_qs = reviews_qs.order_by("-created_at")
 
     # Optimize verified purchase check
+    review_ids = list(reviews_qs.values_list("id", flat=True))
     review_user_ids = list(reviews_qs.values_list("user_id", flat=True))
     verified_users = set(
         OrderItem.objects.filter(
@@ -1027,7 +1029,7 @@ def reviews(request, variant_id):
 
     # Check if current user voted helpful
     user_helpful_votes = set(
-        ReviewHelpful.objects.filter(user=user, review__in=reviews_qs).values_list(
+        ReviewHelpful.objects.filter(user=user, review_id__in=review_ids).values_list(
             "review_id", flat=True
         )
     )
