@@ -8,7 +8,7 @@
     {% for banner in active_banners %}
     <article class="absolute inset-0 transition-opacity duration-700 {% if forloop.first %}opacity-100{% else %}pointer-events-none opacity-0{% endif %}" data-banner-slide>
         <div class="absolute inset-0">
-            <img alt="{{ banner.title }}" class="h-full w-full object-cover object-center" src="{{ banner.hero_image_url }}"/>
+            <img alt="{{ banner.title }}" class="h-full w-full object-cover object-center" src="{{ banner.hero_image_url }}" loading="eager" fetchpriority="high" decoding="async" width="1600" height="680"/>
             <div class="absolute inset-0 bg-gradient-to-r from-stone-950/85 via-stone-950/40 to-transparent"></div>
         </div>
         <div class="relative flex h-full w-full flex-col justify-center px-4 sm:px-8 lg:px-16 xl:px-24">
@@ -40,7 +40,7 @@
 {% else %}
 <section class="relative h-[650px] w-full overflow-hidden bg-stone-900">
     <div class="absolute inset-0">
-        <img alt="Hero" class="h-full w-full object-cover object-center opacity-70" src="https://images.unsplash.com/photo-1491933382434-500287f9b54b?q=80&w=1600&auto=format&fit=crop"/>
+        <img alt="Hero" class="h-full w-full object-cover object-center opacity-70" src="https://images.unsplash.com/photo-1491933382434-500287f9b54b?q=80&w=1600&auto=format&fit=crop" loading="eager" fetchpriority="high" decoding="async" width="1600" height="650"/>
         <div class="absolute inset-0 bg-gradient-to-r from-stone-950/80 via-stone-950/30 to-transparent"></div>
     </div>
     <div class="relative mx-auto flex h-full max-w-7xl flex-col justify-center px-4 sm:px-12">
@@ -103,7 +103,7 @@
         <a href="{% url 'category_products' category.slug %}" class="group flex min-w-[8.75rem] shrink-0 snap-start flex-col items-center gap-4 text-center sm:min-w-[10.5rem] lg:min-w-[11.5rem]">
             <div class="relative flex h-32 w-32 items-center justify-center overflow-hidden rounded-full border border-stone-200 bg-white shadow-lg shadow-stone-200/70 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-2xl group-hover:shadow-primary/20 group-hover:ring-4 group-hover:ring-primary/15 dark:border-stone-700 dark:bg-surface-dark sm:h-40 sm:w-40 lg:h-44 lg:w-44">
                 {% if category.image_url %}
-                    <img alt="{{ category.name }}" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" src="{{ category.image_url.url }}"/>
+                    <img alt="{{ category.name }}" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" src="{{ category.image_url.url }}" loading="lazy" decoding="async" width="176" height="176"/>
                 {% else %}
                     <span class="material-symbols-outlined text-stone-300 text-5xl sm:text-6xl">category</span>
                 {% endif %}
@@ -142,7 +142,7 @@
 
                     <a href="{% url 'product_detail_user' item.variant.product.slug %}?variant={{ item.variant.id }}" class="relative mb-3 block aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 sm:mb-4">
                         {% if item.image and item.image.image %}
-                        <img src="{{ item.image.image.url }}" alt="{{ item.variant.product.name }}" class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
+                        <img src="{{ item.image.image.url }}" alt="{{ item.variant.product.name }}" class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110" loading="lazy" decoding="async" width="640" height="640">
                         {% else %}
                         <div class="flex h-full w-full items-center justify-center">
                             <span class="material-symbols-outlined text-4xl text-stone-300">image</span>
@@ -231,7 +231,7 @@
                     <a href="{% url 'product_detail_user' item.variant.product.slug %}?variant={{ item.variant.id }}" class="relative mb-2 block aspect-square w-full overflow-hidden rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 sm:mb-4 sm:rounded-2xl">
                         {% if item.image and item.image.image %}
                         <img src="{{ item.image.image.url }}" alt="{{ item.variant.product.name }}" 
-                             class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
+                             class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110" loading="lazy" decoding="async" width="640" height="640">
                         {% else %}
                         <div class="flex h-full w-full items-center justify-center">
                             <span class="material-symbols-outlined text-3xl text-stone-300 sm:text-5xl">image</span>

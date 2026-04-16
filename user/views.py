@@ -29,7 +29,7 @@ from .models import (
 from core.models import SubCategory, Category, Address, Notification
 import json
 from django.http import Http404
-from django.db.models import Q, Avg, Count
+from django.db.models import Q, Avg, Count, Prefetch
 from django.db import transaction
 from decimal import Decimal
 from django.utils import timezone
@@ -164,10 +164,14 @@ def _finalize_online_order(
         logger.info("Order %s marked as PAID", order.order_number)
 
         for item in order.items.all():
-            ProductVariant.objects.select_for_update().filter(pk=item.variant_id).first()
+            ProductVariant.objects.select_for_update().filter(
+                pk=item.variant_id
+            ).first()
             if not _deduct_order_item_stock(item):
                 raise ValueError(f"Insufficient stock for {item.variant.product.name}")
-            logger.info("Stock updated for variant %s: -%s", item.variant.id, item.quantity)
+            logger.info(
+                "Stock updated for variant %s: -%s", item.variant.id, item.quantity
+            )
 
         _record_payment_transaction(
             order,
@@ -198,7 +202,19 @@ def _extract_razorpay_payment_details(payload):
 
 
 def _get_primary_image_for_variant(variant):
-    images = list(variant.images.all())
+    preview_image = getattr(variant, "preview_image", None)
+    if preview_image is not None:
+        return preview_image
+
+    primary_images = getattr(variant, "primary_images", None)
+    if primary_images is not None:
+        for image in primary_images:
+            if image.image:
+                return image
+
+    images = getattr(variant, "ordered_images", None)
+    if images is None:
+        images = list(variant.images.all())
     for image in images:
         if image.image and image.is_primary:
             return image
@@ -206,6 +222,52 @@ def _get_primary_image_for_variant(variant):
         if image.image:
             return image
     return None
+
+
+def _primary_variant_image_prefetch():
+    return Prefetch(
+        "images",
+        queryset=ProductImage.objects.filter(is_primary=True).only(
+            "id", "variant_id", "image", "alt_text", "is_primary"
+        ),
+        to_attr="primary_images",
+    )
+
+
+def _with_primary_variant_images(queryset):
+    return queryset.prefetch_related(_primary_variant_image_prefetch())
+
+
+def _ensure_variant_preview_images(variants):
+    variants = list(variants)
+    fallback_variant_ids = []
+
+    for variant in variants:
+        primary_images = getattr(variant, "primary_images", None)
+        variant.preview_image = next(
+            (image for image in (primary_images or []) if getattr(image, "image", None)),
+            None,
+        )
+        if variant.preview_image is None:
+            fallback_variant_ids.append(variant.id)
+
+    if not fallback_variant_ids:
+        return variants
+
+    fallback_images = {}
+    for image in (
+        ProductImage.objects.filter(variant_id__in=fallback_variant_ids)
+        .only("id", "variant_id", "image", "alt_text", "is_primary")
+        .order_by("variant_id", "-is_primary", "id")
+    ):
+        if image.image and image.variant_id not in fallback_images:
+            fallback_images[image.variant_id] = image
+
+    for variant in variants:
+        if variant.preview_image is None:
+            variant.preview_image = fallback_images.get(variant.id)
+
+    return variants
 
 
 def _get_wishlist_variant_ids(user, variant_ids):
@@ -220,6 +282,7 @@ def _get_wishlist_variant_ids(user, variant_ids):
 
 def _build_product_data(variants, wishlist_variant_ids=None):
     wishlist_variant_ids = wishlist_variant_ids or set()
+    variants = _ensure_variant_preview_images(variants)
     return [
         {
             "variant": variant,
@@ -273,7 +336,7 @@ def _get_recently_viewed_variants(request, *, limit=6, exclude_variant_ids=None)
         return []
 
     recent_variants = (
-        _customer_visible_variants_queryset()
+        _with_primary_variant_images(_customer_visible_variants_queryset())
         .filter(id__in=ordered_ids)
         .select_related(
             "product",
@@ -281,7 +344,6 @@ def _get_recently_viewed_variants(request, *, limit=6, exclude_variant_ids=None)
             "product__subcategory",
             "product__subcategory__category",
         )
-        .prefetch_related("images")
     )
     variant_map = {variant.id: variant for variant in recent_variants}
     ordered_variants = [
@@ -392,14 +454,13 @@ def home_view(request):
 
     categories = _get_cached_active_categories()
     active_banners = _get_cached_active_banners()
-    variants = (
+    variants = _with_primary_variant_images(
         ProductVariant.objects.filter(
             product__is_active=True,
             product__approval_status="APPROVED",
             product__seller__status="APPROVED",
         )
         .select_related("product", "product__seller")
-        .prefetch_related("images")
         .order_by("-id")[:8]
     )
     variant_list = list(variants)
@@ -444,16 +505,19 @@ def all_products(request):
     min_rating = request.GET.get("rating")
     availability = request.GET.get("availability")
 
-    variants = ProductVariant.objects.filter(
-        product__is_active=True,
-        product__approval_status="APPROVED",
-        product__seller__status="APPROVED",
-    ).select_related(
-        "product",
-        "product__seller",
-        "product__subcategory",
-        "product__subcategory__category",
-    ).prefetch_related("images")
+    variants = _with_primary_variant_images(
+        ProductVariant.objects.filter(
+            product__is_active=True,
+            product__approval_status="APPROVED",
+            product__seller__status="APPROVED",
+        )
+        .select_related(
+            "product",
+            "product__seller",
+            "product__subcategory",
+            "product__subcategory__category",
+        )
+    )
 
     # Base query for brands - start with all approved products
     brand_query = Product.objects.filter(
@@ -575,14 +639,13 @@ def all_products(request):
 
 
 def new_arrival(request):
-    variants = (
+    variants = _with_primary_variant_images(
         ProductVariant.objects.filter(
             product__is_active=True,
             product__approval_status="APPROVED",
             product__seller__status="APPROVED",
         )
         .select_related("product", "product__seller")
-        .prefetch_related("images")
         .order_by("-id")
     )
     paginator = Paginator(variants, 12)
@@ -613,7 +676,7 @@ def category_products(request, slug=None, id=None):
         raise Http404("Category not found")
 
     subcategory = SubCategory.objects.filter(category=categories, is_active=True)
-    variants = (
+    variants = _with_primary_variant_images(
         ProductVariant.objects.filter(
             product__subcategory__category=categories,
             product__is_active=True,
@@ -621,7 +684,6 @@ def category_products(request, slug=None, id=None):
             product__seller__status="APPROVED",
         )
         .select_related("product", "product__seller")
-        .prefetch_related("images")
         .order_by("-id")
     )
     paginator = Paginator(variants, 12)
@@ -657,7 +719,7 @@ def subcategory_products(request, slug=None, id=None):
 
     categories = current_sub.category
     subcategory = SubCategory.objects.filter(category=categories, is_active=True)
-    variants = (
+    variants = _with_primary_variant_images(
         ProductVariant.objects.filter(
             product__subcategory=current_sub,
             product__is_active=True,
@@ -665,7 +727,6 @@ def subcategory_products(request, slug=None, id=None):
             product__seller__status="APPROVED",
         )
         .select_related("product", "product__seller")
-        .prefetch_related("images")
         .order_by("-id")
     )
     paginator = Paginator(variants, 12)
@@ -798,11 +859,17 @@ def product_detail(request, slug=None, id=None):
     requested_variant_id = str(request.GET.get("variant", "")).strip()
     if requested_variant_id:
         selected_variant = next(
-            (variant for variant in product.variants.all() if str(variant.id) == requested_variant_id),
+            (
+                variant
+                for variant in product.variants.all()
+                if str(variant.id) == requested_variant_id
+            ),
             selected_variant,
         )
     _track_recently_viewed_variant(request, selected_variant)
-    selected_variant_images = list(selected_variant.images.all()) if selected_variant else []
+    selected_variant_images = (
+        list(selected_variant.images.all()) if selected_variant else []
+    )
     selected_variant_image = None
     for image in selected_variant_images:
         if image.image and image.is_primary:
@@ -1279,16 +1346,19 @@ def filtering(request):
     iprod = request.GET.get("q") or request.GET.get("product")
     sort = request.GET.get("sort", "newest")
 
-    variants = ProductVariant.objects.filter(
-        product__is_active=True,
-        product__approval_status="APPROVED",
-        product__seller__status="APPROVED",
-    ).select_related(
-        "product",
-        "product__seller",
-        "product__subcategory",
-        "product__subcategory__category",
-    ).prefetch_related("images")
+    variants = _with_primary_variant_images(
+        ProductVariant.objects.filter(
+            product__is_active=True,
+            product__approval_status="APPROVED",
+            product__seller__status="APPROVED",
+        )
+        .select_related(
+            "product",
+            "product__seller",
+            "product__subcategory",
+            "product__subcategory__category",
+        )
+    )
 
     brand_query = Product.objects.filter(
         is_active=True, approval_status="APPROVED", seller__status="APPROVED"
@@ -1372,7 +1442,7 @@ def filtering(request):
 
 
 def best_seller(request):
-    variants = (
+    variants = _with_primary_variant_images(
         ProductVariant.objects.filter(
             product__is_active=True,
             product__approval_status="APPROVED",
@@ -1381,7 +1451,6 @@ def best_seller(request):
         .annotate(total_sold=Sum("orderitem__quantity"))
         .filter(total_sold__gt=0)
         .select_related("product", "product__seller")
-        .prefetch_related("images")
         .order_by("-total_sold")
     )
     paginator = Paginator(variants, 12)
@@ -1452,7 +1521,6 @@ def get_subcategories_ajax(request):
         {"subcategories": list(subcategories), "count": len(subcategories)}
     )
 
-
 def search_autocomplete(request):
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request method"}, status=400)
@@ -1497,8 +1565,6 @@ def search_autocomplete(request):
 
     return JsonResponse(suggestions)
 
-
-# order related
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def display_order(request):
@@ -1513,7 +1579,6 @@ def display_order(request):
         .order_by("-order__ordered_at")
     )
 
-    # Compute shipment info for each item
     for item in order_items:
         from django.utils import timezone
 
@@ -1545,7 +1610,6 @@ def display_order(request):
 
     return render(request, "user/orders.html", {"page_obj": page_obj})
 
-
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def order_cancel(request, order_id):
@@ -1568,7 +1632,6 @@ def order_cancel(request, order_id):
             _restock_order_item(item)
     return JsonResponse({"success": True, "message": "Order cancelled successfully"})
 
-
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def order_item_cancel(request, item_id):
@@ -1588,7 +1651,6 @@ def order_item_cancel(request, item_id):
         _restock_order_item(order_item)
 
     return JsonResponse({"success": True, "message": "Item cancelled successfully"})
-
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
@@ -1633,8 +1695,6 @@ def request_return(request, item_id):
     messages.success(request, "Return requested successfully.")
     return redirect("user_orders")
 
-
-# profile and adress
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def profile_settings(request):
@@ -1669,13 +1729,11 @@ def profile_settings(request):
         {"addresses": addresses, "default_address": default_address, "user": user},
     )
 
-
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def manage_addresses(request):
     addresses = Address.objects.filter(user=request.user).order_by("-is_default", "-id")
     return render(request, "user/addresses.html", {"addresses": addresses})
-
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
@@ -1709,7 +1767,6 @@ def user_address(request):
     messages.success(request, "Address added successfully.")
     return redirect("manage_addresses")
 
-
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def edit_address(request, id):
@@ -1742,7 +1799,6 @@ def edit_address(request, id):
     messages.success(request, "Address updated successfully.")
     return redirect("manage_addresses")
 
-
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def delete_address(request, id):
@@ -1755,8 +1811,6 @@ def delete_address(request, id):
     messages.success(request, "Address removed successfully.")
     return redirect("manage_addresses")
 
-
-# wishlist related views
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def toggle_wishlist(request, variant_id, wishlist_id=None):
@@ -1768,7 +1822,6 @@ def toggle_wishlist(request, variant_id, wishlist_id=None):
     if wishlist_id:
         wishlist = get_object_or_404(Wishlist, id=wishlist_id, user=user)
     else:
-        # Try to get from body if not in args
         try:
             data = json.loads(request.body)
             w_id = data.get("wishlist_id")
@@ -1807,7 +1860,6 @@ def toggle_wishlist(request, variant_id, wishlist_id=None):
             }
         )
 
-
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def wishlist_view(request):
@@ -1835,7 +1887,6 @@ def wishlist_view(request):
         request, "user/wishlist.html", {"page_obj": page_obj, "wishlist": wishlist}
     )
 
-
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def specific_wishlist_view(request, wishlist_id):
@@ -1858,7 +1909,6 @@ def specific_wishlist_view(request, wishlist_id):
         request, "user/wishlist.html", {"page_obj": page_obj, "wishlist": wishlist}
     )
 
-
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def remove_from_wishlist(request, item_id):
@@ -1869,7 +1919,6 @@ def remove_from_wishlist(request, item_id):
     )
     wishlist_item.delete()
     return JsonResponse({"success": True, "message": "Item removed from wishlist"})
-
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
@@ -1882,7 +1931,6 @@ def manage_wishlists(request):
         .order_by("-created_at")
     )
     return render(request, "user/manage_wishlists.html", {"wishlists": wishlists})
-
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
@@ -1910,7 +1958,6 @@ def create_wishlist(request):
             "wishlist_id": wishlist.id,
         }
     )
-
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
@@ -1940,7 +1987,6 @@ def edit_wishlist(request, wishlist_id):
     wishlist.save()
     return JsonResponse({"success": True, "message": "Wishlist updated successfully"})
 
-
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def delete_wishlist(request, wishlist_id):
@@ -1956,7 +2002,6 @@ def delete_wishlist(request, wishlist_id):
 
     wishlist.delete()
     return JsonResponse({"success": True, "message": "Wishlist deleted successfully"})
-
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
@@ -2046,9 +2091,6 @@ def toggle_review_helpful(request, review_id):
             }
         )
 
-
-# payments related views
-
 client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
 
@@ -2058,7 +2100,6 @@ def _send_order_confirmation(order):
     """
     user = order.user
 
-    # 1. In-App Notification
     try:
         url = reverse("order_success", args=[order.id])
         create_notification(
@@ -2071,7 +2112,6 @@ def _send_order_confirmation(order):
     except Exception as e:
         logger.error(f"In-App Notification Failed: {e}")
 
-    # 2. Email Notification
     try:
         send_mail(
             subject=f"Order Confirmed: {order.order_number}",
@@ -2083,7 +2123,6 @@ def _send_order_confirmation(order):
     except Exception as e:
         logger.error(f"Email Notification Failed: {e}")
 
-    # 3. WhatsApp Notification
     if getattr(settings, "WHATSAPP_NOTIFICATIONS_ENABLED", False):
         try:
             notifier = WhatsAppNotifier()
@@ -2094,10 +2133,8 @@ def _send_order_confirmation(order):
         except Exception as e:
             logger.error(f"WhatsApp Notification Failed: {e}")
 
-
 def _money(value):
     return DzDecimal(value or 0).quantize(MONEY_PRECISION)
-
 
 def _get_checkout_coupon(raw_code):
     raw_code = (raw_code or "").strip().upper()
@@ -2115,10 +2152,8 @@ def _get_checkout_coupon(raw_code):
         .first()
     )
 
-
 def _remove_checkout_coupon(request):
     request.session.pop(CHECKOUT_PROMO_SESSION_KEY, None)
-
 
 def _build_checkout_summary(
     request,
@@ -2166,9 +2201,7 @@ def _build_checkout_summary(
             raise ValueError("Your cart is empty")
         for item in cart.items.all():
             if not _is_variant_customer_visible(item.variant):
-                raise ValueError(
-                    f"{item.variant.product.name} is no longer available"
-                )
+                raise ValueError(f"{item.variant.product.name} is no longer available")
             if item.variant.stock_quantity < item.quantity:
                 raise ValueError(f"Insufficient stock for {item.variant.product.name}")
             line_items.append(
@@ -2196,9 +2229,7 @@ def _build_checkout_summary(
         elif not coupon.is_currently_valid():
             promo_error = "This promo code is inactive or expired."
         elif subtotal < _money(coupon.min_order_amount):
-            promo_error = (
-                f"This promo code requires a minimum subtotal of ₹{coupon.min_order_amount:.2f}."
-            )
+            promo_error = f"This promo code requires a minimum subtotal of ₹{coupon.min_order_amount:.2f}."
         else:
             eligible_subtotal = _money(
                 sum(
@@ -2254,7 +2285,6 @@ def _serialize_checkout_totals(summary):
         "promo_message": summary["promo_message"],
     }
 
-
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
 def checkout(request):
@@ -2277,7 +2307,6 @@ def checkout(request):
         _remove_checkout_coupon(request)
 
     return render(request, "user/checkout.html", context)
-
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
@@ -2316,7 +2345,6 @@ def apply_promo_code(request):
             "totals": _serialize_checkout_totals(summary),
         }
     )
-
 
 @login_required
 @role_required(allowed_roles=["CUSTOMER"])
@@ -2392,7 +2420,6 @@ def create_razorpay_order(request):
         applied_promo_code = summary["promo_code"]
         discount_amount = summary["discount_amount"]
 
-        # Create Order and items in a single transaction
         with transaction.atomic():
             order = Order.objects.create(
                 user=user,
@@ -2457,7 +2484,9 @@ def create_razorpay_order(request):
                         f"Razorpay API returned invalid response: {razorpay_order}"
                     )
                     raise RazorpayOrderError(
-                        {"error": "Payment gateway error. Razorpay order creation failed"},
+                        {
+                            "error": "Payment gateway error. Razorpay order creation failed"
+                        },
                         500,
                     )
 
@@ -2553,9 +2582,12 @@ def log_razorpay_failure(request):
         return JsonResponse({"error": "Order not found"}, status=404)
 
     order.payment_status = "FAILED"
+    order.order_status = "CANCELLED"
     if razorpay_payment_id:
         order.razorpay_payment_id = razorpay_payment_id
-    order.save(update_fields=["payment_status", "razorpay_payment_id"])
+    order.save(update_fields=["payment_status", "order_status", "razorpay_payment_id"])
+
+    OrderItem.objects.filter(order=order).update(status="CANCELLED")
 
     PaymentTransaction.objects.get_or_create(
         order=order,
@@ -2586,7 +2618,6 @@ def verify_razorpay_payment(request):
         return redirect("checkout")
 
     try:
-        # Validate required parameters FIRST
         razorpay_order_id = request.POST.get("razorpay_order_id", "").strip()
         razorpay_payment_id = request.POST.get("razorpay_payment_id", "").strip()
         razorpay_signature = request.POST.get("razorpay_signature", "").strip()
@@ -2606,19 +2637,18 @@ def verify_razorpay_payment(request):
             f"Verifying Razorpay payment: order_id={razorpay_order_id}, payment_id={razorpay_payment_id}"
         )
 
-        # Get order
         try:
-            order = Order.objects.get(razorpay_order_id=razorpay_order_id, user=request.user)
+            order = Order.objects.get(
+                razorpay_order_id=razorpay_order_id, user=request.user
+            )
         except Order.DoesNotExist:
             logger.error(f"Order not found for razorpay_order_id: {razorpay_order_id}")
             messages.error(request, "Payment verification failed: Order not found")
             return redirect("checkout")
 
-        # Save payment_id BEFORE verification
         order.razorpay_payment_id = razorpay_payment_id
         order.save()
 
-        # Verify signature
         try:
             client.utility.verify_payment_signature(params_dict)
             logger.info(
@@ -2629,7 +2659,9 @@ def verify_razorpay_payment(request):
                 f"Signature verification FAILED for order {order.order_number}: {str(e)}"
             )
             order.payment_status = "FAILED"
-            order.save()
+            order.order_status = "CANCELLED"
+            order.save(update_fields=["payment_status", "order_status"])
+            OrderItem.objects.filter(order=order).update(status="CANCELLED")
             messages.error(request, "Payment verification failed: Invalid signature")
             return redirect("user_orders")
         except Exception as e:
@@ -2638,7 +2670,9 @@ def verify_razorpay_payment(request):
                 exc_info=True,
             )
             order.payment_status = "FAILED"
-            order.save()
+            order.order_status = "CANCELLED"
+            order.save(update_fields=["payment_status", "order_status"])
+            OrderItem.objects.filter(order=order).update(status="CANCELLED")
             messages.error(
                 request, "Payment verification error. Please contact support."
             )
@@ -2646,7 +2680,6 @@ def verify_razorpay_payment(request):
 
         clear_cart = not request.session.get("buy_now_variant_id")
 
-        # Payment successful - Update order and inventory
         try:
             order, was_confirmed = _finalize_online_order(
                 order,
@@ -2655,7 +2688,9 @@ def verify_razorpay_payment(request):
                 clear_cart=clear_cart,
             )
             if was_confirmed:
-                logger.info(f"Payment verified and order confirmed: {order.order_number}")
+                logger.info(
+                    f"Payment verified and order confirmed: {order.order_number}"
+                )
             else:
                 logger.info(
                     "Order %s already verified; returning success page",
@@ -2767,15 +2802,18 @@ def process_cod_order(request):
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
     with transaction.atomic():
-        order = Order.objects.select_for_update().prefetch_related("items__variant").get(
-            pk=order.pk
+        order = (
+            Order.objects.select_for_update()
+            .prefetch_related("items__variant")
+            .get(pk=order.pk)
         )
         if order.order_status == "CONFIRMED":
             return redirect("order_success", order_id=order.id)
 
-        # Check stock availability
         for item in order.items.all():
-            ProductVariant.objects.select_for_update().filter(pk=item.variant_id).first()
+            ProductVariant.objects.select_for_update().filter(
+                pk=item.variant_id
+            ).first()
             variant = ProductVariant.objects.get(pk=item.variant_id)
             if not item.stock_deducted and variant.stock_quantity < item.quantity:
                 messages.error(
@@ -2783,7 +2821,6 @@ def process_cod_order(request):
                 )
                 return redirect("checkout")
 
-        # Update stock
         for item in order.items.all():
             if not _deduct_order_item_stock(item):
                 messages.error(
@@ -2791,7 +2828,6 @@ def process_cod_order(request):
                 )
                 return redirect("checkout")
 
-        # Confirm order
         order.payment_method = "COD"
         order.payment_status = "PENDING"
         order.order_status = "CONFIRMED"
@@ -2800,7 +2836,6 @@ def process_cod_order(request):
         if not request.session.get("buy_now_variant_id"):
             Cart.objects.filter(user=request.user).delete()
 
-        # Trigger unified notifications
         _send_order_confirmation(order)
 
         request.session.pop("pending_order_id", None)
@@ -2835,7 +2870,6 @@ def order_success(request, order_id):
 
 @login_required
 def notification_settings(request):
-    # Ensure preference object exists for the user
     pref, created = NotificationPreference.objects.get_or_create(user=request.user)
 
     if request.method == "POST":
@@ -2860,7 +2894,7 @@ def all_notifications(request):
         notifications_qs = notifications_qs.filter(is_read=False)
 
     notifications_list = notifications_qs.order_by("-created_at")
-    paginator = Paginator(notifications_list, 15)  # Show 15 notifications per page
+    paginator = Paginator(notifications_list, 15)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
     return render(
@@ -2875,7 +2909,7 @@ def payment_methods(request):
     if request.method == "POST":
         card_holder_name = request.POST.get("card_holder_name")
         card_number = request.POST.get("card_number")
-        expiry = request.POST.get("expiry")  # MM/YY
+        expiry = request.POST.get("expiry") 
 
         if card_holder_name and card_number and expiry:
             try:
@@ -2883,7 +2917,6 @@ def payment_methods(request):
                     raise ValueError("Invalid expiry format. Use MM/YY")
                 month, year = expiry.split("/")
 
-                # Simple mock detection
                 brand = "Visa" if card_number.startswith("4") else "Mastercard"
                 if card_number.startswith("3"):
                     brand = "Amex"
@@ -2891,7 +2924,7 @@ def payment_methods(request):
                 SavedCard.objects.create(
                     user=request.user,
                     card_holder_name=card_holder_name,
-                    card_number=card_number[-4:],  # Store last 4 digits
+                    card_number=card_number[-4:], 
                     expiry_month=month,
                     expiry_year=year,
                     card_brand=brand,
@@ -2964,4 +2997,3 @@ def mark_all_notifications_read(request):
         invalidate_user_header_cache(request.user.id)
         messages.success(request, "All notifications marked as read")
     return redirect("all_notifications")
-

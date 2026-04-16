@@ -1,10 +1,8 @@
 import uuid
-
 from django.apps import apps
 from django.core.cache import cache
 from django.db.models import Count
 from django.utils import timezone
-
 
 CATALOG_CACHE_TTL_SECONDS = 300
 HOME_BANNER_CACHE_TTL_SECONDS = 60
@@ -20,10 +18,8 @@ _EMPTY_HEADER_CONTEXT = {
     "user_wishlists": [],
 }
 
-
 def _namespace_version_key(namespace):
     return f"cache_namespace:{namespace}:version"
-
 
 def _get_namespace_version(namespace):
     version_key = _namespace_version_key(namespace)
@@ -33,14 +29,11 @@ def _get_namespace_version(namespace):
         cache.set(version_key, version, None)
     return version
 
-
 def _namespaced_key(namespace, suffix):
     return f"{namespace}:v{_get_namespace_version(namespace)}:{suffix}"
 
-
 def invalidate_cache_namespace(namespace):
     cache.set(_namespace_version_key(namespace), uuid.uuid4().hex, None)
-
 
 def get_cached_active_categories():
     Category = apps.get_model("core", "Category")
@@ -51,7 +44,6 @@ def get_cached_active_categories():
         CATALOG_CACHE_TTL_SECONDS,
     )
 
-
 def get_cached_active_subcategories():
     SubCategory = apps.get_model("core", "SubCategory")
     cache_key = _namespaced_key("catalog", "active_subcategories")
@@ -60,7 +52,6 @@ def get_cached_active_subcategories():
         lambda: list(SubCategory.objects.filter(is_active=True)),
         CATALOG_CACHE_TTL_SECONDS,
     )
-
 
 def get_cached_subcategory_options(category_slug=None):
     suffix = f"subcategory_options:{category_slug or 'all'}"
@@ -81,7 +72,6 @@ def get_cached_subcategory_options(category_slug=None):
         CATALOG_CACHE_TTL_SECONDS,
     )
 
-
 def get_cached_active_banners():
     Banner = apps.get_model("core", "Banner")
     cache_key = _namespaced_key("home", "active_banners")
@@ -97,7 +87,6 @@ def get_cached_active_banners():
         HOME_BANNER_CACHE_TTL_SECONDS,
     )
 
-
 def get_cached_google_login_enabled():
     cache_key = _namespaced_key("auth", "google_login_enabled")
 
@@ -110,14 +99,11 @@ def get_cached_google_login_enabled():
 
     return cache.get_or_set(cache_key, _load_google_login_enabled, AUTH_CACHE_TTL_SECONDS)
 
-
 def _user_wishlist_cache_key(user_id):
     return f"user:{user_id}:wishlists"
 
-
 def _header_context_cache_key(user_id):
     return f"header_context:{user_id}"
-
 
 def get_cached_user_wishlists(user):
     if not getattr(user, "is_authenticated", False):
@@ -134,7 +120,6 @@ def get_cached_user_wishlists(user):
         ),
         USER_WISHLISTS_CACHE_TTL_SECONDS,
     )
-
 
 def get_cached_header_context(user):
     if not getattr(user, "is_authenticated", False):
@@ -163,16 +148,13 @@ def get_cached_header_context(user):
     cache.set(cache_key, context, HEADER_CONTEXT_TTL_SECONDS)
     return context
 
-
 def invalidate_user_wishlist_cache(user_id):
     if user_id:
         cache.delete(_user_wishlist_cache_key(user_id))
 
-
 def invalidate_user_header_cache(user_id):
     if user_id:
         cache.delete(_header_context_cache_key(user_id))
-
 
 def invalidate_user_common_cache(user_id):
     invalidate_user_wishlist_cache(user_id)

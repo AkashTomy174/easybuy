@@ -217,7 +217,7 @@
                 <div class="group relative flex flex-col rounded-3xl border border-stone-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-1 hover:shadow-2xl dark:border-stone-700 dark:bg-surface-dark">
                     <a href="{% url 'product_detail_user' item.variant.product.slug %}?variant={{ item.variant.id }}" class="relative mb-4 block aspect-square w-full overflow-hidden rounded-2xl bg-stone-50 dark:bg-stone-800">
                         {% if item.image and item.image.image %}
-                        <img src="{{ item.image.image.url }}" alt="{{ item.variant.product.name }}" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110">
+                        <img src="{{ item.image.image.url }}" alt="{{ item.variant.product.name }}" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" decoding="async" width="640" height="640">
                         {% else %}
                         <div class="flex h-full w-full items-center justify-center bg-stone-100 dark:bg-stone-800">
                             <span class="material-symbols-outlined text-5xl text-stone-400">image</span>

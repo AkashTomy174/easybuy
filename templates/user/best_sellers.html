@@ -44,7 +44,7 @@
                 <a href="{% url 'product_detail_user' variant.product.slug %}?variant={{ variant.id }}" class="relative mb-2 block aspect-square w-full overflow-hidden rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 sm:mb-4 sm:rounded-2xl">
                     {% if product_image and product_image.image %}
                     <img src="{{ product_image.image.url }}" alt="{{ variant.product.name }}" 
-                         class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110">
+                         class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110" loading="lazy" decoding="async" width="640" height="640">
                     {% else %}
                     <div class="flex h-full w-full items-center justify-center">
                         <span class="material-symbols-outlined text-3xl text-stone-300 sm:text-5xl">image</span>

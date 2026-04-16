@@ -216,11 +216,20 @@ WHITENOISE_AUTOREFRESH = RUNNING_DEVELOPMENT_SERVER
 WHITENOISE_USE_FINDERS = RUNNING_DEVELOPMENT_SERVER
 
 CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "easybuy-performance-cache",
-        "TIMEOUT": 300,
-    }
+    "default": (
+        {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": os.getenv("REDIS_URL", "").strip(),
+            "TIMEOUT": 300,
+            "KEY_PREFIX": "easybuy",
+        }
+        if os.getenv("REDIS_URL", "").strip()
+        else {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "easybuy-performance-cache",
+            "TIMEOUT": 300,
+        }
+    )
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
