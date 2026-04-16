@@ -121,19 +121,21 @@
 </section>
 
 {% if recent_product_data %}
-<section class="bg-white py-24 dark:bg-surface-dark/90">
+<section class="bg-stone-100 py-24 dark:bg-stone-900/50">
     <div class="mx-auto max-w-7xl px-4 sm:px-12">
         <div class="mb-12 flex items-end justify-between">
             <div>
                 <h2 class="text-3xl font-black text-stone-900 dark:text-white">Continue shopping for</h2>
                 <p class="mt-2 text-stone-500">Pick up where you left off with the products you viewed recently.</p>
             </div>
-            <a href="{% url 'all_products' %}" class="font-bold text-primary transition-all duration-300 hover:underline">Browse More</a>
+            <a href="{% url 'all_products' %}">
+                <button class="rounded-2xl border border-stone-300 bg-gradient-to-r from-white to-stone-50 px-6 py-2.5 text-sm font-bold shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 dark:border-stone-600 dark:from-stone-800 dark:to-stone-700 dark:hover:shadow-primary/20">Browse More</button>
+            </a>
         </div>
 
         <div class="grid grid-cols-3 gap-2 sm:gap-4 lg:grid-cols-4">
             {% for item in recent_product_data %}
-                <div class="group relative flex flex-col rounded-2xl border border-stone-200 bg-stone-50/70 p-2 product-card-shadow transition-all hover:border-primary/30 hover:shadow-2xl hover:-translate-y-2 dark:border-stone-700 dark:bg-stone-900/60 sm:rounded-3xl sm:p-4">
+                <div class="group relative flex flex-col rounded-2xl border border-stone-200 bg-white p-2 product-card-shadow transition-all hover:border-primary/30 hover:shadow-2xl hover:-translate-y-2 dark:border-stone-700 dark:bg-surface-dark sm:rounded-3xl sm:p-4">
                     {% if item.variant.mrp > item.variant.selling_price %}
                     <div class="absolute top-2 left-2 z-10 sm:top-4 sm:left-4">
                         <span class="rounded-full bg-red-500 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-white sm:px-3 sm:py-1 sm:text-[10px]">Sale</span>
