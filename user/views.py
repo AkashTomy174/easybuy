@@ -787,16 +787,25 @@ def product_detail(request, slug=None, id=None):
             request, "user/product_details.html", {"error": "Product not found"}
         )
 
-    related_products = (
-        Product.objects.prefetch_related("variants__images")
-        .filter(
-            subcategory_id=product.subcategory_id,
-            is_active=True,
-            approval_status="APPROVED",
-            seller__status="APPROVED",
+    if product.subcategory_id:
+        related_products = list(
+            Product.objects.prefetch_related("variants__images")
+            .filter(
+                subcategory_id=product.subcategory_id,
+                is_active=True,
+                approval_status="APPROVED",
+                seller__status="APPROVED",
+            )
+            .exclude(slug=product.slug)[:4]
         )
-        .exclude(slug=product.slug)[:4]
-    )
+    else:
+        related_products = []
+
+    for rp in related_products:
+        variants = list(rp.variants.all())
+        rp.cheapest_variant = min(
+            variants, key=lambda v: v.selling_price, default=None
+        )
 
     reviews = list(
         Review.objects.select_related("user")
