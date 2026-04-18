@@ -954,7 +954,10 @@ def status(request, id):
             )
 
         # Unified Notifications (In-App & Email) via Helper
-        send_status_change_notification(order_item.order.user, order_item, new_status)
+        try:
+            send_status_change_notification(order_item.order.user, order_item, new_status)
+        except Exception as e:
+            logger.error(f"Notification failed for order {id}: {e}")
 
         if getattr(settings, "WHATSAPP_NOTIFICATIONS_ENABLED", True):
             logger.info(
