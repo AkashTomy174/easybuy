@@ -992,7 +992,24 @@ def status(request, id):
         success_msg = f"Order status updated to {new_status}"
 
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
-            return JsonResponse({"success": True, "message": success_msg})
+            return JsonResponse(
+                {
+                    "success": True,
+                    "message": success_msg,
+                    "new_status": order_item.status,
+                    "is_final": order_item.status in {"DELIVERED", "CANCELLED"},
+                    "shipped_at": (
+                        timezone.localtime(order_item.shipped_at).strftime("%b %d")
+                        if order_item.shipped_at
+                        else ""
+                    ),
+                    "delivered_at": (
+                        timezone.localtime(order_item.delivered_at).strftime("%b %d")
+                        if order_item.delivered_at
+                        else ""
+                    ),
+                }
+            )
 
         messages.success(request, success_msg)
         return redirect("seller_orders")
@@ -1106,6 +1123,7 @@ def seller_returns(request):
             "order_item__variant__product",
             "order_item__order",
         )
+        .prefetch_related("images")
         .order_by("-created_at")
     )
 

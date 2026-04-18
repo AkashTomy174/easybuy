@@ -41,6 +41,7 @@ import logging
 from django.conf import settings
 from django.http import HttpResponse
 from decimal import Decimal as DzDecimal
+from PIL import Image, UnidentifiedImageError
 from core.whatsapp_utils import WhatsAppNotifier
 from core.services import create_notification
 from core.cache_utils import (
@@ -441,6 +442,17 @@ def _validate_image_file(file_obj, *, label):
         return f"{label} must be a JPG, PNG, GIF, or WEBP image."
     if file_obj.size > MAX_IMAGE_UPLOAD_BYTES:
         return f"{label} must be smaller than 5MB."
+    try:
+        file_obj.seek(0)
+        with Image.open(file_obj) as image_obj:
+            image_obj.verify()
+    except (UnidentifiedImageError, OSError, ValueError):
+        return f"{label} appears to be corrupted or not a valid image."
+    finally:
+        try:
+            file_obj.seek(0)
+        except Exception:
+            pass
     return ""
 
 
@@ -1691,6 +1703,16 @@ def request_return(request, item_id):
             return redirect("user_orders")
 
     with transaction.atomic():
+        item = (
+            OrderItem.objects.select_for_update()
+            .select_related("variant__product", "order")
+            .get(id=item_id, order__user=request.user)
+        )
+        eligibility = _get_return_eligibility(item)
+        if not eligibility["eligible"]:
+            messages.error(request, eligibility["message"])
+            return redirect("user_orders")
+
         return_req = ReturnRequest.objects.create(
             order_item=item, reason=reason, status="PENDING"
         )

@@ -166,7 +166,10 @@
                                 <span class="text-xs text-stone-500">Est. Ship: {{ item.estimated_ship_date|date:"M d" }}</span>
                                 {% endif %}
                                 {% if item.shipped_at %}
-                                <span class="text-xs text-blue-600 font-semibold">Shipped: {{ item.shipped_at|date:"M d" }}</span>
+                                <span class="js-shipped-at text-xs text-blue-600 font-semibold">Shipped: {{ item.shipped_at|date:"M d" }}</span>
+                                {% endif %}
+                                {% if item.delivered_at %}
+                                <span class="js-delivered-at text-xs text-emerald-600 font-semibold">Delivered: {{ item.delivered_at|date:"M d" }}</span>
                                 {% endif %}
                             </div>
                         </form>
@@ -240,6 +243,8 @@ function updateStatus(itemId, newStatus) {
     const form = document.getElementById(`status-form-${itemId}`);
     const select = document.getElementById(`status-select-${itemId}`);
     const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+    const statusContainer = select ? select.closest('.flex.items-center.gap-2') : null;
+    const detailContainer = form.querySelector('.flex.flex-col.gap-1');
     select.classList.add('ring-2', 'ring-primary', 'ring-opacity-50');
 
     const colorMap = {
@@ -247,6 +252,13 @@ function updateStatus(itemId, newStatus) {
         'SHIPPED': 'text-blue-600',
         'DELIVERED': 'text-emerald-600',
         'CANCELLED': 'text-red-600'
+    };
+
+    const badgeMap = {
+        'DELIVERED': 'text-emerald-600',
+        'CANCELLED': 'text-red-600',
+        'RETURN_REQUESTED': 'text-stone-500',
+        'RETURNED': 'text-stone-500'
     };
 
     fetch(form.action, {
@@ -260,14 +272,46 @@ function updateStatus(itemId, newStatus) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            const resolvedStatus = data.new_status || newStatus;
             select.classList.remove('text-orange-600', 'text-blue-600', 'text-emerald-600', 'text-red-600');
-            select.classList.add(colorMap[newStatus]);
+            select.classList.add(colorMap[resolvedStatus] || 'text-stone-600');
             select.classList.replace('ring-primary', 'ring-emerald-500');
-            showToast('Order status updated successfully.', 'success');
-            
-            setTimeout(() => {
-                window.location.reload();
-            }, 800);
+
+            if (data.is_final && statusContainer) {
+                const badge = document.createElement('span');
+                const badgeColor = badgeMap[resolvedStatus] || 'text-stone-500';
+                badge.className = `text-[10px] font-black uppercase tracking-wider ${badgeColor}`;
+                badge.textContent = resolvedStatus;
+                statusContainer.innerHTML = '';
+                statusContainer.appendChild(badge);
+            } else if (select) {
+                if (resolvedStatus === 'SHIPPED') {
+                    select.innerHTML = '<option value="SHIPPED" selected>SHIPPED</option><option value="DELIVERED">DELIVERED</option>';
+                    select.value = 'SHIPPED';
+                }
+            }
+
+            if (detailContainer) {
+                const oldShip = detailContainer.querySelector('.js-shipped-at');
+                const oldDelivered = detailContainer.querySelector('.js-delivered-at');
+                if (oldShip) oldShip.remove();
+                if (oldDelivered) oldDelivered.remove();
+
+                if (data.shipped_at) {
+                    const shipped = document.createElement('span');
+                    shipped.className = 'js-shipped-at text-xs text-blue-600 font-semibold';
+                    shipped.textContent = `Shipped: ${data.shipped_at}`;
+                    detailContainer.appendChild(shipped);
+                }
+                if (data.delivered_at) {
+                    const delivered = document.createElement('span');
+                    delivered.className = 'js-delivered-at text-xs text-emerald-600 font-semibold';
+                    delivered.textContent = `Delivered: ${data.delivered_at}`;
+                    detailContainer.appendChild(delivered);
+                }
+            }
+
+            showToast(data.message || 'Order status updated successfully.', 'success');
         } else {
             showToast('Update failed: ' + (data.message || 'Unknown error'), 'error');
             select.classList.remove('ring-2', 'ring-primary');
