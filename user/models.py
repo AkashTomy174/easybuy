@@ -139,9 +139,10 @@ class OrderItem(models.Model):
 
     def save(self, *args, **kwargs):
         from django.utils import timezone
+        from datetime import timedelta
 
         if self.status in ["PENDING", "CONFIRMED"] and not self.estimated_ship_date:
-            self.estimated_ship_date = timezone.now() + timezone.timedelta(days=2)
+            self.estimated_ship_date = timezone.now() + timedelta(days=2)
         self.subtotal = self.quantity * self.price_at_purchase
         super().save(*args, **kwargs)
 
