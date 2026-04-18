@@ -17,7 +17,18 @@ class PublicHostMiddleware:
         if public_host:
             current_host = (request.META.get("HTTP_HOST") or "").strip()
             current_hostname = current_host.split(":", 1)[0].lower()
-            if current_hostname in {"", "127.0.0.1", "0.0.0.0", "localhost", "::1"}:
+            public_hostname = public_host.split(":", 1)[0].lower()
+            allowed_hosts = {
+                host.split(":", 1)[0].strip().lower()
+                for host in getattr(settings, "ALLOWED_HOSTS", [])
+                if host
+            }
+            can_rewrite_public_host = "*" in allowed_hosts or public_hostname in allowed_hosts
+
+            if (
+                current_hostname in {"", "127.0.0.1", "0.0.0.0", "localhost", "::1"}
+                and can_rewrite_public_host
+            ):
                 request.META["HTTP_HOST"] = public_host
                 request.META["SERVER_NAME"] = public_host.split(":", 1)[0]
                 if ":" in public_host:

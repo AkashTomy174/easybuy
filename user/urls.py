@@ -166,5 +166,6 @@ urlpatterns = [
         views.delete_notification,
         name="delete_notification",
     ),
+    path("orders/status/", views.order_status_api, name="order_status_api"),
 ]
 

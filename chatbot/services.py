@@ -15,7 +15,7 @@ from .models import ComplaintReplyTemplate, ComplaintTicket, FAQEntry
 
 try:
     from openai import OpenAI
-except ImportError:  # pragma: no cover - exercised via configuration fallback
+except ImportError:
     OpenAI = None
 
 
@@ -69,95 +69,29 @@ DEFAULT_COMPLAINT_TEMPLATES = {
 }
 
 STOP_WORDS = {
-    "a",
-    "an",
-    "the",
-    "for",
-    "to",
-    "of",
-    "in",
-    "on",
-    "at",
-    "i",
-    "me",
-    "my",
-    "you",
-    "your",
-    "it",
-    "this",
-    "that",
-    "what",
-    "how",
-    "do",
-    "does",
-    "can",
-    "could",
-    "would",
-    "should",
-    "is",
-    "are",
-    "am",
-    "be",
-    "show",
-    "find",
-    "need",
-    "want",
-    "looking",
-    "tell",
-    "about",
-    "something",
-    "sure",
-    "please",
-    "with",
-    "and",
-    "or",
-    "under",
-    "below",
-    "best",
-    "product",
-    "products",
+    "a", "an", "the", "for", "to", "of", "in", "on", "at", "i", "me", "my",
+    "you", "your", "it", "this", "that", "what", "how", "do", "does", "can",
+    "could", "would", "should", "is", "are", "am", "be", "show", "find",
+    "need", "want", "looking", "tell", "about", "something", "sure", "please",
+    "with", "and", "or", "under", "below", "best", "product", "products",
 }
 
 PRODUCT_HINTS = {
-    "phone",
-    "mobile",
-    "laptop",
-    "headphone",
-    "headphones",
-    "earbuds",
-    "tv",
-    "tablet",
-    "camera",
-    "watch",
-    "speaker",
-    "buy",
-    "recommend",
-    "recommendation",
+    "phone", "mobile", "laptop", "headphone", "headphones", "earbuds", "tv",
+    "tablet", "camera", "watch", "speaker", "buy", "recommend", "recommendation",
     "browse",
 }
 
 ORDER_HINTS = {"order", "track", "delivery", "shipped", "delivered", "cancel"}
+
 COMPLAINT_HINTS = {
-    "complaint",
-    "issue",
-    "problem",
-    "damaged",
-    "broken",
-    "refund",
-    "late",
-    "delay",
-    "wrong",
+    "complaint", "issue", "problem", "damaged", "broken", "refund", "late",
+    "delay", "wrong",
 }
+
 ESCALATION_HINTS = {
-    "human",
-    "agent",
-    "support person",
-    "representative",
-    "talk to support",
-    "talk to a human",
-    "connect me to support",
-    "customer care",
-    "live agent",
+    "human", "agent", "support person", "representative", "talk to support",
+    "talk to a human", "connect me to support", "customer care", "live agent",
     "speak to someone",
 }
 
@@ -177,6 +111,49 @@ Return a JSON object with:
 - intent: string
 - quick_replies: array of up to 3 short strings
 - should_escalate: boolean
+""".strip()
+
+INTENT_CLASSIFIER_PROMPT = """
+You are an intent classification engine for an e-commerce chatbot.
+
+Your task is to classify a user's query into ONE of these categories:
+
+1. PRODUCT_SEARCH -> User is clearly trying to find or browse products
+2. AI_ASSIST -> User is asking for advice, explanation, or general help
+3. AMBIGUOUS -> Not enough signal, or could be both
+
+---
+
+STRICT RULES:
+
+1. DO NOT classify as PRODUCT_SEARCH based on a single generic keyword.
+   Example of weak tokens: red, best, new, good, cheap, latest
+
+2. PRODUCT_SEARCH requires at least ONE of:
+   - Specific product type (e.g., "iphone", "running shoes")
+   - Brand mention (e.g., "nike", "samsung")
+   - Strong multi-token combination (e.g., "red dress", "gaming laptop")
+
+3. If the query asks a question, prefer AI_ASSIST unless product intent is very strong.
+   Example:
+   - "which laptop is best for coding?" -> AI_ASSIST
+   - "buy dell laptop i7" -> PRODUCT_SEARCH
+
+4. If both signals exist:
+   - If user is comparing, deciding, or asking -> AI_ASSIST
+   - If user is directly searching/browsing -> PRODUCT_SEARCH
+
+5. If uncertain -> AMBIGUOUS
+
+---
+
+OUTPUT FORMAT (STRICT JSON ONLY):
+{
+  "intent": "PRODUCT_SEARCH | AI_ASSIST | AMBIGUOUS",
+  "confidence": 0.0 to 1.0,
+  "reason": "short explanation",
+  "matched_tokens": ["list", "of", "important", "tokens"]
+}
 """.strip()
 
 
@@ -330,8 +307,51 @@ def parse_budget(message):
 
 
 def is_product_query(message):
+    from core.cache_utils import get_cached_chatbot_product_hints
     tokens = set(tokenize(message))
-    return bool(tokens.intersection(PRODUCT_HINTS)) or bool(parse_budget(message))
+    if tokens.intersection(PRODUCT_HINTS) or parse_budget(message):
+        return True
+    dynamic_hints = get_cached_chatbot_product_hints()
+    return bool(tokens.intersection(dynamic_hints))
+
+
+def classify_product_intent(message):
+    """
+    Uses OpenAI to classify whether the message is PRODUCT_SEARCH, AI_ASSIST, or AMBIGUOUS.
+    Falls back to keyword matching if OpenAI is unavailable.
+    Returns one of: 'PRODUCT_SEARCH', 'AI_ASSIST', 'AMBIGUOUS'
+    """
+    if not openai_enabled():
+        return "PRODUCT_SEARCH" if is_product_query(message) else "AI_ASSIST"
+
+    client = get_openai_client()
+    if not client:
+        return "PRODUCT_SEARCH" if is_product_query(message) else "AI_ASSIST"
+
+    try:
+        response = client.responses.create(
+            model=settings.OPENAI_MODEL,
+            input=[
+                {"role": "system", "content": INTENT_CLASSIFIER_PROMPT},
+                {"role": "user", "content": message},
+            ],
+            text={"format": {"type": "json_object"}},
+            store=False,
+        )
+        raw = (getattr(response, "output_text", "") or "").strip()
+        data = json.loads(raw)
+        intent = str(data.get("intent", "")).strip().upper()
+        confidence = float(data.get("confidence", 0))
+        if intent not in {"PRODUCT_SEARCH", "AI_ASSIST", "AMBIGUOUS"}:
+            raise ValueError(f"Unknown intent: {intent}")
+        logger.debug(
+            "Intent classified: %s (%.2f) - %s",
+            intent, confidence, data.get("reason", "")
+        )
+        return intent
+    except Exception:
+        logger.exception("Intent classification failed, falling back to keyword match.")
+        return "PRODUCT_SEARCH" if is_product_query(message) else "AI_ASSIST"
 
 
 def _base_product_queryset():
@@ -624,7 +644,7 @@ def generate_ai_reply(user, session, message, extra_context=None):
             text={"format": {"type": "json_object"}},
             store=False,
         )
-    except Exception:  # pragma: no cover - network/provider failures are logged
+    except Exception:
         logger.exception("OpenAI chatbot fallback failed.")
         return None
 
@@ -708,6 +728,7 @@ def handle_chat_message(user, session, message):
         }
 
     lower_message = clean_message.lower()
+
     if any(_contains_keyword(lower_message, phrase) for phrase in ESCALATION_HINTS):
         latest_ticket = session.complaints.order_by("-created_at").first()
         return escalate_to_human(session, latest_ticket)
@@ -733,7 +754,9 @@ def handle_chat_message(user, session, message):
             "meta": {"faq_question": faq_entry.question},
         }
 
-    if is_product_query(clean_message):
+    product_intent = classify_product_intent(clean_message)
+
+    if product_intent == "PRODUCT_SEARCH":
         variants, budget = search_products(clean_message)
         if variants:
             reply = "Here are some products you can look at"
@@ -755,6 +778,24 @@ def handle_chat_message(user, session, message):
             "intent": "product_search",
             "quick_replies": ["Show budget phones", "Show laptops", "Show headphones"],
         }
+
+    if product_intent == "AMBIGUOUS":
+        variants, budget = search_products(clean_message)
+        if variants:
+            reply = "I found some products that might match"
+            if budget:
+                reply += f" under Rs. {budget}"
+            reply += ". Were you looking for these, or did you need help with something else?"
+            return {
+                "reply": reply,
+                "intent": "product_search",
+                "products": [serialize_product(variant) for variant in variants],
+                "quick_replies": [
+                    "Yes, show more",
+                    "What is your return policy?",
+                    "I have a complaint",
+                ],
+            }
 
     ai_response = generate_ai_reply(user, session, clean_message)
     if ai_response:

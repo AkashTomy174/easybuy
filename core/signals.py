@@ -3,6 +3,7 @@ from django.dispatch import receiver
 
 from core.cache_utils import (
     invalidate_cache_namespace,
+    invalidate_chatbot_brands_cache,
     invalidate_user_header_cache,
 )
 from core.models import Banner, Category, Notification, SubCategory
@@ -14,6 +15,7 @@ from core.models import Banner, Category, Notification, SubCategory
 @receiver(post_delete, sender=SubCategory)
 def invalidate_catalog_common_cache(sender, **kwargs):
     invalidate_cache_namespace("catalog")
+    invalidate_chatbot_brands_cache()
 
 
 @receiver(post_save, sender=Banner)
@@ -40,3 +42,16 @@ if SocialApp is not None:
     @receiver(post_delete, sender=SocialApp)
     def invalidate_auth_common_cache(sender, **kwargs):
         invalidate_cache_namespace("auth")
+
+
+try:
+    from seller.models import Product
+except Exception:
+    Product = None
+
+if Product is not None:
+
+    @receiver(post_save, sender=Product)
+    @receiver(post_delete, sender=Product)
+    def invalidate_chatbot_brands_on_product_change(sender, instance, **kwargs):
+        invalidate_chatbot_brands_cache()

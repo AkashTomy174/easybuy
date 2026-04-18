@@ -1,3 +1,4 @@
+import re
 import uuid
 from django.apps import apps
 from django.core.cache import cache
@@ -159,3 +160,51 @@ def invalidate_user_header_cache(user_id):
 def invalidate_user_common_cache(user_id):
     invalidate_user_wishlist_cache(user_id)
     invalidate_user_header_cache(user_id)
+
+CHATBOT_HINTS_CACHE_KEY = "chatbot:product_hints"
+CHATBOT_HINTS_CACHE_TTL = 300
+
+def get_cached_chatbot_product_hints():
+    cached = cache.get(CHATBOT_HINTS_CACHE_KEY)
+    if cached is not None:
+        return cached
+
+    Product = apps.get_model("seller", "Product")
+    Category = apps.get_model("core", "Category")
+    SubCategory = apps.get_model("core", "SubCategory")
+
+    base_qs = Product.objects.filter(
+        is_active=True,
+        approval_status="APPROVED",
+        seller__status="APPROVED",
+    )
+
+    brands = base_qs.exclude(brand__isnull=True).exclude(brand__exact="") \
+        .values_list("brand", flat=True).distinct()
+
+    product_names = base_qs.exclude(name__isnull=True).exclude(name__exact="") \
+        .values_list("name", flat=True).distinct()
+
+    category_names = Category.objects.filter(is_active=True) \
+        .values_list("name", flat=True)
+
+    subcategory_names = SubCategory.objects.filter(is_active=True) \
+        .values_list("name", flat=True)
+
+    hints = set()
+    for value in (*brands, *category_names, *subcategory_names):
+        if value:
+            hints.add(value.lower().strip())
+
+    # for product names, tokenize each word so "boAt Rockerz 255" adds "boat", "rockerz", "255"
+    for name in product_names:
+        if name:
+            for token in re.findall(r"[a-zA-Z0-9]+", name.lower()):
+                if len(token) > 2:
+                    hints.add(token)
+
+    cache.set(CHATBOT_HINTS_CACHE_KEY, hints, CHATBOT_HINTS_CACHE_TTL)
+    return hints
+
+def invalidate_chatbot_brands_cache():
+    cache.delete(CHATBOT_HINTS_CACHE_KEY)

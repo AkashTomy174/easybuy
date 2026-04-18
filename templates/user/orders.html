@@ -11,7 +11,7 @@
     {% if page_obj %}
         <div class="space-y-4">
             {% for item in page_obj %}
-            <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <div class="bg-white dark:bg-surface-dark rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm overflow-hidden hover:shadow-md transition-shadow" data-item-id="{{ item.id }}">
                 <!-- Item Header -->
                 <div class="bg-stone-50 dark:bg-stone-800/50 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
                     <div class="flex items-center gap-4">
@@ -27,7 +27,7 @@
                     <div class="flex items-center gap-3">
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Status:</span>
-                            <span class="px-3 py-1 text-xs font-black uppercase tracking-wider rounded-full 
+                            <span class="order-status-badge px-3 py-1 text-xs font-black uppercase tracking-wider rounded-full 
                                 {% if item.status == 'DELIVERED' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
                                 {% elif item.status == 'SHIPPED' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400
                                 {% elif item.status == 'CONFIRMED' %}bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
@@ -192,6 +192,46 @@
 
 {% block extra_js %}
 <script>
+const STATUS_CLASSES = {
+    DELIVERED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    SHIPPED:   'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    CONFIRMED: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    RETURNED:  'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+};
+const DEFAULT_STATUS_CLASS = 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+
+function getItemIds() {
+    return [...document.querySelectorAll('[data-item-id]')].map(el => el.dataset.itemId);
+}
+
+function applyStatusUpdate(itemId, newStatus) {
+    const card = document.querySelector(`[data-item-id="${itemId}"]`);
+    if (!card) return;
+    const badge = card.querySelector('.order-status-badge');
+    if (!badge || badge.textContent.trim() === newStatus) return;
+
+    const baseClasses = 'order-status-badge px-3 py-1 text-xs font-black uppercase tracking-wider rounded-full';
+    const colorClass = STATUS_CLASSES[newStatus] || DEFAULT_STATUS_CLASS;
+    badge.className = `${baseClasses} ${colorClass}`;
+    badge.textContent = newStatus;
+
+    badge.animate([{opacity: 0, transform: 'scale(0.8)'}, {opacity: 1, transform: 'scale(1)'}], {duration: 400, easing: 'ease-out'});
+}
+
+function pollOrderStatuses() {
+    const ids = getItemIds();
+    if (!ids.length) return;
+    fetch(`/user/orders/status/?ids=${ids.join(',')}`)
+        .then(r => r.json())
+        .then(data => {
+            Object.entries(data.statuses || {}).forEach(([id, status]) => applyStatusUpdate(id, status));
+        })
+        .catch(() => {});
+}
+
+setInterval(pollOrderStatuses, 15000);
+
 function cancelItem(itemId) {
     showConfirmDialog({
         title: 'Cancel this item?',

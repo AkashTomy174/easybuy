@@ -2997,3 +2997,22 @@ def mark_all_notifications_read(request):
         invalidate_user_header_cache(request.user.id)
         messages.success(request, "All notifications marked as read")
     return redirect("all_notifications")
+
+
+@login_required
+@role_required(allowed_roles=["CUSTOMER"])
+def order_status_api(request):
+    item_ids_raw = request.GET.get("ids", "")
+    try:
+        item_ids = [int(i) for i in item_ids_raw.split(",") if i.strip().isdigit()]
+    except ValueError:
+        return JsonResponse({"error": "Invalid ids"}, status=400)
+
+    if not item_ids:
+        return JsonResponse({"statuses": {}})
+
+    items = OrderItem.objects.filter(
+        id__in=item_ids, order__user=request.user
+    ).values("id", "status")
+
+    return JsonResponse({"statuses": {str(item["id"]): item["status"] for item in items}})

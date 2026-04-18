@@ -60,7 +60,7 @@ PUBLIC_BASE_URL = _normalize_public_base_url(
     os.getenv("APP_BASE_URL"),
     default_scheme=DEFAULT_PUBLIC_SCHEME,
 )
-if not PUBLIC_BASE_URL and not RUNNING_DEVELOPMENT_SERVER:
+if not PUBLIC_BASE_URL and not RUNNING_DEVELOPMENT_SERVER and not RUNNING_TESTS:
     public_host = _guess_public_host(ALLOWED_HOSTS)
     if public_host:
         PUBLIC_BASE_URL = f"{DEFAULT_PUBLIC_SCHEME}://{public_host}"
