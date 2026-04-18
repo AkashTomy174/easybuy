@@ -943,8 +943,6 @@ def status(request, id):
             old_status = order_item.status
             update_fields = {"status": new_status}
             if new_status == "SHIPPED" and not order_item.shipped_at:
-                from django.utils import timezone
-
                 update_fields["shipped_at"] = timezone.now()
             elif new_status == "DELIVERED" and not order_item.delivered_at:
                 update_fields["delivered_at"] = timezone.now()
