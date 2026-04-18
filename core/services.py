@@ -1,4 +1,7 @@
+import logging
 from .models import Notification, StockNotification
+
+logger = logging.getLogger(__name__)
 
 
 def create_notification(user, type, title, message, image_url=None, redirect_url=None):
@@ -15,7 +18,10 @@ def create_notification(user, type, title, message, image_url=None, redirect_url
         image_url=image_url,
         redirect_url=redirect_url,
     )
-    send_notification_task.delay(notification.id)
+    try:
+        send_notification_task.delay(notification.id)
+    except Exception as e:
+        logger.warning(f"Celery unavailable, notification {notification.id} saved to DB only: {e}")
     return notification
 
 def check_stock_notifications(variant):
@@ -42,4 +48,3 @@ def check_stock_notifications(variant):
             image_url=image_url,
             redirect_url=product_url,
         )
-
