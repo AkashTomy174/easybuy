@@ -941,14 +941,18 @@ def status(request, id):
     try:
         with transaction.atomic():
             old_status = order_item.status
-            order_item.status = new_status
+            update_fields = {"status": new_status}
             if new_status == "SHIPPED" and not order_item.shipped_at:
                 from django.utils import timezone
 
-                order_item.shipped_at = timezone.now()
+                update_fields["shipped_at"] = timezone.now()
             elif new_status == "DELIVERED" and not order_item.delivered_at:
-                order_item.delivered_at = timezone.now()
-            order_item.save()
+                update_fields["delivered_at"] = timezone.now()
+
+            # Use queryset update to avoid invoking OrderItem.save() side effects
+            # during status transitions.
+            OrderItem.objects.filter(pk=order_item.pk).update(**update_fields)
+            order_item.refresh_from_db()
             logger.info(
                 f"Status Change: Order {order_item.order.order_number} | {old_status} -> {new_status} by {request.user.username}"
             )
@@ -999,7 +1003,7 @@ def status(request, id):
         logger.error(f"Critical error in status update: {traceback.format_exc()}")
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse(
-                {"success": False, "message": "Server Error"}, status=500
+                {"success": False, "message": f"Server Error: {str(e)}"}, status=500
             )
         messages.error(request, "An error occurred while updating status.")
         return redirect("seller_orders")
