@@ -132,29 +132,66 @@
         {% if related_products %}
         <div class="mt-16">
             <h2 class="text-2xl font-black text-stone-900 dark:text-white mb-6">You may also like</h2>
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div class="grid grid-cols-3 gap-2 sm:gap-4 lg:grid-cols-4">
                 {% for related in related_products %}
                 {% with related.cheapest_variant as rv %}
                 {% if rv %}
-                <a href="{% url 'product_detail_user' related.slug %}?variant={{ rv.id }}"
-                   class="group flex flex-col rounded-2xl border border-stone-200 bg-white p-3 transition-all hover:border-primary/40 hover:shadow-lg hover:-translate-y-1 dark:border-stone-700 dark:bg-stone-800">
-                    <div class="relative mb-3 aspect-square overflow-hidden rounded-xl bg-stone-100 dark:bg-stone-700">
+                <div class="group relative flex flex-col rounded-2xl border border-stone-200 bg-white p-2 product-card-shadow transition-all hover:border-primary/30 hover:shadow-2xl hover:-translate-y-2 dark:border-stone-700 dark:bg-surface-dark sm:rounded-3xl sm:p-4">
+                    {% if rv.mrp > rv.selling_price %}
+                    <div class="absolute top-2 left-2 z-10 sm:top-4 sm:left-4">
+                        <span class="rounded-full bg-red-500 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-white sm:px-3 sm:py-1 sm:text-[10px]">Sale</span>
+                    </div>
+                    {% endif %}
+
+                    <a href="{% url 'product_detail_user' related.slug %}?variant={{ rv.id }}" class="relative mb-2 block aspect-square w-full overflow-hidden rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 sm:mb-4 sm:rounded-2xl">
                         {% with rv.images.first as img %}
                         {% if img and img.image %}
                         <img src="{{ img.image.url }}" alt="{{ related.name }}"
-                             class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                             loading="lazy" width="400" height="400">
+                             class="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                             loading="lazy" decoding="async" width="640" height="640">
                         {% else %}
                         <div class="flex h-full w-full items-center justify-center">
-                            <span class="material-symbols-outlined text-3xl text-stone-300">image</span>
+                            <span class="material-symbols-outlined text-3xl text-stone-300 sm:text-5xl">image</span>
                         </div>
                         {% endif %}
                         {% endwith %}
+                        {% if rv.stock_quantity <= 0 %}
+                        <div class="absolute bottom-0 left-0 right-0 bg-red-500/90 py-1 text-center text-[9px] font-bold text-white backdrop-blur-sm sm:text-xs">OUT OF STOCK</div>
+                        {% endif %}
+                    </a>
+
+                    <a href="{% url 'product_detail_user' related.slug %}?variant={{ rv.id }}" class="block flex flex-1 flex-col px-1 sm:px-2">
+                        <span class="mb-1 text-[8px] font-black uppercase tracking-[0.16em] text-stone-400 dark:text-stone-500 sm:text-[10px] sm:tracking-[0.2em]">{{ related.brand }}</span>
+                        <h3 class="line-clamp-2 text-[11px] font-bold leading-tight text-stone-900 transition-colors group-hover:text-primary dark:text-white sm:line-clamp-1 sm:text-lg">{{ related.name }}</h3>
+                    </a>
+
+                    <div class="mt-2 grid h-10 grid-cols-[1fr_auto] items-center gap-2 px-1 sm:mt-4 sm:h-12 sm:gap-3 sm:px-2">
+                        <div class="flex flex-col justify-center">
+                            <span class="text-sm font-black leading-none text-primary sm:text-xl">&#8377;{{ rv.selling_price }}</span>
+                            {% if rv.mrp > rv.selling_price %}
+                            <span class="text-[9px] font-medium leading-none text-stone-400 line-through sm:text-xs">&#8377;{{ rv.mrp }}</span>
+                            {% endif %}
+                        </div>
+                        {% if rv.stock_quantity <= 0 %}
+                            {% if request.user.is_authenticated %}
+                            <button data-stock-notify-btn data-variant-id="{{ rv.id }}" onclick="event.preventDefault(); event.stopPropagation(); const btn = this; toggleStockNotify(btn.dataset.variantId, btn); return false;" class="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700 sm:h-10 sm:w-auto sm:gap-1 sm:px-4 sm:rounded-2xl sm:text-sm sm:font-bold">
+                                <span class="material-symbols-outlined text-base sm:text-[20px]">notifications_active</span>
+                                <span class="hidden sm:inline">Notify Me</span>
+                            </button>
+                            {% else %}
+                            <button disabled class="flex h-8 w-8 items-center justify-center rounded-xl bg-stone-300 text-stone-500 cursor-not-allowed sm:h-10 sm:w-auto sm:gap-1 sm:px-4 sm:rounded-2xl sm:text-sm sm:font-bold" title="Login to get notified">
+                                <span class="material-symbols-outlined text-base sm:text-[20px]">notifications_off</span>
+                                <span class="hidden sm:inline">Notify Me</span>
+                            </button>
+                            {% endif %}
+                        {% else %}
+                        <button data-addtocart-btn onclick="event.preventDefault(); event.stopPropagation(); addToCart({{ rv.id }}, this); return false;" class="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg shadow-primary/30 transition-all hover:scale-[1.02] hover:shadow-xl sm:h-10 sm:w-auto sm:gap-1 sm:px-4 sm:rounded-2xl sm:text-sm sm:font-bold">
+                            <span class="material-symbols-outlined text-base sm:text-[20px]">add_shopping_cart</span>
+                            <span class="hidden sm:inline">Add to Cart</span>
+                        </button>
+                        {% endif %}
                     </div>
-                    <span class="text-[10px] font-black uppercase tracking-widest text-stone-400">{{ related.brand }}</span>
-                    <h3 class="mt-1 line-clamp-2 text-sm font-bold text-stone-900 group-hover:text-primary dark:text-white">{{ related.name }}</h3>
-                    <p class="mt-2 text-base font-black text-primary">From ₹{{ rv.selling_price }}</p>
-                </a>
+                </div>
                 {% endif %}
                 {% endwith %}
                 {% endfor %}
@@ -165,6 +202,10 @@
     </div>
     {% endif %}
 </div>
+
+<style>
+.product-card-shadow { box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.08); }
+</style>
 
 <script>
     let selectedVariantId = null;
