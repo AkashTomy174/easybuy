@@ -55,7 +55,7 @@ jobs:
             "$VENV_PYTHON" manage.py collectstatic --noinput
 
             echo "Restart services"
-            sudo systemctl reload gunicorn
+            sudo systemctl restart gunicorn
             sudo systemctl reload nginx
             sudo systemctl is-active --quiet gunicorn
             sudo systemctl is-active --quiet nginx
