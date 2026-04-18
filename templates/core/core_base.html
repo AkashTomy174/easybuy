@@ -868,6 +868,9 @@ function openWishlistModal(variantId, buttonElement = null) {
     const modal = document.getElementById('wishlistModal');
     if (modal) {
         modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
     }
 }
 
@@ -875,6 +878,7 @@ function closeWishlistModal() {
     const modal = document.getElementById('wishlistModal');
     if (modal) {
         modal.classList.add('hidden');
+        modal.style.display = '';
     }
     currentVariantId = null;
     currentWishlistTrigger = null;
@@ -1006,6 +1010,15 @@ document.addEventListener('DOMContentLoaded', function() {
             closeWishlistModal();
         }
     });
+
+    const wishlistModal = document.getElementById('wishlistModal');
+    if (wishlistModal) {
+        wishlistModal.addEventListener('click', function(event) {
+            if (event.target === wishlistModal) {
+                closeWishlistModal();
+            }
+        });
+    }
 });
 
 // Enhanced addToCart with animations
