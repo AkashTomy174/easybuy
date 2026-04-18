@@ -215,7 +215,20 @@ def get_openai_client():
         return None
     return OpenAI(
         api_key=settings.OPENAI_API_KEY,
-        timeout=getattr(settings, "OPENAI_TIMEOUT_SECONDS", 20),
+        timeout=getattr(
+            settings,
+            "OPENAI_CHAT_TIMEOUT_SECONDS",
+            getattr(settings, "OPENAI_TIMEOUT_SECONDS", 20),
+        ),
+    )
+
+
+def get_openai_client_with_timeout(timeout_seconds):
+    if not openai_enabled():
+        return None
+    return OpenAI(
+        api_key=settings.OPENAI_API_KEY,
+        timeout=timeout_seconds,
     )
 
 
@@ -324,7 +337,15 @@ def classify_product_intent(message):
     if not openai_enabled():
         return "PRODUCT_SEARCH" if is_product_query(message) else "AI_ASSIST"
 
-    client = get_openai_client()
+    # Fast local heuristic to avoid an extra OpenAI call for obvious cases.
+    if is_product_query(message):
+        if "?" in (message or ""):
+            return "AI_ASSIST"
+        return "PRODUCT_SEARCH"
+
+    client = get_openai_client_with_timeout(
+        getattr(settings, "OPENAI_INTENT_TIMEOUT_SECONDS", 4)
+    )
     if not client:
         return "PRODUCT_SEARCH" if is_product_query(message) else "AI_ASSIST"
 
@@ -665,6 +686,29 @@ def generate_ai_reply(user, session, message, extra_context=None):
     return _normalize_ai_reply(user, data)
 
 
+def _should_try_ai_fallback(message):
+    text = (message or "").strip().lower()
+    if not text:
+        return False
+    # Avoid expensive fallback for very short generic prompts.
+    if len(text) < 12 and "?" not in text:
+        return False
+    ai_hint_words = {
+        "recommend",
+        "suggest",
+        "compare",
+        "difference",
+        "best",
+        "which",
+        "help",
+        "need",
+        "why",
+        "how",
+    }
+    tokens = set(tokenize(text))
+    return "?" in text or bool(tokens.intersection(ai_hint_words))
+
+
 def create_complaint(user, session, message):
     order = None
     if getattr(user, "is_authenticated", False):
@@ -754,6 +798,30 @@ def handle_chat_message(user, session, message):
             "meta": {"faq_question": faq_entry.question},
         }
 
+    # Fast-path most product discovery queries using local rules first.
+    if is_product_query(clean_message):
+        variants, budget = search_products(clean_message)
+        if variants:
+            reply = "Here are some products you can look at"
+            if budget:
+                reply += f" under Rs. {budget}"
+            reply += "."
+            return {
+                "reply": reply,
+                "intent": "product_search",
+                "products": [serialize_product(variant) for variant in variants],
+                "quick_replies": [
+                    "Show laptops",
+                    "Show headphones",
+                    "What is your return policy?",
+                ],
+            }
+        return {
+            "reply": "I couldn't find a strong match yet. Try telling me the category, brand, or a budget like 'phones under 15000'.",
+            "intent": "product_search",
+            "quick_replies": ["Show budget phones", "Show laptops", "Show headphones"],
+        }
+
     product_intent = classify_product_intent(clean_message)
 
     if product_intent == "PRODUCT_SEARCH":
@@ -797,9 +865,10 @@ def handle_chat_message(user, session, message):
                 ],
             }
 
-    ai_response = generate_ai_reply(user, session, clean_message)
-    if ai_response:
-        return ai_response
+    if _should_try_ai_fallback(clean_message):
+        ai_response = generate_ai_reply(user, session, clean_message)
+        if ai_response:
+            return ai_response
 
     return {
         "reply": (

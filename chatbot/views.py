@@ -1,10 +1,14 @@
 import json
+import logging
+import time
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 
 from .models import ChatMessage, ChatSession
 from .services import get_quick_replies, get_welcome_message, handle_chat_message
+
+logger = logging.getLogger(__name__)
 
 
 def _ensure_session_key(request):
@@ -131,7 +135,16 @@ def send_message(request):
         intent="user_message",
     )
 
+    started_at = time.perf_counter()
     response = handle_chat_message(request.user, chat_session, message)
+    elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+    logger.info(
+        "chatbot.message latency_ms=%s session_id=%s user_id=%s intent=%s",
+        elapsed_ms,
+        chat_session.id,
+        getattr(request.user, "id", None),
+        response.get("intent", ""),
+    )
     bot_message = ChatMessage.objects.create(
         session=chat_session,
         role="bot",

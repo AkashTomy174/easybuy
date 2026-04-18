@@ -1642,6 +1642,28 @@ function appendChatbotMessage(message) {
     scrollChatbotToBottom();
 }
 
+function appendChatbotTypingIndicator() {
+    const { messages } = chatbotElements();
+    if (!messages) return null;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex justify-start';
+    wrapper.setAttribute('data-chatbot-typing', 'true');
+    wrapper.innerHTML = `
+        <div class="max-w-[85%] rounded-3xl rounded-tl-md bg-white px-4 py-3 text-sm text-stone-500 shadow-sm dark:bg-stone-800 dark:text-stone-300">
+            <span class="inline-flex items-center gap-1">
+                <span class="h-1.5 w-1.5 rounded-full bg-stone-400 animate-pulse"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-stone-400 animate-pulse [animation-delay:120ms]"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-stone-400 animate-pulse [animation-delay:240ms]"></span>
+            </span>
+            <span class="ml-2">Thinking...</span>
+        </div>
+    `;
+    messages.appendChild(wrapper);
+    scrollChatbotToBottom();
+    return wrapper;
+}
+
 function renderChatbotMessages(messages) {
     const { messages: container } = chatbotElements();
     if (!container) return;
@@ -1694,6 +1716,7 @@ async function sendChatbotMessage(rawMessage) {
     }
 
     appendChatbotMessage({ role: 'user', content: message, payload: {} });
+    const typingIndicator = appendChatbotTypingIndicator();
 
     try {
         const response = await fetch(root.dataset.messageUrl, {
@@ -1708,10 +1731,16 @@ async function sendChatbotMessage(rawMessage) {
                 message: message
             })
         });
+        if (typingIndicator && typingIndicator.parentNode) {
+            typingIndicator.parentNode.removeChild(typingIndicator);
+        }
         const data = await response.json();
         chatbotState.sessionId = data.session_id;
         appendChatbotMessage(data.bot_message);
     } catch (error) {
+        if (typingIndicator && typingIndicator.parentNode) {
+            typingIndicator.parentNode.removeChild(typingIndicator);
+        }
         console.error('Chatbot send failed:', error);
         showToast('Unable to send message right now.', 'error');
     } finally {
