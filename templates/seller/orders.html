@@ -137,21 +137,30 @@
                             {% csrf_token %}
                             <div class="flex flex-col gap-1">
                                 <div class="flex items-center gap-2">
+                                    {% if item.status == 'DELIVERED' or item.status == 'CANCELLED' or item.status == 'RETURN_REQUESTED' or item.status == 'RETURNED' %}
+                                    <span class="text-[10px] font-black uppercase tracking-wider
+                                        {% if item.status == 'DELIVERED' %}text-emerald-600
+                                        {% elif item.status == 'CANCELLED' %}text-red-600
+                                        {% else %}text-stone-500{% endif %}">
+                                        {{ item.status }}
+                                    </span>
+                                    {% else %}
                                     <select name="status"
                                             id="status-select-{{ item.id }}"
                                             onchange="updateStatus({{ item.id }}, this.value)"
                                             class="text-[10px] font-black uppercase tracking-wider bg-transparent border-0 cursor-pointer focus:ring-0
                                             {% if item.status == 'PENDING' %}text-orange-600
                                             {% elif item.status == 'SHIPPED' %}text-blue-600
-                                            {% elif item.status == 'DELIVERED' %}text-emerald-600
-                                            {% elif item.status == 'CANCELLED' %}text-red-600
-                                            {% else %}text-stone-600
                                             {% endif %}">
-                                        <option value="PENDING" {% if item.status == 'PENDING' %}selected{% endif %}>Pending</option>
-                                        <option value="SHIPPED" {% if item.status == 'SHIPPED' %}selected{% endif %}>Shipped</option>
-                                        <option value="DELIVERED" {% if item.status == 'DELIVERED' %}selected{% endif %}>Delivered</option>
-                                        <option value="CANCELLED" {% if item.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                                        <option value="{{ item.status }}" selected>{{ item.status }}</option>
+                                        {% if item.status == 'PENDING' %}
+                                        <option value="SHIPPED">SHIPPED</option>
+                                        <option value="CANCELLED">CANCELLED</option>
+                                        {% elif item.status == 'SHIPPED' %}
+                                        <option value="DELIVERED">DELIVERED</option>
+                                        {% endif %}
                                     </select>
+                                    {% endif %}
                                 </div>
                                 {% if item.estimated_ship_date %}
                                 <span class="text-xs text-stone-500">Est. Ship: {{ item.estimated_ship_date|date:"M d" }}</span>
