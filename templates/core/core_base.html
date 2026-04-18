@@ -534,9 +534,9 @@
                         </button>
                     </div>
                     
-                    <div class="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+                    <div class="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-2 isolate">
                         {% for wishlist in user_wishlists %}
-                        <button type="button" onclick="addToSpecificWishlist('{{ wishlist.id }}')" class="w-full group flex items-center justify-between p-4 rounded-2xl border-2 border-transparent hover:border-primary hover:bg-primary/5 transition-all text-left">
+                        <button type="button" onclick="addToSpecificWishlist('{{ wishlist.id }}')" class="w-full group flex items-center justify-between p-4 rounded-2xl border-2 border-transparent hover:border-primary hover:bg-primary/5 bg-white dark:bg-stone-900 transition-all text-left relative z-10">
                             <div class="flex items-center gap-4">
                                 <div class="h-12 w-12 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-400 group-hover:text-primary transition-colors">
                                     <span class="material-symbols-outlined">favorite</span>
@@ -890,6 +890,7 @@ function syncWishlistButtonState(buttonElement, inWishlist) {
     if (!icon) return;
     icon.textContent = inWishlist ? 'favorite' : 'favorite_border';
     buttonElement.classList.toggle('text-accent-terracotta', Boolean(inWishlist));
+    buttonElement.classList.toggle('text-stone-400', !Boolean(inWishlist));
 }
 
 function addToSpecificWishlist(wishlistId, event = null) {
