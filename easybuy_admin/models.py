@@ -117,7 +117,10 @@ class Coupon(models.Model):
         if self.subcategory_id:
             return product.subcategory_id == self.subcategory_id
         if self.category_id:
-            return product.subcategory.category_id == self.category_id
+            subcategory = getattr(product, "subcategory", None)
+            if subcategory is None:
+                return False
+            return subcategory.category_id == self.category_id
         return False
 
     def is_currently_valid(self):

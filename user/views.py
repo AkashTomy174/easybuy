@@ -2100,7 +2100,9 @@ def toggle_review_helpful(request, review_id):
             }
         )
 
-client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+def _get_razorpay_client():
+    return razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
 
 
 def _send_order_confirmation(order):
@@ -2480,7 +2482,7 @@ def create_razorpay_order(request):
                 order.total_amount,
             )
             try:
-                razorpay_order = client.order.create(
+                razorpay_order = _get_razorpay_client().order.create(
                     {
                         "amount": amount_paise,
                         "currency": "INR",
@@ -2659,7 +2661,7 @@ def verify_razorpay_payment(request):
         order.save()
 
         try:
-            client.utility.verify_payment_signature(params_dict)
+            _get_razorpay_client().utility.verify_payment_signature(params_dict)
             logger.info(
                 f"Signature verified successfully for order {order.order_number}"
             )
@@ -2746,7 +2748,7 @@ def razorpay_webhook(request):
 
     body = request.body.decode("utf-8")
     try:
-        client.utility.verify_webhook_signature(body, signature, webhook_secret)
+        _get_razorpay_client().utility.verify_webhook_signature(body, signature, webhook_secret)
     except razorpay.errors.SignatureVerificationError:
         logger.warning("Invalid Razorpay webhook signature.")
         return JsonResponse({"error": "Invalid signature"}, status=400)
