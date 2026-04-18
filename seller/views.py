@@ -679,6 +679,13 @@ def add_variant(request, product_id):
             if validation_error:
                 messages.error(request, validation_error)
                 return redirect("add_variant", product_id=product.id)
+
+        try:
+            primary_image_index = int(request.POST.get("primary_image_index") or 0)
+        except (ValueError, TypeError):
+            primary_image_index = 0
+        primary_image_index = max(0, min(primary_image_index, len(images) - 1))
+
         try:
             with transaction.atomic():
 
@@ -700,7 +707,7 @@ def add_variant(request, product_id):
                     ProductImage.objects.create(
                         variant=variant,
                         image=img,
-                        is_primary=(idx == 0),
+                        is_primary=(idx == primary_image_index),
                     )
 
         except IntegrityError:

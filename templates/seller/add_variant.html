@@ -131,10 +131,12 @@
                         <span class="material-symbols-outlined text-stone-400 group-hover:text-stone-900 transition-colors">upload</span>
                     </div>
                     <p class="text-sm font-black text-stone-900">Click to upload or drag & drop</p>
-                    <p class="text-xs text-stone-400 mt-1 font-medium italic">At least one primary image required. Max 5MB per file.</p>
+                    <p class="text-xs text-stone-400 mt-1 font-medium italic">At least one image required. Click any image below to set it as primary.</p>
                 </div>
+                <input type="hidden" name="primary_image_index" id="primaryImageIndex" value="0">
 
                 <div id="previewGrid" class="grid grid-cols-4 sm:grid-cols-5 gap-4 mt-8"></div>
+                <p id="previewHint" class="hidden mt-3 text-xs text-stone-400 font-medium">👆 Click an image to set it as the primary (display) image.</p>
             </div>
 
             <div class="flex flex-col sm:flex-row items-center justify-end gap-4 pt-6">
@@ -200,29 +202,64 @@
 </div>
 
 <script>
-    // Professional Image Preview Script
     const imageInput = document.getElementById('imageInput');
     const previewGrid = document.getElementById('previewGrid');
+    const primaryIndexInput = document.getElementById('primaryImageIndex');
+    const previewHint = document.getElementById('previewHint');
+    let primaryIndex = 0;
 
-    imageInput.addEventListener('change', function() {
+    function renderPreviews(files) {
         previewGrid.innerHTML = '';
-        const files = Array.from(this.files);
+        primaryIndex = 0;
+        primaryIndexInput.value = 0;
+
+        if (!files.length) {
+            previewHint.classList.add('hidden');
+            return;
+        }
+        previewHint.classList.remove('hidden');
 
         files.forEach((file, index) => {
-            if (file.size > 5 * 1024 * 1024) return; // Prevent preview of oversized files
+            if (file.size > 5 * 1024 * 1024) return;
 
             const reader = new FileReader();
             reader.onload = (e) => {
                 const wrapper = document.createElement('div');
-                wrapper.className = "relative group aspect-square rounded-2xl overflow-hidden border-2 border-stone-100 bg-white shadow-sm";
+                wrapper.className = 'relative group aspect-square rounded-2xl overflow-hidden border-2 bg-white shadow-sm cursor-pointer transition-all duration-200';
+                wrapper.dataset.index = index;
                 wrapper.innerHTML = `
-                    <img src="${e.target.result}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
-                    ${index === 0 ? '<div class="absolute top-2 left-2 bg-stone-900 text-white text-[8px] font-black px-2 py-1 rounded shadow-lg uppercase">Primary</div>' : ''}
+                    <img src="${e.target.result}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    <div class="primary-badge absolute top-2 left-2 text-[8px] font-black px-2 py-1 rounded shadow-lg uppercase hidden bg-stone-900 text-white">Primary</div>
+                    <div class="select-overlay absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-all duration-200">
+                        <span class="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 text-3xl drop-shadow">check_circle</span>
+                    </div>
                 `;
+                wrapper.addEventListener('click', () => setPrimary(index));
                 previewGrid.appendChild(wrapper);
+
+                if (index === 0) setPrimary(0);
             };
             reader.readAsDataURL(file);
         });
+    }
+
+    function setPrimary(index) {
+        primaryIndex = index;
+        primaryIndexInput.value = index;
+
+        previewGrid.querySelectorAll('[data-index]').forEach(wrapper => {
+            const badge = wrapper.querySelector('.primary-badge');
+            const isSelected = parseInt(wrapper.dataset.index) === index;
+            badge.classList.toggle('hidden', !isSelected);
+            wrapper.classList.toggle('border-stone-900', isSelected);
+            wrapper.classList.toggle('ring-2', isSelected);
+            wrapper.classList.toggle('ring-stone-900', isSelected);
+            wrapper.classList.toggle('border-stone-100', !isSelected);
+        });
+    }
+
+    imageInput.addEventListener('change', function () {
+        renderPreviews(Array.from(this.files));
     });
 </script>
 
