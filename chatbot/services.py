@@ -157,8 +157,22 @@ OUTPUT FORMAT (STRICT JSON ONLY):
 """.strip()
 
 
+QUERY_NORMALIZATION_REPLACEMENTS = (
+    (r"\bmobilephone\b", "mobile phone"),
+    (r"\bsmartphone\b", "smart phone"),
+    (r"\bcellphone\b", "cell phone"),
+)
+
+
+def _normalize_query_text(message):
+    text = (message or "").lower()
+    for pattern, replacement in QUERY_NORMALIZATION_REPLACEMENTS:
+        text = re.sub(pattern, replacement, text)
+    return text
+
+
 def tokenize(message):
-    return re.findall(r"[a-zA-Z0-9]+", (message or "").lower())
+    return re.findall(r"[a-zA-Z0-9]+", _normalize_query_text(message))
 
 
 def _expand_token_variants(tokens):
@@ -428,6 +442,8 @@ def search_products(message):
         tokens.append(token)
         if token.endswith("s") and len(token) > 3:
             tokens.append(token[:-1])
+        if token in {"phone", "mobile", "smart"}:
+            tokens.extend(["phone", "mobile"])
     budget = parse_budget(message)
 
     queryset = _base_product_queryset()
@@ -442,6 +458,15 @@ def search_products(message):
             query |= Q(product__subcategory__name__icontains=token)
             query |= Q(product__subcategory__category__name__icontains=token)
         queryset = queryset.filter(query)
+
+    token_set = set(tokens)
+    wants_phone = bool(token_set.intersection({"phone", "mobile", "smart"}))
+    wants_headphone = bool(token_set.intersection({"headphone", "headphones", "earphone", "earphones", "earbuds"}))
+
+    if wants_phone and not wants_headphone:
+        queryset = queryset.exclude(product__name__icontains="headphone")
+        queryset = queryset.exclude(product__name__icontains="earphone")
+        queryset = queryset.exclude(product__subcategory__name__icontains="headphone")
 
     variants = list(queryset.order_by("selling_price", "-created_at")[:5])
     return variants, budget
