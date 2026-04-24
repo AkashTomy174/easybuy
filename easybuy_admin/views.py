@@ -170,8 +170,8 @@ def _build_admin_dashboard_context():
         or 0
     )
     user_counts = User.objects.aggregate(
-        sellers=Count("id", filter=Q(role="SELLER")),
-        users=Count("id", filter=Q(role="CUSTOMER")),
+        sellers=Count("id", filter=Q(role=User.ROLE_SELLER)),
+        users=Count("id", filter=Q(role=User.ROLE_CUSTOMER)),
     )
 
     daily_rows = (
@@ -314,7 +314,11 @@ def approve_seller(request, id):
     if request.method != "POST":
         return redirect("seller_veri")
     seller = get_object_or_404(SellerProfile, id=id)
+    if seller.status == SellerProfile.STATUS_APPROVED:
+        messages.info(request, f"Seller '{seller.store_name}' is already approved.")
+        return redirect("seller_veri")
     seller.status = "APPROVED"
+    seller.rejection_reason = ""
     seller.save()
     seller_email = seller.user.email
     seller_name = seller.store_name
@@ -331,6 +335,9 @@ def reject_seller(request, id):
         return redirect("seller_veri")
     seller = get_object_or_404(SellerProfile, id=id)
     reason = request.POST.get("reason") if request.method == "POST" else None
+    if seller.status == SellerProfile.STATUS_REJECTED:
+        messages.info(request, f"Seller '{seller.store_name}' is already rejected.")
+        return redirect("seller_veri")
     seller.rejection_reason = reason
     seller.status = "REJECTED"
     seller.save()
@@ -464,7 +471,7 @@ def seller_veri(request):
 @login_required
 @role_required(allowed_roles=["ADMIN"])
 def detailed_view(request, id):
-    details = SellerProfile.objects.select_related("user").get(pk=id)
+    details = get_object_or_404(SellerProfile.objects.select_related("user"), pk=id)
     review = _build_seller_review(details)
     pending_queue = SellerProfile.objects.filter(status="PENDING").order_by(
         "created_at", "id"
@@ -500,7 +507,7 @@ def detailed_view(request, id):
 
 
 @login_required
-@role_required(allowed_roles=["ADMIN"])
+@role_required(allowed_roles=[User.ROLE_ADMIN], permission="admin:access")
 def add_category(request):
     form_values = {
         "name": (request.POST.get("name") or "").strip(),
@@ -594,9 +601,9 @@ def add_subcategory(request):
 
     if request.method == "POST":
         category_id = request.POST.get("category")
-        name = request.POST.get("name")
+        name = (request.POST.get("name") or "").strip()
         if category_id and name:
-            category = Category.objects.get(id=category_id)
+            category = get_object_or_404(Category, id=category_id)
             SubCategory.objects.create(category=category, name=name)
             messages.success(request, f"Subcategory '{name}' added successfully!")
             return redirect("admin_all_categories")
@@ -814,6 +821,10 @@ def admin_promo_codes(request):
                 coupon_kwargs["category"] = get_object_or_404(Category, id=target_id)
             elif scope == "SUBCATEGORY":
                 coupon_kwargs["subcategory"] = get_object_or_404(SubCategory, id=target_id)
+            elif scope == "PRODUCT":
+                raise ValidationError(
+                    "Product-scoped promo codes must be created by the seller who owns the product."
+                )
             else:
                 raise ValidationError("Choose a valid scope.")
 

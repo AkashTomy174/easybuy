@@ -8,6 +8,7 @@ from django.db.models.functions import TruncDate
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.core.cache import cache
 from django.utils import timezone
 from django.conf import settings
 from datetime import datetime, timedelta
@@ -16,6 +17,7 @@ import logging
 import traceback
 import random
 import string
+import re
 from core.decorators import role_required, approved_seller_required
 from easybuy_admin.models import Coupon
 from .models import SellerProfile, Product, ProductVariant, ProductImage, InventoryLog
@@ -27,6 +29,7 @@ from decimal import Decimal, InvalidOperation
 from django.core.mail import send_mail
 from django.urls import reverse
 from core.notifications import send_status_change_notification
+from django.utils.html import strip_tags
 
 
 User = get_user_model()
@@ -43,6 +46,8 @@ ALLOWED_DOCUMENT_CONTENT_TYPES = {
     "image/webp",
 }
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+SELLER_REGISTRATION_ATTEMPT_LIMIT = 5
+SELLER_REGISTRATION_WINDOW_SECONDS = 15 * 60
 ALLOWED_ORDER_STATUS_TRANSITIONS = {
     "PENDING": {"SHIPPED", "CANCELLED"},
     "SHIPPED": {"DELIVERED"},
@@ -83,6 +88,32 @@ def seller_shell_context(request, active_menu=None, **extra):
     return context
 
 
+def _seller_products_queryset(request):
+    # Internal helper only; all callers are seller-authenticated views guarded by
+    # @approved_seller_required, so authorization is enforced at the view layer.
+    return Product.objects.filter(seller=request.user.seller_profile)
+
+
+def _seller_variants_queryset(request):
+    # Internal helper only; authorization is enforced by the protected views that call it.
+    return ProductVariant.objects.filter(product__seller=request.user.seller_profile)
+
+
+def _seller_order_items_queryset(request):
+    # Internal helper only; authorization is enforced by the protected views that call it.
+    return OrderItem.objects.filter(seller=request.user.seller_profile)
+
+
+def _seller_reviews_queryset(request):
+    # Internal helper only; authorization is enforced by the protected views that call it.
+    return Review.objects.filter(product__seller=request.user.seller_profile)
+
+
+def _seller_return_requests_queryset(request):
+    # Internal helper only; authorization is enforced by the protected views that call it.
+    return ReturnRequest.objects.filter(order_item__seller=request.user.seller_profile)
+
+
 def _validate_upload(file_obj, *, allowed_content_types, label):
     content_type = (getattr(file_obj, "content_type", "") or "").lower()
     if content_type and content_type not in allowed_content_types:
@@ -99,19 +130,66 @@ def _parse_promo_datetime(raw_value):
     return dt
 
 
+def _seller_registration_context(**values):
+    def _clean(value):
+        value = "" if value is None else str(value)
+        return strip_tags(value).strip()
+
+    return {
+        "username": _clean(values.get("username")),
+        "email": _clean(values.get("email")),
+        "store_name": _clean(values.get("store_name")),
+        "gst_number": _clean(values.get("gst_number")),
+        "pan_number": _clean(values.get("pan_number")),
+        "bank_account_number": _clean(values.get("bank_account_number")),
+        "ifsc_code": _clean(values.get("ifsc_code")),
+        "business_address": _clean(values.get("business_address")),
+    }
+
+
+def _seller_client_ip(request):
+    forwarded_for = (request.META.get("HTTP_X_FORWARDED_FOR") or "").strip()
+    if forwarded_for and getattr(settings, "USE_X_FORWARDED_HOST", False):
+        return forwarded_for.split(",", 1)[0].strip() or "unknown"
+    return (request.META.get("REMOTE_ADDR") or "unknown").strip()
+
+
+def _seller_registration_cache_key(request, email):
+    safe_ip = re.sub(r"[^a-zA-Z0-9_.:-]", "_", _seller_client_ip(request))
+    safe_email = re.sub(
+        r"[^a-zA-Z0-9_.@+-]", "_",
+        (email or "").strip().lower() or "anonymous",
+    )
+    return f"security:seller-registration:{safe_ip}:{safe_email}"
+
+
+def _validate_seller_registration_fields(
+    *, gst_number, pan_number, bank_account_number, ifsc_code
+):
+    if gst_number and not re.fullmatch(r"\d{2}[A-Z]{5}\d{4}[A-Z][A-Z0-9]Z[A-Z0-9]", gst_number):
+        return "Enter a valid GST number."
+    if pan_number and not re.fullmatch(r"[A-Z]{5}\d{4}[A-Z]", pan_number):
+        return "Enter a valid PAN number."
+    if bank_account_number and not re.fullmatch(r"\d{9,18}", bank_account_number):
+        return "Enter a valid bank account number."
+    if ifsc_code and not re.fullmatch(r"[A-Z]{4}0[A-Z0-9]{6}", ifsc_code):
+        return "Enter a valid IFSC code."
+    return ""
+
+
 def seller_regi_success(request):
     return render(request, "seller/seller_registration_success.html")
 
 
 @login_required
-@role_required(allowed_roles=["SELLER"])
+@role_required(allowed_roles=[User.ROLE_SELLER], permission="seller:access")
 def seller_waiting(request):
     seller_profile = getattr(request.user, "seller_profile", None)
     if seller_profile is None:
         messages.error(request, "Complete your seller registration to continue.")
         return redirect("seller_register")
 
-    if seller_profile.status == "APPROVED":
+    if seller_profile.status == SellerProfile.STATUS_APPROVED:
         return redirect("seller_dashboard")
 
     return render(
@@ -127,46 +205,68 @@ def seller_waiting(request):
 
 def seller_regi(request):
     if request.method == "POST":
-        username = request.POST.get("username")
-        email = request.POST.get("email")
+        username = (request.POST.get("username") or "").strip()
+        email = (request.POST.get("email") or "").strip().lower()
         password = request.POST.get("password")
-        store_name = request.POST.get("store_name")
-        gst_number = request.POST.get("gst_number")
-        pan_number = request.POST.get("pan_number")
+        store_name = (request.POST.get("store_name") or "").strip()
+        gst_number = (request.POST.get("gst_number") or "").strip().upper()
+        pan_number = (request.POST.get("pan_number") or "").strip().upper()
         doc = request.FILES.get("doc")
-        bank_account_number = request.POST.get("bank_account_number")
-        ifsc_code = request.POST.get("ifsc_code")
-        business_address = request.POST.get("business_address")
+        bank_account_number = (request.POST.get("bank_account_number") or "").strip()
+        ifsc_code = (request.POST.get("ifsc_code") or "").strip().upper()
+        business_address = (request.POST.get("business_address") or "").strip()
+        form_context = _seller_registration_context(
+            username=username,
+            email=email,
+            store_name=store_name,
+            gst_number=gst_number,
+            pan_number=pan_number,
+            bank_account_number=bank_account_number,
+            ifsc_code=ifsc_code,
+            business_address=business_address,
+        )
+        rate_limit_key = _seller_registration_cache_key(request, email)
+        attempts = int(cache.get(rate_limit_key, 0) or 0)
+        if attempts >= SELLER_REGISTRATION_ATTEMPT_LIMIT:
+            return render(
+                request,
+                "seller/sellerregistration.html",
+                {
+                    **form_context,
+                    "error": "Too many registration attempts. Please try again later.",
+                },
+            )
+        validation_error = _validate_seller_registration_fields(
+            gst_number=gst_number,
+            pan_number=pan_number,
+            bank_account_number=bank_account_number,
+            ifsc_code=ifsc_code,
+        )
+        if validation_error:
+            cache.set(rate_limit_key, attempts + 1, SELLER_REGISTRATION_WINDOW_SECONDS)
+            return render(
+                request,
+                "seller/sellerregistration.html",
+                {**form_context, "error": validation_error},
+            )
         if User.objects.filter(username=username).exists():
+            cache.set(rate_limit_key, attempts + 1, SELLER_REGISTRATION_WINDOW_SECONDS)
             return render(
                 request,
                 "seller/sellerregistration.html",
                 {
                     "error": "Username already exists. Please choose a different username.",
-                    "username": username,
-                    "email": email,
-                    "store_name": store_name,
-                    "gst_number": gst_number,
-                    "pan_number": pan_number,
-                    "bank_account_number": bank_account_number,
-                    "ifsc_code": ifsc_code,
-                    "business_address": business_address,
+                    **form_context,
                 },
             )
         if email and User.objects.filter(email=email).exists():
+            cache.set(rate_limit_key, attempts + 1, SELLER_REGISTRATION_WINDOW_SECONDS)
             return render(
                 request,
                 "seller/sellerregistration.html",
                 {
                     "error": "Email already registered. Please use a different email.",
-                    "username": username,
-                    "email": email,
-                    "store_name": store_name,
-                    "gst_number": gst_number,
-                    "pan_number": pan_number,
-                    "bank_account_number": bank_account_number,
-                    "ifsc_code": ifsc_code,
-                    "business_address": business_address,
+                    **form_context,
                 },
             )
         if doc:
@@ -176,19 +276,15 @@ def seller_regi(request):
                 label="Business document",
             )
             if validation_error:
+                cache.set(
+                    rate_limit_key, attempts + 1, SELLER_REGISTRATION_WINDOW_SECONDS
+                )
                 return render(
                     request,
                     "seller/sellerregistration.html",
                     {
                         "error": validation_error,
-                        "username": username,
-                        "email": email,
-                        "store_name": store_name,
-                        "gst_number": gst_number,
-                        "pan_number": pan_number,
-                        "bank_account_number": bank_account_number,
-                        "ifsc_code": ifsc_code,
-                        "business_address": business_address,
+                        **form_context,
                     },
                 )
 
@@ -198,7 +294,7 @@ def seller_regi(request):
                     username=username,
                     email=email,
                     password=password,
-                    role="SELLER",
+                    role=User.ROLE_SELLER,
                 )
                 SellerProfile.objects.create(
                     user=user,
@@ -207,37 +303,34 @@ def seller_regi(request):
                     gst_number=gst_number,
                     pan_number=pan_number,
                     doc=doc,
-                    status="PENDING",
+                    status=SellerProfile.STATUS_PENDING,
                     bank_account_number=bank_account_number,
                     ifsc_code=ifsc_code,
                     business_address=business_address,
                 )
+            cache.delete(rate_limit_key)
             return redirect("seller_registration_success")
-        except Exception as e:
+        except Exception:
+            logger.exception("Seller registration failed for %s", email or username)
+            cache.set(rate_limit_key, attempts + 1, SELLER_REGISTRATION_WINDOW_SECONDS)
             return render(
                 request,
                 "seller/sellerregistration.html",
                 {
-                    "error": f"Registration failed: {str(e)}",
-                    "username": username,
-                    "email": email,
-                    "store_name": store_name,
-                    "gst_number": gst_number,
-                    "pan_number": pan_number,
-                    "bank_account_number": bank_account_number,
-                    "ifsc_code": ifsc_code,
-                    "business_address": business_address,
+                    "error": "Registration failed. Please try again.",
+                    **form_context,
                 },
             )
     return render(request, "seller/sellerregistration.html")
 
 
+@login_required
 @approved_seller_required
 def seller_product_list(request):
-    sellers = SellerProfile.objects.prefetch_related("product_set").all()
-    return render(request, "seller/inventory.html", {"sellers": sellers})
+    return redirect("seller_inventory")
 
 
+@login_required
 @approved_seller_required
 def seller_dashboard(request):
     seller = request.user.seller_profile
@@ -372,6 +465,7 @@ def seller_dashboard(request):
     return render(request, "seller/dashboard.html", context)
 
 
+@login_required
 @approved_seller_required
 def seller_inventory(request):
     seller = request.user.seller_profile
@@ -423,6 +517,7 @@ def seller_inventory(request):
     return render(request, "seller/inventory.html", context)
 
 
+@login_required
 @approved_seller_required
 def seller_promo_codes(request):
     seller = request.user.seller_profile
@@ -430,7 +525,7 @@ def seller_promo_codes(request):
     if request.method == "POST":
         try:
             product = get_object_or_404(
-                Product, id=request.POST.get("product_id"), seller=seller
+                _seller_products_queryset(request), id=request.POST.get("product_id")
             )
             valid_from = _parse_promo_datetime(request.POST.get("valid_from"))
             valid_to = _parse_promo_datetime(request.POST.get("valid_to"))
@@ -474,7 +569,7 @@ def seller_promo_codes(request):
         .select_related("product")
         .order_by("-created_at")
     )
-    products = Product.objects.filter(seller=seller).order_by("name")
+    products = _seller_products_queryset(request).order_by("name")
     return render(
         request,
         "seller/promo_codes.html",
@@ -487,6 +582,7 @@ def seller_promo_codes(request):
     )
 
 
+@login_required
 @approved_seller_required
 def toggle_seller_promo_code(request, coupon_id):
     if request.method != "POST":
@@ -500,6 +596,7 @@ def toggle_seller_promo_code(request, coupon_id):
     return redirect("seller_promo_codes")
 
 
+@login_required
 @approved_seller_required
 def add_product(request):
 
@@ -551,8 +648,7 @@ def add_product(request):
         if not is_returnable:
             return_days = 0
 
-        if Product.objects.filter(
-            seller=request.user.seller_profile,
+        if _seller_products_queryset(request).filter(
             name__iexact=name,
             model_number__iexact=model,
         ).exists():
@@ -595,12 +691,11 @@ def add_product(request):
     )
 
 
+@login_required
 @approved_seller_required
 def add_variant(request, product_id):
 
-    product = get_object_or_404(
-        Product, id=product_id, seller=request.user.seller_profile
-    )
+    product = get_object_or_404(_seller_products_queryset(request), id=product_id)
 
     if request.method == "POST":
 
@@ -737,11 +832,10 @@ def add_variant(request, product_id):
     )
 
 
+@login_required
 @approved_seller_required
 def select_product_for_variant(request):
-    products = Product.objects.filter(seller=request.user.seller_profile).order_by(
-        "-created_at"
-    )
+    products = _seller_products_queryset(request).order_by("-created_at")
 
     return render(
         request,
@@ -754,6 +848,7 @@ def select_product_for_variant(request):
     )
 
 
+@login_required
 @approved_seller_required
 def add_stock(request):
     if request.method == "POST":
@@ -764,19 +859,24 @@ def add_stock(request):
 
             if stock_to_add <= 0:
                 return JsonResponse({"success": False, "error": "Invalid stock amount"})
-            item = ProductVariant.objects.select_related("product").get(
-                id=item_id, product__seller=request.user.seller_profile
-            )
-
-            old_stock = item.stock_quantity
-            item.stock_quantity += stock_to_add
-            item.save()
-            InventoryLog.objects.create(
-                variant=item,
-                change_amount=stock_to_add,
-                reason=reason,
-                performed_by=request.user,
-            )
+            with transaction.atomic():
+                item = (
+                    _seller_variants_queryset(request)
+                    .select_related("product")
+                    .select_for_update()
+                    .get(id=item_id)
+                )
+                old_stock = item.stock_quantity
+                ProductVariant.objects.filter(pk=item.pk).update(
+                    stock_quantity=F("stock_quantity") + stock_to_add
+                )
+                item.refresh_from_db(fields=["stock_quantity"])
+                InventoryLog.objects.create(
+                    variant=item,
+                    change_amount=stock_to_add,
+                    reason=reason,
+                    performed_by=request.user,
+                )
 
             # Check stock notifications if stock was 0 and now >0
             if old_stock <= 0 and item.stock_quantity > 0:
@@ -793,12 +893,17 @@ def add_stock(request):
             )
         except ProductVariant.DoesNotExist:
             return JsonResponse({"success": False, "error": "item not found"})
-        except Exception as e:
-            return JsonResponse({"success": False, "error": str(e)})
+        except Exception:
+            logger.exception("Stock update failed for seller %s", request.user.id)
+            return JsonResponse(
+                {"success": False, "error": "Unable to update stock right now."},
+                status=500,
+            )
 
     return JsonResponse({"success": False, "error": "Invalid request method"})
 
 
+@login_required
 @approved_seller_required
 def deactivate(request, id):
     if request.method != "POST":
@@ -811,13 +916,13 @@ def deactivate(request, id):
         )
 
     try:
-        item = ProductVariant.objects.select_related("product").get(
-            id=id, product__seller=request.user.seller_profile
+        item = _seller_variants_queryset(request).select_related("product").get(id=id)
+        product = get_object_or_404(
+            Product, id=item.product_id, seller=request.user.seller_profile
         )
-        product = item.product
 
         product.is_active = not product.is_active
-        product.save()
+        product.save(update_fields=["is_active"])
 
         return JsonResponse(
             {
@@ -829,10 +934,15 @@ def deactivate(request, id):
 
     except ProductVariant.DoesNotExist:
         return JsonResponse({"success": False, "error": "item not found"}, status=404)
-    except Exception as e:
-        return JsonResponse({"success": False, "error": str(e)}, status=500)
+    except Exception:
+        logger.exception("Product activation toggle failed for seller %s", request.user.id)
+        return JsonResponse(
+            {"success": False, "error": "Unable to update product status."},
+            status=500,
+        )
 
 
+@login_required
 @approved_seller_required
 def seller_order(request):
     seller = request.user.seller_profile
@@ -840,7 +950,7 @@ def seller_order(request):
     page = request.GET.get("page", 1)
 
     base_query = (
-        OrderItem.objects.filter(seller=seller)
+        _seller_order_items_queryset(request)
         .select_related("order", "variant", "variant__product")
         .order_by("-order__ordered_at")
     )
@@ -851,22 +961,20 @@ def seller_order(request):
     paginator = Paginator(base_query, 5)
     order_items = paginator.get_page(page)
 
-    all_query = OrderItem.objects.filter(seller=seller).select_related(
-        "order", "variant", "variant__product"
+    summary = _seller_order_items_queryset(request).aggregate(
+        total_orders=Count("id"),
+        total_revenue=Sum(F("price_at_purchase") * F("quantity")),
+        pending_orders=Count("id", filter=Q(status="PENDING")),
+        shipped_orders=Count("id", filter=Q(status="SHIPPED")),
+        delivered_orders=Count("id", filter=Q(status="DELIVERED")),
+        cancelled_orders=Count("id", filter=Q(status="CANCELLED")),
     )
-    total_orders = all_query.count()
-    total_revenue = sum(
-        float(item.price_at_purchase * item.quantity) for item in all_query
-    )
-
-    pending_orders = OrderItem.objects.filter(seller=seller, status="PENDING").count()
-    shipped_orders = OrderItem.objects.filter(seller=seller, status="SHIPPED").count()
-    delivered_orders = OrderItem.objects.filter(
-        seller=seller, status="DELIVERED"
-    ).count()
-    cancelled_orders = OrderItem.objects.filter(
-        seller=seller, status="CANCELLED"
-    ).count()
+    total_orders = summary["total_orders"] or 0
+    total_revenue = float(summary["total_revenue"] or 0)
+    pending_orders = summary["pending_orders"] or 0
+    shipped_orders = summary["shipped_orders"] or 0
+    delivered_orders = summary["delivered_orders"] or 0
+    cancelled_orders = summary["cancelled_orders"] or 0
 
     context = seller_shell_context(
         request,
@@ -894,10 +1002,10 @@ import traceback
 logger = logging.getLogger(__name__)
 
 
+@login_required
 @approved_seller_required
 def status(request, id):
-    seller = request.user.seller_profile
-    order_item = get_object_or_404(OrderItem, seller=seller, id=id)
+    order_item = get_object_or_404(_seller_order_items_queryset(request), id=id)
     if request.method != "POST":
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse(
@@ -961,7 +1069,7 @@ def status(request, id):
         except Exception as e:
             logger.error(f"Notification failed for order {id}: {e}")
 
-        if getattr(settings, "WHATSAPP_NOTIFICATIONS_ENABLED", True):
+        if getattr(settings, "WHATSAPP_NOTIFICATIONS_ENABLED", False):
             logger.info(
                 f"WhatsApp notifications enabled, sending for OrderItem {order_item.id} status {new_status}"
             )
@@ -1014,22 +1122,25 @@ def status(request, id):
         messages.success(request, success_msg)
         return redirect("seller_orders")
 
-    except Exception as e:
+    except Exception:
         logger.error(f"Critical error in status update: {traceback.format_exc()}")
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse(
-                {"success": False, "message": f"Server Error: {str(e)}"}, status=500
+                {
+                    "success": False,
+                    "message": "An unexpected error occurred while updating status.",
+                },
+                status=500,
             )
         messages.error(request, "An error occurred while updating status.")
         return redirect("seller_orders")
 
 
+@login_required
 @approved_seller_required
 def seller_reviews(request):
-    seller = request.user.seller_profile
-
     reviews = (
-        Review.objects.filter(product__seller=seller)
+        _seller_reviews_queryset(request)
         .select_related("user", "product")
         .prefetch_related("images", "videos", "product__variants__images")
         .order_by("-created_at")
@@ -1048,11 +1159,11 @@ def seller_reviews(request):
     return render(request, "seller/reviews.html", context)
 
 
+@login_required
 @approved_seller_required
 def reply_review(request, review_id):
-    seller = request.user.seller_profile
     review = get_object_or_404(
-        Review.objects.select_related("product"), id=review_id, product__seller=seller
+        _seller_reviews_queryset(request).select_related("product"), id=review_id
     )
 
     if request.method == "POST":
@@ -1075,17 +1186,15 @@ def reply_review(request, review_id):
     return redirect("seller_reviews")
 
 
+@login_required
 @approved_seller_required
 def reply_to_review(request, review_id):
     if request.method != "POST":
         return JsonResponse({"message": "Invalid request"}, status=400)
 
     review = get_object_or_404(
-        Review.objects.select_related("product__seller"), id=review_id
+        _seller_reviews_queryset(request).select_related("product__seller"), id=review_id
     )
-
-    if review.product.seller.user != request.user:
-        return JsonResponse({"success": False, "message": "Unauthorized"}, status=403)
 
     reply = request.POST.get("reply", "").strip()
 
@@ -1111,12 +1220,12 @@ def reply_to_review(request, review_id):
     )
 
 
+@login_required
 @approved_seller_required
 def seller_returns(request):
-    seller = request.user.seller_profile
     status_filter = request.GET.get("status")
     return_requests_qs = (
-        ReturnRequest.objects.filter(order_item__seller=seller)
+        _seller_return_requests_queryset(request)
         .select_related(
             "order_item",
             "order_item__variant",
@@ -1153,13 +1262,13 @@ def seller_returns(request):
     return render(request, "seller/returns.html", context)
 
 
+@login_required
 @approved_seller_required
 def process_return(request, id):
     if request.method != "POST":
         return JsonResponse({"success": False, "message": "Invalid method"}, status=405)
 
-    seller = request.user.seller_profile
-    return_req = get_object_or_404(ReturnRequest, id=id, order_item__seller=seller)
+    return_req = get_object_or_404(_seller_return_requests_queryset(request), id=id)
     action = request.POST.get("action")
     allowed_actions = {"approve", "reject"}
 
@@ -1181,11 +1290,13 @@ def process_return(request, id):
                 # Update item status & Restock
                 item = return_req.order_item
                 item.status = "RETURNED"
-                item.save()
+                item.save(update_fields=["status"])
 
                 variant = item.variant
-                variant.stock_quantity += item.quantity
-                variant.save()
+                ProductVariant.objects.filter(pk=variant.pk).update(
+                    stock_quantity=F("stock_quantity") + item.quantity
+                )
+                variant.refresh_from_db(fields=["stock_quantity"])
 
                 InventoryLog.objects.create(
                     variant=variant,

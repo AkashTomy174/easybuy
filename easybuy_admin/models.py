@@ -39,6 +39,25 @@ class Discount(models.Model):
     
 class Coupon(models.Model):
     DISCOUNT_TYPE = Discount.DISCOUNT_TYPE
+    VALIDATED_SAVE_FIELDS = {
+        "name",
+        "code",
+        "discount_type",
+        "discount_value",
+        "valid_from",
+        "valid_to",
+        "usage_limit",
+        "min_order_amount",
+        "is_active",
+        "seller",
+        "seller_id",
+        "category",
+        "category_id",
+        "subcategory",
+        "subcategory_id",
+        "product",
+        "product_id",
+    }
 
     name = models.CharField(max_length=100, blank=True)
     code = models.CharField(max_length=50, unique=True)
@@ -179,7 +198,14 @@ class Coupon(models.Model):
         self.code = (self.code or "").strip().upper()
         if not self.name:
             self.name = self.code
-        self.full_clean()
+        update_fields = kwargs.get("update_fields")
+        should_validate = self._state.adding or update_fields is None
+        if update_fields is not None:
+            should_validate = bool(
+                self.VALIDATED_SAVE_FIELDS.intersection(set(update_fields))
+            )
+        if should_validate:
+            self.full_clean()
         super().save(*args, **kwargs)
 class OfferDiscountBridge(models.Model):
     offer = models.ForeignKey(Offer, on_delete=models.CASCADE)

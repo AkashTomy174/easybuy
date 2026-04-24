@@ -77,8 +77,14 @@ def _cache_get_or_set(key, loader_fn, ttl):
 # Namespace versioning
 # ---------------------------------------------------------------------------
 
+def _sanitize_key_segment(value):
+    """Strip characters that are not safe in cache keys and cannot carry XSS payloads."""
+    return re.sub(r"[^a-zA-Z0-9_\-:.]", "_", str(value))
+
+
 def _namespace_version_key(namespace):
-    return f"cache_namespace:{namespace}:version"
+    safe_namespace = _sanitize_key_segment(namespace)
+    return f"cache_namespace:{safe_namespace}:version"
 
 
 def _get_namespace_version(namespace):
@@ -91,7 +97,9 @@ def _get_namespace_version(namespace):
 
 
 def _namespaced_key(namespace, suffix):
-    return f"{namespace}:v{_get_namespace_version(namespace)}:{suffix}"
+    safe_namespace = _sanitize_key_segment(namespace)
+    safe_suffix = _sanitize_key_segment(suffix)
+    return f"{safe_namespace}:v{_get_namespace_version(safe_namespace)}:{safe_suffix}"
 
 
 def invalidate_cache_namespace(namespace):
@@ -127,7 +135,8 @@ def get_cached_active_subcategories():
 
 
 def get_cached_subcategory_options(category_slug=None):
-    suffix = f"subcategory_options:{category_slug or 'all'}"
+    safe_slug = _sanitize_key_segment(category_slug) if category_slug else "all"
+    suffix = f"subcategory_options:{safe_slug}"
     cache_key = _namespaced_key("catalog", suffix)
 
     def _load():

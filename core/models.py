@@ -15,10 +15,14 @@ def generate_unique_category_slug(klass, field, slug_field="slug"):
 
 
 class User(AbstractUser):
+    ROLE_ADMIN = "ADMIN"
+    ROLE_SELLER = "SELLER"
+    ROLE_CUSTOMER = "CUSTOMER"
+
     ROLE_CHOICES = (
-        ("ADMIN", "Admin"),
-        ("SELLER", "Seller"),
-        ("CUSTOMER", "Customer"),
+        (ROLE_ADMIN, "Admin"),
+        (ROLE_SELLER, "Seller"),
+        (ROLE_CUSTOMER, "Customer"),
     )
 
     GENDER_CHOICES = (
@@ -29,7 +33,9 @@ class User(AbstractUser):
 
     email = models.EmailField(unique=True, null=True, blank=True)
     phone_number = models.CharField(max_length=15, unique=True, null=True, blank=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="CUSTOMER")
+    role = models.CharField(
+        max_length=20, choices=ROLE_CHOICES, default=ROLE_CUSTOMER
+    )
     profile_image = models.ImageField(
         upload_to="profile_images/", null=True, blank=True
     )
@@ -42,8 +48,42 @@ class User(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    ACTION_PERMISSIONS = {
+        ROLE_ADMIN: {
+            "admin:access",
+            "catalog:approve",
+            "catalog:manage",
+            "seller:review",
+        },
+        ROLE_SELLER: {
+            "seller:access",
+            "seller:inventory",
+            "seller:orders",
+            "seller:products",
+            "seller:promotions",
+            "seller:returns",
+            "seller:reviews",
+        },
+        ROLE_CUSTOMER: {
+            "customer:access",
+            "customer:cart",
+            "customer:checkout",
+            "customer:orders",
+            "customer:reviews",
+            "customer:wishlist",
+        },
+    }
+
     def __str__(self):
         return self.username
+
+    def has_role(self, *roles):
+        return self.role in roles
+
+    def has_permission(self, action):
+        if not action:
+            return True
+        return action in self.ACTION_PERMISSIONS.get(self.role, set())
 
 
 class Otp(models.Model):

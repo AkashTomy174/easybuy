@@ -31,7 +31,7 @@ import json
 from django.http import Http404
 from django.db.models import Q, Avg, Count, Prefetch
 from django.db import transaction
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db.models import Sum
@@ -69,6 +69,8 @@ ALLOWED_IMAGE_CONTENT_TYPES = {
 }
 MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024
 MAX_RETURN_IMAGES = 5
+PENDING_ORDER_STATES = {"PENDING"}
+SUCCESSFUL_RAZORPAY_PAYMENT_STATUSES = {"authorized", "captured", "refunded"}
 
 
 class RazorpayOrderError(Exception):
@@ -507,6 +509,7 @@ def all_categories(request):
 
 
 def all_products(request):
+    # Public by design: storefront catalog browsing is available before login.
     icategory = request.GET.get("category")
     isubCategory = request.GET.get("subcategory")
     ibrand = request.GET.getlist("brand")
@@ -556,12 +559,18 @@ def all_products(request):
             | Q(description__icontains=search_query)
             | Q(brand__icontains=search_query)
         )
-    if min_price:
-        min_price = float(min_price)
-        variants = variants.filter(selling_price__gte=min_price)
-    if max_price:
-        max_price = float(max_price)
-        variants = variants.filter(selling_price__lte=max_price)
+    try:
+        min_price_value = _parse_decimal_filter(min_price)
+        max_price_value = _parse_decimal_filter(max_price)
+    except InvalidOperation:
+        messages.error(request, "Invalid price range supplied.")
+        min_price_value = None
+        max_price_value = None
+
+    if min_price_value is not None:
+        variants = variants.filter(selling_price__gte=min_price_value)
+    if max_price_value is not None:
+        variants = variants.filter(selling_price__lte=max_price_value)
 
     # Rating filter
     if min_rating:
@@ -1001,6 +1010,10 @@ def add_reviews(request, variant_id):
                         request, f"Image {image.name} exceeds 5MB and was skipped."
                     )
                     continue
+                validation_error = _validate_image_file(image, label="Review image")
+                if validation_error:
+                    messages.warning(request, validation_error)
+                    continue
                 ReviewImage.objects.create(review=review, image=image)
 
             # Handle video uploads
@@ -1359,6 +1372,7 @@ def remove_from_cart(request, item_id):
 
 # filtering related
 def filtering(request):
+    # Public by design: storefront filtering is available before login.
     icategory = request.GET.get("category")
     isubCategory = request.GET.get("subcategory")
     ibrand = request.GET.getlist("brand")
@@ -1408,13 +1422,19 @@ def filtering(request):
             | Q(brand__icontains=search_query)
         )
 
-    if min_price:
-        min_price = float(min_price)
-        variants = variants.filter(selling_price__gte=min_price)
+    try:
+        min_price_value = _parse_decimal_filter(min_price)
+        max_price_value = _parse_decimal_filter(max_price)
+    except InvalidOperation:
+        messages.error(request, "Invalid price range supplied.")
+        min_price_value = None
+        max_price_value = None
 
-    if max_price:
-        max_price = float(max_price)
-        variants = variants.filter(selling_price__lte=max_price)
+    if min_price_value is not None:
+        variants = variants.filter(selling_price__gte=min_price_value)
+
+    if max_price_value is not None:
+        variants = variants.filter(selling_price__lte=max_price_value)
 
     if sort == "price_low":
         variants = variants.order_by("selling_price")
@@ -1735,6 +1755,7 @@ def profile_settings(request):
 
     if request.method == "POST":
         profile_image = request.FILES.get("profile_image")
+        submitted_email = (request.POST.get("email") or "").strip().lower()
         if profile_image:
             validation_error = _validate_image_file(
                 profile_image, label="Profile image"
@@ -1743,9 +1764,16 @@ def profile_settings(request):
                 messages.error(request, validation_error)
                 return redirect("profile_settings")
 
+        if submitted_email and submitted_email != (user.email or "").strip().lower():
+            messages.error(
+                request,
+                "Email changes require verification before they can be applied.",
+            )
+            return redirect("profile_settings")
+
         user.first_name = request.POST.get("first_name")
         user.last_name = request.POST.get("last_name")
-        user.email = request.POST.get("email")
+        user.email = submitted_email or user.email
         user.phone_number = request.POST.get("phone_number")
         user.dob = request.POST.get("dob") if request.POST.get("dob") else None
         user.gender = request.POST.get("gender")
@@ -1862,7 +1890,7 @@ def toggle_wishlist(request, variant_id, wishlist_id=None):
                 wishlist, _ = Wishlist.objects.get_or_create(
                     user=user, wishlist_name="My Wishlist"
                 )
-        except:
+        except (json.JSONDecodeError, TypeError, ValueError):
             wishlist, _ = Wishlist.objects.get_or_create(
                 user=user, wishlist_name="My Wishlist"
             )
@@ -2124,6 +2152,16 @@ def toggle_review_helpful(request, review_id):
 
 def _get_razorpay_client():
     return razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
+
+def _parse_decimal_filter(raw_value):
+    raw_value = (raw_value or "").strip()
+    if not raw_value:
+        return None
+    value = Decimal(raw_value)
+    if value < 0:
+        raise InvalidOperation
+    return value
 
 
 
@@ -2606,6 +2644,10 @@ def log_razorpay_failure(request):
 
     if not razorpay_order_id:
         return JsonResponse({"error": "Missing razorpay_order_id"}, status=400)
+    if not razorpay_payment_id:
+        return JsonResponse(
+            {"error": "Missing razorpay_payment_id for verification"}, status=400
+        )
 
     order = Order.objects.filter(
         razorpay_order_id=razorpay_order_id,
@@ -2613,6 +2655,37 @@ def log_razorpay_failure(request):
     ).first()
     if not order:
         return JsonResponse({"error": "Order not found"}, status=404)
+
+    if (
+        order.payment_status not in PENDING_ORDER_STATES
+        or order.order_status not in PENDING_ORDER_STATES
+    ):
+        return JsonResponse(
+            {"error": "Only pending orders can be marked as failed."}, status=409
+        )
+
+    if razorpay_payment_id:
+        try:
+            payment = _get_razorpay_client().payment.fetch(razorpay_payment_id)
+        except Exception:
+            logger.warning(
+                "Unable to verify Razorpay failure for order %s and payment %s",
+                order.order_number,
+                razorpay_payment_id,
+                exc_info=True,
+            )
+            return JsonResponse(
+                {"error": "Unable to verify payment status right now."}, status=502
+            )
+
+        payment_order_id = str(payment.get("order_id") or "").strip()
+        payment_status = str(payment.get("status") or "").strip().lower()
+        if payment_order_id and payment_order_id != razorpay_order_id:
+            return JsonResponse({"error": "Payment does not match order."}, status=400)
+        if payment_status in SUCCESSFUL_RAZORPAY_PAYMENT_STATUSES:
+            return JsonResponse(
+                {"error": "Confirmed payments cannot be marked as failed."}, status=409
+            )
 
     order.payment_status = "FAILED"
     order.order_status = "CANCELLED"
@@ -2940,33 +3013,10 @@ def all_notifications(request):
 @login_required
 def payment_methods(request):
     if request.method == "POST":
-        card_holder_name = request.POST.get("card_holder_name")
-        card_number = request.POST.get("card_number")
-        expiry = request.POST.get("expiry") 
-
-        if card_holder_name and card_number and expiry:
-            try:
-                if "/" not in expiry:
-                    raise ValueError("Invalid expiry format. Use MM/YY")
-                month, year = expiry.split("/")
-
-                brand = "Visa" if card_number.startswith("4") else "Mastercard"
-                if card_number.startswith("3"):
-                    brand = "Amex"
-
-                SavedCard.objects.create(
-                    user=request.user,
-                    card_holder_name=card_holder_name,
-                    card_number=card_number[-4:], 
-                    expiry_month=month,
-                    expiry_year=year,
-                    card_brand=brand,
-                )
-                messages.success(request, "Payment method added successfully.")
-            except Exception as e:
-                messages.error(request, f"Failed to add card: {e}")
-        else:
-            messages.error(request, "All fields are required.")
+        messages.error(
+            request,
+            "Card details must be tokenized by the payment gateway and cannot be stored from this form.",
+        )
         return redirect("payment_methods")
 
     cards = SavedCard.objects.filter(user=request.user).order_by(

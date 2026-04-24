@@ -16,6 +16,10 @@ def generate_unique_slug(klass, field, slug_field="slug"):
 
 
 class SellerProfile(models.Model):
+    STATUS_APPROVED = "APPROVED"
+    STATUS_REJECTED = "REJECTED"
+    STATUS_PENDING = "PENDING"
+
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="seller_profile"
     )
@@ -28,11 +32,13 @@ class SellerProfile(models.Model):
     ifsc_code = models.CharField(max_length=20)
     business_address = models.TextField()
     CHOICES = (
-        ("APPROVED", "approved"),
-        ("REJECTED", "rejected"),
-        ("PENDING", "pending"),
+        (STATUS_APPROVED, "approved"),
+        (STATUS_REJECTED, "rejected"),
+        (STATUS_PENDING, "pending"),
     )
-    status = models.CharField(max_length=20, choices=CHOICES, default="PENDING")
+    status = models.CharField(
+        max_length=20, choices=CHOICES, default=STATUS_PENDING
+    )
     rating = models.FloatField(default=0)
     rejection_reason = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -42,6 +48,10 @@ class SellerProfile(models.Model):
 
 
 class Product(models.Model):
+    APPROVAL_APPROVED = "APPROVED"
+    APPROVAL_PENDING = "PENDING"
+    APPROVAL_REJECTED = "REJECTED"
+
     seller = models.ForeignKey(
         SellerProfile, on_delete=models.CASCADE, related_name="products"
     )
@@ -57,12 +67,12 @@ class Product(models.Model):
     is_returnable = models.BooleanField(default=True)
     return_days = models.IntegerField(default=7)
     CHOICES = (
-        ("APPROVED", "approved"),
-        ("PENDING", "pending"),
-        ("REJECTED", "rejected"),
+        (APPROVAL_APPROVED, "approved"),
+        (APPROVAL_PENDING, "pending"),
+        (APPROVAL_REJECTED, "rejected"),
     )
     approval_status = models.CharField(
-        max_length=20, choices=CHOICES, default="PENDING"
+        max_length=20, choices=CHOICES, default=APPROVAL_PENDING
     )
     rejection_reason = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)

@@ -5,6 +5,8 @@ from django.conf.urls.static import static
 from django.views.static import serve
 from core.views import all_login
 
+handler403 = "core.views.custom_permission_denied_view"
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),

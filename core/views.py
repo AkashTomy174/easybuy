@@ -21,6 +21,7 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from seller.models import ProductVariant
 
 from .cache_utils import get_cached_google_login_enabled
+from .decorators import GENERIC_PERMISSION_DENIED_MESSAGE
 from .forms import EasyBuyPasswordChangeForm, EasyBuySetPasswordForm, ForgotPasswordForm
 from .models import Category, NotificationConfig, NotificationDelivery, Otp, StockNotification, User
 from .services import create_notification
@@ -32,6 +33,7 @@ LOGIN_ATTEMPT_LIMIT = 5
 LOGIN_ATTEMPT_WINDOW_SECONDS = 15 * 60
 OTP_ATTEMPT_LIMIT = 5
 OTP_ATTEMPT_WINDOW_SECONDS = 10 * 60
+OTP_EXPIRY_MINUTES = OTP_ATTEMPT_WINDOW_SECONDS // 60
 
 
 def generate_otp():
@@ -56,13 +58,32 @@ def _get_pending_customer_by_email(email):
     if not email:
         return None
     return (
-        User.objects.filter(email__iexact=email, role="CUSTOMER", is_active=False)
+        User.objects.filter(
+            email__iexact=email,
+            role=User.ROLE_CUSTOMER,
+            is_active=False,
+        )
         .order_by("id")
         .first()
     )
 
 
+def custom_permission_denied_view(request, exception=None):
+    return render(
+        request,
+        "403.html",
+        {"message": GENERIC_PERMISSION_DENIED_MESSAGE},
+        status=403,
+    )
+
+
 def _client_ip(request):
+    if getattr(settings, "USE_X_FORWARDED_HOST", False):
+        forwarded_for = (request.META.get("HTTP_X_FORWARDED_FOR") or "").strip()
+        if forwarded_for:
+            first_hop = forwarded_for.split(",", 1)[0].strip()
+            if first_hop:
+                return first_hop
     return (request.META.get("REMOTE_ADDR") or "unknown").strip()
 
 
@@ -105,7 +126,7 @@ def send_otp_email(email, otp):
     message = f"""
     Welcome to EasyBuy!
     Your verification code is: {otp}
-    This code will expire in 10 minutes.
+    This code will expire in {OTP_EXPIRY_MINUTES} minutes.
     If you didn't create this account, please ignore this email.
     Best regards,
     EasyBuy Team
@@ -209,6 +230,7 @@ def all_login(request):
 
 
 def register_view(request):
+    # Public by design: this is the unauthenticated customer signup entry point.
     if request.method == "POST":
         if "otp" in request.POST and request.POST.get("otp"):
             return verify_otp(request)
@@ -273,6 +295,7 @@ def register_view(request):
             return redirect("register")
 
         otp_code = generate_otp()
+        created_pending_user = existing_user is None
         try:
             with transaction.atomic():
                 user = existing_user or User(email=email, role="CUSTOMER")
@@ -301,6 +324,8 @@ def register_view(request):
             messages.success(request, f"OTP sent to {email}. Please verify.")
             return render(request, "core/verify_otp.html", {"email": email})
 
+        if created_pending_user:
+            user.delete()
         messages.error(request, "Failed to send OTP. Please try again.")
         return redirect("register")
 
@@ -329,7 +354,9 @@ def verify_otp(request):
         user = User.objects.get(email__iexact=email)
         otp_record = Otp.objects.filter(user=user, verified=False).latest("created_at")
 
-        if timezone.now() - otp_record.created_at > timedelta(minutes=5):
+        if timezone.now() - otp_record.created_at > timedelta(
+            minutes=OTP_EXPIRY_MINUTES
+        ):
             messages.error(request, "OTP has expired. Please request a new one.")
             return render(request, "core/verify_otp.html", {"email": email})
 
@@ -462,6 +489,7 @@ def logout_view(request):
     return redirect("home")
 
 
+@login_required
 def place_order_view(request):
     user = request.user
     create_notification(
@@ -470,6 +498,7 @@ def place_order_view(request):
         title="Order Placed!",
         message="Your order has been successfully placed.",
     )
+    return redirect("user_orders")
 
 
 @login_required
@@ -499,6 +528,7 @@ def toggle_stock_notification(request, variant_id):
 
 
 def contact_view(request):
+    # Public by design: informational support/contact page.
     return render(request, "core/contact.html")
 
 
@@ -514,6 +544,7 @@ def discover_view(request):
 
 
 def health_check(request):
+    # Public by design: health probes must not require login.
     from django.db import connection
     try:
         connection.ensure_connection()
