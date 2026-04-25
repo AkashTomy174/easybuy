@@ -971,10 +971,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmBtn = document.getElementById('confirmModalConfirm');
     const cancelBtn = document.getElementById('confirmModalCancel');
 
-    // Check for saved preference
+    // Default to light mode unless the user explicitly chose dark mode.
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    if (savedTheme === 'dark') {
         html.classList.add('dark');
+    } else {
+        html.classList.remove('dark');
     }
 
     if (darkModeToggle) {
