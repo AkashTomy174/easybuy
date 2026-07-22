@@ -1,0 +1,5 @@
+templates/** linguist-vendored
+static/css/*-built.css linguist-generated
+static/css/tailwind-*.css linguist-generated
+static/css/easybuy-design-system.css linguist-generated
+static/css/enhancements.css linguist-generated
